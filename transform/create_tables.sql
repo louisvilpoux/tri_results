@@ -1,0 +1,93 @@
+CREATE TABLE raw_data (
+    id SERIAL PRIMARY KEY,
+    clt TEXT, clt_f TEXT, temps TEXT, nom TEXT, club TEXT, cat TEXT, clt_cat TEXT, 
+    id_league TEXT, league TEXT, "détails" TEXT, rang_global TEXT, rang_sexe TEXT, 
+    rang_categorie TEXT, categorie TEXT, indice_performance TEXT, 
+    indice_performance_reference TEXT, total_time TEXT, swim_time TEXT, 
+    rang_swim TEXT, rang_course_swim TEXT, indice_performance_swim TEXT, 
+    t1_time TEXT, rang_t1 TEXT, rang_course_t1 TEXT, indice_performance_t1 TEXT, 
+    bike_time TEXT, rang_bike TEXT, rang_course_bike TEXT, 
+    indice_performance_bike TEXT, t2_time TEXT, rang_t2 TEXT, rang_course_t2 TEXT, 
+    indice_performance_t2 TEXT, run_time TEXT, rang_run TEXT, rang_course_run TEXT, 
+    indice_performance_run TEXT, name_epreuve TEXT, format_epreuve TEXT, 
+    year_epreuve TEXT, date_epreuve TEXT, lieu_epreuve TEXT, scraped_at TEXT,
+    source TEXT
+);
+
+CREATE TABLE races (
+    id SERIAL PRIMARY KEY,
+    name_epreuve TEXT NOT NULL,
+    format_initial TEXT,
+    type_epreuve TEXT,
+    format_epreuve TEXT,
+    year_epreuve TEXT,
+    date_epreuve TEXT,
+    lieu_epreuve TEXT
+);
+
+CREATE TABLE athletes_tmp (
+    id SERIAL PRIMARY KEY,
+    nom TEXT NOT NULL,
+    club TEXT,
+    cat_initial TEXT,
+    sexe TEXT
+);
+
+CREATE TABLE athletes (
+    id SERIAL PRIMARY KEY,
+    unified_id INTEGER,
+    nom TEXT NOT NULL,
+    club TEXT,
+    cat_initial TEXT,
+    sexe TEXT,
+    nb_races INT,
+    athlete_key TEXT
+);
+
+CREATE TABLE results (
+    id SERIAL PRIMARY KEY,
+    clt TEXT,
+    clt_f TEXT,
+    epreuve_id INT NOT NULL REFERENCES races(id),
+    name_epreuve TEXT,
+    type_epreuve TEXT,
+    format_epreuve TEXT,
+    date_epreuve TEXT,
+    year_epreuve TEXT,
+    athlete_id INT NOT NULL REFERENCES athletes(id),
+    nom_athlete TEXT,
+    sexe TEXT,
+    cat TEXT,
+    clt_cat TEXT,
+    id_league TEXT,
+    league TEXT,
+    url TEXT,
+    rang_global TEXT,
+    rang_sexe TEXT,
+    rang_categorie TEXT,
+    categorie TEXT,
+    indice_performance TEXT,
+    indice_performance_reference TEXT,
+    total_time TEXT,
+    swim_time TEXT,
+    rang_swim TEXT,
+    rang_course_swim TEXT,
+    indice_performance_swim TEXT,
+    t1_time TEXT,
+    rang_t1 TEXT,
+    rang_course_t1 TEXT,
+    indice_performance_t1 TEXT,
+    bike_time TEXT,
+    rang_bike TEXT,
+    rang_course_bike TEXT,
+    indice_performance_bike TEXT,
+    t2_time TEXT,
+    rang_t2 TEXT,
+    rang_course_t2 TEXT,
+    indice_performance_t2 TEXT,
+    run_time TEXT,
+    rang_run TEXT,
+    rang_course_run TEXT,
+    indice_performance_run TEXT,
+    source TEXT
+);

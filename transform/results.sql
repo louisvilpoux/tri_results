@@ -1,0 +1,76 @@
+WITH all_data AS (
+SELECT
+    rfta.clt,
+    rfta.clt_f,
+    r.id AS epreuve_id,
+    r.name_epreuve,
+    r.type_epreuve,
+    r.format_epreuve,
+    r.date_epreuve,
+    r.year_epreuve,
+    a.unified_id AS athlete_id,
+    a.nom AS nom_athlete,
+    a.sexe,
+    rfta.cat,
+    rfta.clt_cat,
+    rfta.id_league,
+    rfta.league,
+    rfta.détails as url,
+    rfta.rang_global,
+    rfta.rang_sexe,
+    rfta.rang_categorie,
+    rfta.categorie,
+    rfta.indice_performance,
+    rfta.indice_performance_reference,
+    rfta.total_time,
+    rfta.swim_time,
+    rfta.rang_swim,
+    rfta.rang_course_swim,
+    rfta.indice_performance_swim,
+    rfta.t1_time,
+    rfta.rang_t1,
+    rfta.rang_course_t1,
+    rfta.indice_performance_t1,
+    rfta.bike_time,
+    rfta.rang_bike,
+    rfta.rang_course_bike,
+    rfta.indice_performance_bike,
+    rfta.t2_time,
+    rfta.rang_t2,
+    rfta.rang_course_t2,
+    rfta.indice_performance_t2,
+    rfta.run_time,
+    rfta.rang_run,
+    rfta.rang_course_run,
+    rfta.indice_performance_run,
+    rfta.source,
+    row_number() OVER (PARTITION BY r.id , a.unified_id) as rn
+FROM raw_data AS rfta
+JOIN races AS r ON r.name_epreuve = rfta.name_epreuve
+                AND r.format_initial = rfta.format_epreuve
+                AND r.date_epreuve = rfta.date_epreuve
+JOIN athletes AS a ON a.nom = rfta.nom
+)
+
+INSERT INTO results (clt, clt_f, epreuve_id, name_epreuve, type_epreuve, 
+format_epreuve, date_epreuve, year_epreuve, athlete_id, nom_athlete, sexe, cat, 
+clt_cat, id_league, league, url, rang_global, rang_sexe, rang_categorie, 
+categorie, indice_performance, indice_performance_reference, total_time, 
+swim_time, rang_swim, rang_course_swim, indice_performance_swim, t1_time, 
+rang_t1, rang_course_t1, indice_performance_t1, bike_time, rang_bike, 
+rang_course_bike, indice_performance_bike, t2_time, rang_t2, rang_course_t2, 
+indice_performance_t2, run_time, rang_run, rang_course_run, 
+indice_performance_run, source)
+SELECT 
+clt, clt_f, epreuve_id, name_epreuve, type_epreuve, 
+format_epreuve, date_epreuve, year_epreuve, athlete_id, nom_athlete, sexe, cat, 
+clt_cat, id_league, league, url, rang_global, rang_sexe, rang_categorie, 
+categorie, indice_performance, indice_performance_reference, total_time, 
+swim_time, rang_swim, rang_course_swim, indice_performance_swim, t1_time, 
+rang_t1, rang_course_t1, indice_performance_t1, bike_time, rang_bike, 
+rang_course_bike, indice_performance_bike, t2_time, rang_t2, rang_course_t2, 
+indice_performance_t2, run_time, rang_run, rang_course_run, 
+indice_performance_run, source
+FROM all_data
+WHERE rn = 1
+;
