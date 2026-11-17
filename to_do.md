@@ -39,6 +39,25 @@
     - [x] si nom_epreuve contient swimrun et que type_epreuve est vide -> type_epreuve = swimrun
     - [x] si nom_epreuve contient altriman ou extrememan ou xterra et que type_epreuve est vide -> type_epreuve = triathlon
 
+9. Fonctionnalité pagination API
+    - Paramètres :
+        - limit : nombre de résultats retournés (20 par défaut).
+        - offset : nombre de résultats ignorés (0 par défaut).
+        - Limite maximale : 100 résultats par requête.
+
+    Pour la réponse on veut le format : 
+    ```
+    {
+    "items": [],
+    "pagination": {
+        "total": 1250,
+        "limit": 20,
+        "offset": 0,
+        "has_next": true
+    }
+    }
+    ```
+
 
 # Next :
 - source : regarder si les informations de genre sont bonnes.
@@ -54,24 +73,6 @@
     - page 4 : recherche
 
 Pour le front, chatGPT recommande Next.js + TypeScript.
-
-Paramètres :
-- limit : nombre de résultats retournés (20 par défaut).
-- offset : nombre de résultats ignorés (0 par défaut).
-- Limite maximale : 100 résultats par requête.
-
-Pour la réponse on veut le format : 
-```
-{
-  "items": [],
-  "pagination": {
-    "total": 1250,
-    "limit": 20,
-    "offset": 0,
-    "has_next": true
-  }
-}
-```
 
 Fonction de tri : `sort by` et `order` .
 Reco : 

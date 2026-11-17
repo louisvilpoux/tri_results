@@ -4,3 +4,5 @@ sources/fftri_t2_area
 sources/prolivesport
 sources/protiming
 .ipynb_checkpoints
+chrono
+api/__pycache__

@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
-from sqlalchemy import create_engine, Column, Integer, String, Date, ForeignKey, Text
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, func
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session
 from typing import List, Optional
 import os
@@ -127,6 +127,8 @@ def list_races(
     year_epreuve: Optional[str] = Query(None),
     type_epreuve: Optional[str] = Query(None),
     format_epreuve: Optional[str] = Query(None),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ):
     query = db.query(Race)
@@ -136,7 +138,21 @@ def list_races(
         query = query.filter(Race.type_epreuve == type_epreuve.upper())
     if format_epreuve:
         query = query.filter(Race.format_epreuve == format_epreuve.upper())
-    return query.order_by(Race.date_epreuve.desc()).limit(100).all()
+    #return query.order_by(Race.date_epreuve.desc()).limit(100).all()
+    
+    total = query.count()
+    items = query.order_by(Race.date_epreuve.desc()).offset(offset).limit(limit).all()
+    has_next = (offset + limit) < total
+
+    return {
+        "items": items,
+        "pagination": {
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "has_next": has_next
+        }
+    }
 
 
 @app.get("/races/{race_id}")
@@ -147,30 +163,74 @@ def get_race(race_id: int, db: Session = Depends(get_db)):
     return race
 
 
-@app.get("/races/{race_id}/results")
-def get_race_results(race_id: int, db: Session = Depends(get_db)):
-    results = (
-        db.query(Result)
-        .filter(Result.epreuve_id == race_id)
-        .order_by(Result.year_epreuve.desc())
-        .all()
-    )
-    return results
+# @app.get("/races/{race_id}/results")
+# def get_race_results(race_id: int, db: Session = Depends(get_db)):
+#     results = (
+#         db.query(Result)
+#         .filter(Result.epreuve_id == race_id)
+#         .order_by(Result.year_epreuve.desc())
+#         .all()
+#     )
+#     return results
+def get_race_results(
+    race_id: int,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    query = db.query(Result).filter(Result.epreuve_id == race_id)
+    total = query.count()
+    items = query.order_by(Result.year_epreuve.desc()).offset(offset).limit(limit).all()
+    has_next = (offset + limit) < total
+
+    return {
+        "items": items,
+        "pagination": {
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "has_next": has_next
+        }
+    }
 
 
+# @app.get("/athletes")
+# def search_athletes(
+#     q: Optional[str] = Query(None, min_length=2),
+#     db: Session = Depends(get_db),
+# ):
+#     return (
+#         db.query(Athlete)
+#         .filter(
+#             Athlete.nom.ilike(f"%{q}%")
+#         )
+#         .limit(50)
+#         .all()
+#     )
 @app.get("/athletes")
 def search_athletes(
     q: Optional[str] = Query(None, min_length=2),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ):
-    return (
-        db.query(Athlete)
-        .filter(
-            Athlete.nom.ilike(f"%{q}%")
-        )
-        .limit(50)
-        .all()
-    )
+    query = db.query(Athlete)
+    if q:
+        query = query.filter(Athlete.nom.ilike(f"%{q}%"))
+    
+    total = query.count()
+    items = query.offset(offset).limit(limit).all()
+    has_next = (offset + limit) < total
+
+    return {
+        "items": items,
+        "pagination": {
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "has_next": has_next
+        }
+    }
 
 
 @app.get("/athletes/{athlete_id}")
@@ -183,20 +243,70 @@ def get_athlete(athlete_id: int, db: Session = Depends(get_db)):
     return athlete
 
 
+# @app.get("/athletes/{athlete_id}/results")
+# def get_athlete_results(athlete_id: int, db: Session = Depends(get_db)):
+#     return (
+#         db.query(Result)
+#         .filter(Result.athlete_id == athlete_id)
+#         .order_by(Result.id.desc(), Result.year_epreuve)
+#         .all()
+#     )
 @app.get("/athletes/{athlete_id}/results")
-def get_athlete_results(athlete_id: int, db: Session = Depends(get_db)):
-    return (
-        db.query(Result)
-        .filter(Result.athlete_id == athlete_id)
-        .order_by(Result.id.desc(), Result.year_epreuve)
-        .all()
-    )
+def get_athlete_results(
+    athlete_id: int,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    query = db.query(Result).filter(Result.athlete_id == athlete_id)
+    total = query.count()
+    items = query.order_by(Result.id.desc(), Result.year_epreuve).offset(offset).limit(limit).all()
+    has_next = (offset + limit) < total
 
-@app.get("/athletes/{athlete_id}/races", response_model=list[str])
-def get_athlete_races(athlete_id: int, db: Session = Depends(get_db)):
+    return {
+        "items": items,
+        "pagination": {
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "has_next": has_next
+        }
+    }
+
+# @app.get("/athletes/{athlete_id}/races", response_model=list[str])
+# def get_athlete_races(athlete_id: int, db: Session = Depends(get_db)):
+#     stmt = (
+#         select(Result.name_epreuve)
+#         .where(Result.athlete_id == athlete_id)
+#         .order_by(Result.id.desc(), Result.year_epreuve)
+#     )
+#     return db.scalars(stmt).all()
+@app.get("/athletes/{athlete_id}/races")
+def get_athlete_races(
+    athlete_id: int,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    count_stmt = select(func.count()).select_from(Result).where(Result.athlete_id == athlete_id)
+    total = db.scalar(count_stmt) or 0
+
     stmt = (
         select(Result.name_epreuve)
         .where(Result.athlete_id == athlete_id)
         .order_by(Result.id.desc(), Result.year_epreuve)
+        .offset(offset)
+        .limit(limit)
     )
-    return db.scalars(stmt).all()
+    items = db.scalars(stmt).all()
+    has_next = (offset + limit) < total
+
+    return {
+        "items": items,
+        "pagination": {
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "has_next": has_next
+        }
+    }
