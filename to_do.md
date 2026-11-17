@@ -6,7 +6,7 @@
         - [x] faire un dossier raw qui contienne la donnée directement scrappée et un dossier _0 qui soit la donnée corrigée.
 
 1. Nettoyer la colonne format_epreuve.
-    - [ ] regarder si cela provient d'une source de données en particulier et peut-être ajuster le scrapping.
+    - [x] regarder si cela provient d'une source de données en particulier et peut-être ajuster le scrapping.
 
 2. Nettoyer la colonne name_epreuve.
     - [x] pour fftri_t2_area il faut que le nom de l'épreuve corresponde au morceau de l'URL adapté et ne pas prendre le nom de l'epreuve scrappée, ou alors dans une autre colonne. On se retrouve à différencier deux épreuves alors que c'est la même épreuve mais pas le même format.
@@ -29,7 +29,15 @@
     - [x] récupérer les urls
     - [ ] faire tourner le script sur toutes les urls
 
-7. Tester Chronoweb
+7. Corriger scrapping Chronoweb
+    - [x] fix code avec les paths
+    - [x] faire tourner le script sur toutes les urls et filtrer pour conserver les bons sports
+
+8. Corriger type_epreuve : `select * from races where type_epreuve = ''`
+    - [ ] si nom_epreuve contient triathlon et que type_epreuve est vide -> type_epreuve = triathlon
+    - [ ] si nom_epreuve contient aquathlon et que type_epreuve est vide -> type_epreuve = aquathlon
+    - [ ] si nom_epreuve contient swimrun et que type_epreuve est vide -> type_epreuve = swimrun
+    - [ ] si nom_epreuve contient altriman ou extrememan ou xterra et que type_epreuve est vide -> type_epreuve = triathlon
 
 
 # Next :
