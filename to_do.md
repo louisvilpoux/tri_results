@@ -34,10 +34,10 @@
     - [x] faire tourner le script sur toutes les urls et filtrer pour conserver les bons sports
 
 8. Corriger type_epreuve : `select * from races where type_epreuve = ''`
-    - [ ] si nom_epreuve contient triathlon et que type_epreuve est vide -> type_epreuve = triathlon
-    - [ ] si nom_epreuve contient aquathlon et que type_epreuve est vide -> type_epreuve = aquathlon
-    - [ ] si nom_epreuve contient swimrun et que type_epreuve est vide -> type_epreuve = swimrun
-    - [ ] si nom_epreuve contient altriman ou extrememan ou xterra et que type_epreuve est vide -> type_epreuve = triathlon
+    - [x] si nom_epreuve contient triathlon et que type_epreuve est vide -> type_epreuve = triathlon
+    - [x] si nom_epreuve contient aquathlon et que type_epreuve est vide -> type_epreuve = aquathlon
+    - [x] si nom_epreuve contient swimrun et que type_epreuve est vide -> type_epreuve = swimrun
+    - [x] si nom_epreuve contient altriman ou extrememan ou xterra et que type_epreuve est vide -> type_epreuve = triathlon
 
 
 # Next :
