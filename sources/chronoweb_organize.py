@@ -46,14 +46,16 @@ os.mkdir(f"./sources/{target}/{target}_0")
 # for each file : replace forbidden caracters in column name, rename columns and only keep some of them
 # result is saved in a dedicated folder
 schema_list = []
+epreuve_possibles = ["triathlon", "aquathlon", "man", "swimrun", "xterra", "bike_and_run"]
 for local_path in list_files:
-    print(local_path)
-    df = pd.read_csv(local_path)
-    unnamed_cols = list(df.columns[df.columns.str.contains("Unnamed")])
-    for index, u_c in enumerate(unnamed_cols):
-        df = df.rename(columns={u_c:"Unnamed_"+str(index)})
-    for c in list(df.columns):
-        df = df.rename(columns={c: clean_col_name(c)})
-    df = simplify_df(df)
-    final_path = local_path.replace(f"/{target}/", f"/{target}/{target}_0/")
-    df.to_csv(final_path, index=False)
+    if any(element in local_path.lower() for element in epreuve_possibles):
+        print(local_path)
+        df = pd.read_csv(local_path)
+        unnamed_cols = list(df.columns[df.columns.str.contains("Unnamed")])
+        for index, u_c in enumerate(unnamed_cols):
+            df = df.rename(columns={u_c:"Unnamed_"+str(index)})
+        for c in list(df.columns):
+            df = df.rename(columns={c: clean_col_name(c)})
+        df = simplify_df(df)
+        final_path = local_path.replace("raw", f"{target}_0")
+        df.to_csv(final_path, index=False)

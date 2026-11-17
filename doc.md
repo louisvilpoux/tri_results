@@ -34,8 +34,7 @@ nom_de_la_source :
 
 - prolivesport : 
     1. prolivesport_links.py : scrapping du site pour venir récupérer l'ensemble des liens vers les pages de résultats des épreuves.
-    2. prolivesport.py : pour chaque url, on vient scrapper la page et générer un csv avec les informations.
-    3. prolivesport_organize.py : pour chaque csv, on vient principalement appliquer les bons noms de colonnes.
+    2. prolivesport.py : pour chaque url, on vient scrapper la page et générer un csv avec les informations finales.
 
 - protiming : 
     1. protiming_links.py : scrapping du site pour venir récupérer l'ensemble des liens vers les pages de résultats des épreuves.
