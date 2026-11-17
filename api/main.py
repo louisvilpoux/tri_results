@@ -1,7 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, func
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session
-from typing import List, Optional
 import os
 from sqlalchemy import select
 from fastapi.responses import RedirectResponse
@@ -125,10 +124,10 @@ async def root():
 
 @app.get("/races")
 def list_races(
-    year_epreuve: Optional[str] = Query(None),
-    type_epreuve: Optional[str] = Query(None),
-    format_epreuve: Optional[str] = Query(None),
-    name_epreuve: Optional[str] = Query(None),
+    year_epreuve: str | None = Query(None),
+    type_epreuve: str | None = Query(None),
+    format_epreuve: str | None = Query(None),
+    name_epreuve: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -167,7 +166,7 @@ def get_race(race_id: int, db: Session = Depends(get_db)):
 @app.get("/races/{race_id}/results")
 def get_race_results(
     race_id: int,
-    s: Optional[str] = Query(None),
+    s: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
@@ -191,8 +190,8 @@ def get_race_results(
 
 @app.get("/athletes")
 def search_athletes(
-    q: Optional[str] = Query(None, min_length=2),
-    s: Optional[str] = Query(None),
+    q: str | None = Query(None, min_length=2),
+    s: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -229,9 +228,9 @@ def get_athlete(athlete_id: int, db: Session = Depends(get_db)):
 @app.get("/athletes/{athlete_id}/results")
 def get_athlete_results(
     athlete_id: int,
-    year_epreuve: Optional[str] = Query(None),
-    type_epreuve: Optional[str] = Query(None),
-    format_epreuve: Optional[str] = Query(None),
+    year_epreuve: str | None = Query(None),
+    type_epreuve: str | None = Query(None),
+    format_epreuve: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
@@ -260,9 +259,9 @@ def get_athlete_results(
 @app.get("/athletes/{athlete_id}/races")
 def get_athlete_races(
     athlete_id: int,
-    year_epreuve: Optional[str] = Query(None),
-    type_epreuve: Optional[str] = Query(None),
-    format_epreuve: Optional[str] = Query(None),
+    year_epreuve: str | None = Query(None),
+    type_epreuve: str | None = Query(None),
+    format_epreuve: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)

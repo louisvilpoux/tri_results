@@ -1,0 +1,4 @@
+[lint]
+ignore = [
+    "B008", # do not perform function calls in argument defaults (nécessaire pour FastAPI Depends)
+]
