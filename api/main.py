@@ -40,7 +40,7 @@ class Athlete(Base):
 class Result(Base):
     __tablename__ = "results"
     id = Column(Integer, primary_key=True, index=True)
-    clt = Column(String(50))
+    clt = Column(Integer)
     clt_f = Column(String(50))
     epreuve_id = Column(Integer, ForeignKey("races.id"))
     name_epreuve = Column(String(50))

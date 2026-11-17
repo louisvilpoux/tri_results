@@ -20,7 +20,9 @@ run_time, rang_run, rang_course_run, indice_performance_run,
 name_epreuve, format_epreuve, year_epreuve, date_epreuve, lieu_epreuve,
 scraped_at, source)
 
-SELECT clt, null as clt_f, temps, nom, club, cat, null as clt_cat, 
+SELECT 
+CASE WHEN pg_input_is_valid(clt, 'integer') THEN clt::integer ELSE NULL END AS clt, 
+null as clt_f, temps, nom, club, cat, null as clt_cat, 
 null as id_league, null as league, détails, clt as rang_global, null as rang_sexe, 
 null as rang_categorie, cat as categorie, null as indice_performance, null as indice_performance_reference, 
 temps as total_time, swim as swim_time, null as rang_swim, null as rang_course_swim, null as indice_performance_swim, 
@@ -32,7 +34,9 @@ name_epreuve, format_epreuve, year_epreuve, date_epreuve, null as lieu_epreuve,
 scraped_at, 'fftri_t2_area' as source
 FROM raw_fftri_t2_area_0 
 UNION ALL
-SELECT clt, null as clt_f, temps, nom, club, cat, clt_cat,
+SELECT 
+CASE WHEN pg_input_is_valid(clt, 'integer') THEN clt::integer ELSE NULL END AS clt,
+null as clt_f, temps, nom, club, cat, clt_cat,
 null as id_league, null as league, "détails", clt as rang_global, rang_sexe,
 clt_cat as rang_categorie, cat as categorie, null as indice_performance, null as indice_performance_reference,
 temps as total_time, swim as swim_time, ((regexp_match(swim, '\((\d+)e\)'))[1]) as rang_swim, null as rang_course_swim, null as indice_performance_swim,
@@ -45,7 +49,9 @@ date_epreuve::date::text as date_epreuve, lieu_epreuve,
 scraped_at, 'prolivesport' as source
 from raw_prolivesport_0
 UNION ALL
-SELECT clt, null as clt_f, temps, nom, club, cat, null as clt_cat,
+SELECT 
+CASE WHEN pg_input_is_valid(clt, 'integer') THEN clt::integer ELSE NULL END AS clt, 
+null as clt_f, temps, nom, club, cat, null as clt_cat,
 null as id_league, null as league, "détails", clt as rang_global, null as rang_sexe,
 null as rang_categorie, cat as categorie, null as indice_performance, null as indice_performance_reference,
 temps as total_time, swim as swim_time, null as rang_swim, null as rang_course_swim, null as indice_performance_swim,
@@ -59,7 +65,9 @@ scraped_at, 'chronoweb' as source
 FROM raw_chronoweb_0
 WHERE name_epreuve is not null
 UNION ALL
-SELECT clt, null as clt_f, temps, nom, club, cat, null as clt_cat,
+SELECT 
+CASE WHEN pg_input_is_valid(clt, 'integer') THEN clt::integer ELSE NULL END AS clt, 
+null as clt_f, temps, nom, club, cat, null as clt_cat,
 null as id_league, null as league, "détails", clt as rang_global, null as rang_sexe,
 null as rang_categorie, cat as categorie, null as indice_performance, null as indice_performance_reference,
 temps as total_time, swim as swim_time, null as rang_swim, null as rang_course_swim, null as indice_performance_swim,

@@ -1,6 +1,6 @@
 CREATE TABLE raw_data (
     id SERIAL PRIMARY KEY,
-    clt TEXT, clt_f TEXT, temps TEXT, nom TEXT, club TEXT, cat TEXT, clt_cat TEXT, 
+    clt INTEGER, clt_f TEXT, temps TEXT, nom TEXT, club TEXT, cat TEXT, clt_cat TEXT, 
     id_league TEXT, league TEXT, "détails" TEXT, rang_global TEXT, rang_sexe TEXT, 
     rang_categorie TEXT, categorie TEXT, indice_performance TEXT, 
     indice_performance_reference TEXT, total_time TEXT, swim_time TEXT, 
@@ -46,7 +46,7 @@ CREATE TABLE athletes (
 
 CREATE TABLE results (
     id SERIAL PRIMARY KEY,
-    clt TEXT,
+    clt INTEGER,
     clt_f TEXT,
     epreuve_id INT NOT NULL REFERENCES races(id),
     name_epreuve TEXT,
