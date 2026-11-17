@@ -51,6 +51,7 @@ class Result(Base):
     year_epreuve = Column(String(50))
     date_epreuve = Column(String(50))
     athlete_id = Column(Integer, ForeignKey("athletes.id"))
+    nom_athlete = Column(String(50))
     cat = Column(String(50))
     clt_cat = Column(String(50))
     id_league = Column(String(50))
@@ -127,6 +128,7 @@ def list_races(
     year_epreuve: Optional[str] = Query(None),
     type_epreuve: Optional[str] = Query(None),
     format_epreuve: Optional[str] = Query(None),
+    name_epreuve: Optional[str] = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -135,11 +137,12 @@ def list_races(
     if year_epreuve:
         query = query.filter(Race.date_epreuve.between(f"{year_epreuve}-01-01", f"{year_epreuve}-12-31"))
     if type_epreuve:
-        query = query.filter(Race.type_epreuve == type_epreuve.upper())
+        query = query.filter(Race.type_epreuve == type_epreuve.lower())
     if format_epreuve:
         query = query.filter(Race.format_epreuve == format_epreuve.upper())
-    #return query.order_by(Race.date_epreuve.desc()).limit(100).all()
-    
+    if name_epreuve:
+        query = query.filter(Race.name_epreuve.ilike(f"%{name_epreuve}%"))
+
     total = query.count()
     items = query.order_by(Race.date_epreuve.desc()).offset(offset).limit(limit).all()
     has_next = (offset + limit) < total
@@ -154,7 +157,6 @@ def list_races(
         }
     }
 
-
 @app.get("/races/{race_id}")
 def get_race(race_id: int, db: Session = Depends(get_db)):
     race = db.query(Race).filter(Race.id == race_id).first()
@@ -162,23 +164,17 @@ def get_race(race_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Race not found")
     return race
 
-
-# @app.get("/races/{race_id}/results")
-# def get_race_results(race_id: int, db: Session = Depends(get_db)):
-#     results = (
-#         db.query(Result)
-#         .filter(Result.epreuve_id == race_id)
-#         .order_by(Result.year_epreuve.desc())
-#         .all()
-#     )
-#     return results
+@app.get("/races/{race_id}/results")
 def get_race_results(
     race_id: int,
+    s: Optional[str] = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
 ):
     query = db.query(Result).filter(Result.epreuve_id == race_id)
+    if s:
+        query = query.filter(Result.sexe == s.upper())
     total = query.count()
     items = query.order_by(Result.year_epreuve.desc()).offset(offset).limit(limit).all()
     has_next = (offset + limit) < total
@@ -193,23 +189,10 @@ def get_race_results(
         }
     }
 
-
-# @app.get("/athletes")
-# def search_athletes(
-#     q: Optional[str] = Query(None, min_length=2),
-#     db: Session = Depends(get_db),
-# ):
-#     return (
-#         db.query(Athlete)
-#         .filter(
-#             Athlete.nom.ilike(f"%{q}%")
-#         )
-#         .limit(50)
-#         .all()
-#     )
 @app.get("/athletes")
 def search_athletes(
     q: Optional[str] = Query(None, min_length=2),
+    s: Optional[str] = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -217,6 +200,8 @@ def search_athletes(
     query = db.query(Athlete)
     if q:
         query = query.filter(Athlete.nom.ilike(f"%{q}%"))
+    if s:
+        query = query.filter(Athlete.sexe == s.upper())
     
     total = query.count()
     items = query.offset(offset).limit(limit).all()
@@ -232,7 +217,6 @@ def search_athletes(
         }
     }
 
-
 @app.get("/athletes/{athlete_id}")
 def get_athlete(athlete_id: int, db: Session = Depends(get_db)):
     athlete = db.query(Athlete)\
@@ -242,23 +226,23 @@ def get_athlete(athlete_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Athlete not found")
     return athlete
 
-
-# @app.get("/athletes/{athlete_id}/results")
-# def get_athlete_results(athlete_id: int, db: Session = Depends(get_db)):
-#     return (
-#         db.query(Result)
-#         .filter(Result.athlete_id == athlete_id)
-#         .order_by(Result.id.desc(), Result.year_epreuve)
-#         .all()
-#     )
 @app.get("/athletes/{athlete_id}/results")
 def get_athlete_results(
     athlete_id: int,
+    year_epreuve: Optional[str] = Query(None),
+    type_epreuve: Optional[str] = Query(None),
+    format_epreuve: Optional[str] = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
 ):
     query = db.query(Result).filter(Result.athlete_id == athlete_id)
+    if year_epreuve:
+        query = query.filter(Result.year_epreuve == year_epreuve)
+    if type_epreuve:
+        query = query.filter(Result.type_epreuve == type_epreuve.lower())
+    if format_epreuve:
+        query = query.filter(Result.format_epreuve == format_epreuve.upper())
     total = query.count()
     items = query.order_by(Result.id.desc(), Result.year_epreuve).offset(offset).limit(limit).all()
     has_next = (offset + limit) < total
@@ -273,27 +257,31 @@ def get_athlete_results(
         }
     }
 
-# @app.get("/athletes/{athlete_id}/races", response_model=list[str])
-# def get_athlete_races(athlete_id: int, db: Session = Depends(get_db)):
-#     stmt = (
-#         select(Result.name_epreuve)
-#         .where(Result.athlete_id == athlete_id)
-#         .order_by(Result.id.desc(), Result.year_epreuve)
-#     )
-#     return db.scalars(stmt).all()
 @app.get("/athletes/{athlete_id}/races")
 def get_athlete_races(
     athlete_id: int,
+    year_epreuve: Optional[str] = Query(None),
+    type_epreuve: Optional[str] = Query(None),
+    format_epreuve: Optional[str] = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
 ):
-    count_stmt = select(func.count()).select_from(Result).where(Result.athlete_id == athlete_id)
+    filters = [Result.athlete_id == athlete_id]
+    
+    if year_epreuve:
+        filters.append(Result.year_epreuve == year_epreuve)
+    if type_epreuve:
+        filters.append(Result.type_epreuve == type_epreuve.lower())
+    if format_epreuve:
+        filters.append(Result.format_epreuve == format_epreuve.upper())
+
+    count_stmt = select(func.count()).select_from(Result).where(*filters)
     total = db.scalar(count_stmt) or 0
 
     stmt = (
         select(Result.name_epreuve)
-        .where(Result.athlete_id == athlete_id)
+        .where(*filters)
         .order_by(Result.id.desc(), Result.year_epreuve)
         .offset(offset)
         .limit(limit)

@@ -58,13 +58,16 @@
     }
     ```
 
+10. Filtres sur l'API
+    - [x] Athletes : nom (q) et sexe (s)
+    - [x] Race : name_epreuve, type_epreuve, format_epreuve, year_epreuve
+
 
 # Next :
 - source : regarder si les informations de genre sont bonnes.
 - API : on veut pouvoir sélectionner une main épreuve et obtenir la liste des ses formats disponibles. Ex : Triathlon de xxx : format M ou L.
 - Global : Comparer les performances : on veut pouvoir comparer deux résultats de course. À détailler et à faire.
-- API : pagination : pour ne pas afficher directement tous les résultats.
-- API : filtres : définir les filtres nécessaire par endpoint. Et les faire.
+
 - API : tri : classement, temps, date.
 - Front : 
     - page 1 : profil d'un athlète
