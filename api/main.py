@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, func
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, func, asc, desc
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session
 import os
 from sqlalchemy import select
@@ -167,6 +167,8 @@ def get_race(race_id: int, db: Session = Depends(get_db)):
 def get_race_results(
     race_id: int,
     s: str | None = Query(None),
+    sort_by: str | None = Query(None, description="Colonne à trier (ex: clt)"),
+    order: str = Query("asc", regex="^(asc|desc)$", description="Ordre de tri : asc ou desc"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
@@ -175,7 +177,21 @@ def get_race_results(
     if s:
         query = query.filter(Result.sexe == s.upper())
     total = query.count()
-    items = query.order_by(Result.year_epreuve.desc()).offset(offset).limit(limit).all()
+
+    # Logique de tri dynamique
+    if sort_by == "clt":
+        # Étant donné que `clt` est stocké en String (peut contenir des chiffres ou des mentions textuelles comme DNF),
+        # on applique le tri en fonction de l'ordre demandé.
+        sort_column = Result.clt
+        if order.lower() == "desc":
+            query = query.order_by(sort_column.desc())
+        else:
+            query = query.order_by(sort_column.asc())
+    else:
+        # Tri par défaut si aucun sort_by valide n'est spécifié
+        query = query.order_by(Result.year_epreuve.desc())
+
+    items = query.offset(offset).limit(limit).all()
     has_next = (offset + limit) < total
 
     return {
@@ -231,6 +247,8 @@ def get_athlete_results(
     year_epreuve: str | None = Query(None),
     type_epreuve: str | None = Query(None),
     format_epreuve: str | None = Query(None),
+    sort_by: str | None = Query(None, description="Colonne à trier (ex: date_epreuve)"),
+    order: str = Query("asc", regex="^(asc|desc)$", description="Ordre de tri : asc ou desc"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
@@ -243,7 +261,17 @@ def get_athlete_results(
     if format_epreuve:
         query = query.filter(Result.format_epreuve == format_epreuve.upper())
     total = query.count()
-    items = query.order_by(Result.id.desc(), Result.year_epreuve).offset(offset).limit(limit).all()
+
+    if sort_by == "date":
+        sort_column = Result.date_epreuve
+        if order.lower() == "desc":
+            query = query.order_by(sort_column.desc())
+        else:
+            query = query.order_by(sort_column.asc())
+    else:
+        query = query.order_by(Result.id.desc(), Result.year_epreuve)
+
+    items = query.offset(offset).limit(limit).all()
     has_next = (offset + limit) < total
 
     return {
@@ -262,6 +290,8 @@ def get_athlete_races(
     year_epreuve: str | None = Query(None),
     type_epreuve: str | None = Query(None),
     format_epreuve: str | None = Query(None),
+    sort_by: str | None = Query(None, description="Colonne à trier (ex: date_epreuve)"),
+    order: str = Query("desc", regex="^(asc|desc)$", description="Ordre de tri : asc ou desc"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
@@ -278,10 +308,19 @@ def get_athlete_races(
     count_stmt = select(func.count()).select_from(Result).where(*filters)
     total = db.scalar(count_stmt) or 0
 
+    order_func = desc if order.lower() == "desc" else asc
+
+    # Application du tri selon sort_by
+    if sort_by == "date_epreuve":
+        order_criteria = order_func(Result.date_epreuve)
+    else:
+        # Tri par défaut si aucun sort_by reconnu n'est spécifié
+        order_criteria = order_func(Result.id)
+
     stmt = (
         select(Result.name_epreuve)
         .where(*filters)
-        .order_by(Result.id.desc(), Result.year_epreuve)
+        .order_by(order_criteria, order_func(Result.year_epreuve))
         .offset(offset)
         .limit(limit)
     )

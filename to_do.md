@@ -59,8 +59,9 @@
     ```
 
 10. Filtres sur l'API
-    - [x] Athletes : nom (q) et sexe (s)
-    - [x] Race : name_epreuve, type_epreuve, format_epreuve, year_epreuve
+    - [x] Athletes : nom (q) et sexe (s).
+    - [x] Race : name_epreuve, type_epreuve, format_epreuve, year_epreuve.
+    - [x] tri : classement, date. Fonctions de tri : `sort by` et `order`.
 
 
 # Next :
@@ -68,7 +69,6 @@
 - API : on veut pouvoir sélectionner une main épreuve et obtenir la liste des ses formats disponibles. Ex : Triathlon de xxx : format M ou L.
 - Global : Comparer les performances : on veut pouvoir comparer deux résultats de course. À détailler et à faire.
 
-- API : tri : classement, temps, date.
 - Front : 
     - page 1 : profil d'un athlète
     - page 2 : fiche d'une course
@@ -76,18 +76,3 @@
     - page 4 : recherche
 
 Pour le front, chatGPT recommande Next.js + TypeScript.
-
-Fonction de tri : `sort by` et `order` .
-Reco : 
-- Utilise une liste blanche de colonnes autorisées pour éviter toute injection SQL.
-- Ajoute systématiquement un deuxième critère de tri stable, par exemple id, pour éviter que des résultats changent de page lorsque plusieurs lignes ont la même valeur.
-
-Tester l'API avant de passer au frontend
-- [ ] Pagination sur un athlète ayant beaucoup de résultats.
-- [ ] Pagination sur une course avec plusieurs milliers de participants.
-- [ ] Combinaison de plusieurs filtres.
-- [ ] Tri ascendant et descendant.
-- [ ] Combinaison filtres + tri + pagination.
-- [ ] Valeurs invalides (limit=-1, order=foobar, etc.).
-- [ ] Aucun résultat correspondant.
-- [ ] Pagination au-delà de la dernière page.
