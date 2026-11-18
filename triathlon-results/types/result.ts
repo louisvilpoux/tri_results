@@ -40,3 +40,32 @@ export interface RaceResultsResponse {
   items: RaceResult[];
   pagination: Pagination;
 }
+
+// Colonnes triables acceptées par GET /races/{id}/results (paramètre sort_by).
+export const RACE_RESULT_SORT_COLUMNS = [
+  "clt",
+  "nom_athlete",
+  "swim_time",
+  "t1_time",
+  "bike_time",
+  "t2_time",
+  "run_time",
+  "total_time",
+] as const;
+
+export type RaceResultSortBy = (typeof RACE_RESULT_SORT_COLUMNS)[number];
+
+export type SortOrder = "asc" | "desc";
+
+export type Sexe = "M" | "F";
+
+// Paramètres du classement, lus depuis l'URL de la page et transmis à l'API.
+export interface RaceResultsQuery {
+  limit: number;
+  offset: number;
+  sortBy: RaceResultSortBy;
+  order: SortOrder;
+  sexe: Sexe | null;
+  categorie: string | null;
+  q: string | null;
+}

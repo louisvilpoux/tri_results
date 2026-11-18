@@ -171,6 +171,17 @@ L'objectif est de donner l'impression d'une véritable plateforme de résultats 
 
 Réalisés
 - page d'accueil
+- page de résultats d'une course : `/races/[id]/results` (et non `/formats/[id]/results` comme prévu plus haut).
+    - En-tête alimenté par `GET /races/{id}` (nom, date, format, lieu) ; 404 si l'épreuve n'existe pas.
+    - Tri en cliquant sur les en-têtes : classement, athlète, natation, T1, vélo, T2, course, total.
+    - Filtres (formulaire GET `next/form`) : nom de l'athlète, sexe, catégorie, nombre de lignes par page (20, 50, 100).
+    - Tout l'état est dans l'URL : `?sexe=F&categorie=MS3&q=dupont&sort_by=total_time&order=desc&limit=50&offset=50`.
+    - Code : `lib/results-query.ts` (lecture et construction de l'URL), `lib/api.ts` (appels API),
+      `components/results/` (tableau, en-tête triable, filtres, pagination), `loading.tsx` (squelette).
 
-En cours : 
-- page de résultat d'une course : il faut rendre le classement intéractif à présent.
+En cours :
+- rien. Prochaine étape prévue : page profil athlète.
+
+Points connus :
+- La colonne `sexe` des résultats prolivesport contient des lettres de catégorie (S, J, P…) : le filtre sexe n'est fiable que pour fftri_t2_area.
+- Les liens du header (`/races`, `/athletes`, `/results`, `/search`) et `/athletes/[id]` mènent encore à des pages inexistantes.

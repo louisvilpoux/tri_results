@@ -1,5 +1,8 @@
+from typing import Any, Literal
+
 from fastapi import FastAPI, Depends, HTTPException, Query
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, func, asc, desc
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, func, asc, desc, case
+from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session
 import os
 from sqlalchemy import select
@@ -163,33 +166,57 @@ def get_race(race_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Race not found")
     return race
 
-@app.get("/races/{race_id}/results")
+RaceResultSortBy = Literal[
+    "clt",
+    "nom_athlete",
+    "swim_time",
+    "t1_time",
+    "bike_time",
+    "t2_time",
+    "run_time",
+    "total_time",
+]
+
+# Les temps sont stockés en texte "HH:MM:SS", mais certaines sources contiennent
+# aussi "—" ou des valeurs négatives : on ne trie que les temps au bon format.
+VALID_TIME_PATTERN = r"^[0-9]{2}:[0-9]{2}:[0-9]{2}$"
+
+
+def get_result_sort_expression(sort_by: RaceResultSortBy) -> ColumnElement:
+    """Retourne l'expression SQL de tri ; les valeurs invalides deviennent NULL."""
+    column = getattr(Result, sort_by)
+    if sort_by.endswith("_time"):
+        return case((column.op("~")(VALID_TIME_PATTERN), column))
+    return column
+
+
+# response_model=None : les items sont des objets ORM sérialisés tels quels par FastAPI.
+@app.get("/races/{race_id}/results", response_model=None)
 def get_race_results(
     race_id: int,
-    s: str | None = Query(None),
-    sort_by: str | None = Query(None, description="Colonne à trier (ex: clt)"),
-    order: str = Query("asc", regex="^(asc|desc)$", description="Ordre de tri : asc ou desc"),
+    s: str | None = Query(None, description="Sexe : M ou F"),
+    categorie: str | None = Query(None, description="Catégorie exacte (ex: MS3)"),
+    q: str | None = Query(None, min_length=2, description="Recherche dans le nom de l'athlète"),
+    sort_by: RaceResultSortBy = Query("clt", description="Colonne à trier"),
+    order: str = Query("asc", pattern="^(asc|desc)$", description="Ordre de tri : asc ou desc"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
-):
+) -> dict[str, Any]:
     query = db.query(Result).filter(Result.epreuve_id == race_id)
     if s:
         query = query.filter(Result.sexe == s.upper())
+    if categorie:
+        query = query.filter(Result.categorie == categorie)
+    if q:
+        query = query.filter(Result.nom_athlete.ilike(f"%{q}%"))
     total = query.count()
 
-    # Logique de tri dynamique
-    if sort_by == "clt":
-        # Étant donné que `clt` est stocké en String (peut contenir des chiffres ou des mentions textuelles comme DNF),
-        # on applique le tri en fonction de l'ordre demandé.
-        sort_column = Result.clt
-        if order.lower() == "desc":
-            query = query.order_by(sort_column.desc())
-        else:
-            query = query.order_by(sort_column.asc())
-    else:
-        # Tri par défaut si aucun sort_by valide n'est spécifié
-        query = query.order_by(Result.year_epreuve.desc())
+    # Les valeurs vides (DNF, temps manquants) restent en fin de liste quel que soit
+    # l'ordre ; l'id garantit une pagination stable en cas d'égalité.
+    sort_expression = get_result_sort_expression(sort_by)
+    direction = desc if order == "desc" else asc
+    query = query.order_by(direction(sort_expression).nulls_last(), Result.id.asc())
 
     items = query.offset(offset).limit(limit).all()
     has_next = (offset + limit) < total
@@ -203,6 +230,18 @@ def get_race_results(
             "has_next": has_next
         }
     }
+
+@app.get("/races/{race_id}/categories")
+def get_race_categories(race_id: int, db: Session = Depends(get_db)) -> list[str]:
+    """Liste triée des catégories présentes dans les résultats d'une épreuve."""
+    rows = (
+        db.query(Result.categorie)
+        .filter(Result.epreuve_id == race_id, Result.categorie.isnot(None))
+        .distinct()
+        .order_by(Result.categorie)
+        .all()
+    )
+    return [row.categorie for row in rows]
 
 @app.get("/athletes")
 def search_athletes(

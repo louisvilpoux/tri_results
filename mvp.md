@@ -4,7 +4,12 @@
 - API REST en Python (FastAPI)
 - endpoints : 
     - /races : voir toutes les courses.
+    - /races/{id} : voir les informations d'une course donnée.
     - /races/{id}/results : voir les résultats d'une course donnée.
+        - tri `sort_by` : `clt` (défaut), `nom_athlete`, `swim_time`, `t1_time`, `bike_time`, `t2_time`, `run_time`, `total_time` ; toute autre valeur renvoie 422.
+        - les valeurs vides et les temps invalides (`—`, négatifs) sont toujours placés en fin de liste.
+        - filtres : `s` (sexe), `categorie` (valeur exacte), `q` (nom de l'athlète, 2 caractères min.).
+    - /races/{id}/categories : liste triée des catégories présentes dans les résultats d'une course.
     - /athletes : voir tous les athlètes.
     - /athletes/{id} : voir les informations d'un athlète donné.
     - /athletes/{id}/results : voir les résultats d'un athlète donné.

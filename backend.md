@@ -13,6 +13,14 @@ cd api
 uvicorn main:app --reload
 ```
 
+# Tests de l'API
+Les tests (pytest + `httpx` pour le `TestClient` FastAPI) s'exécutent contre la base PostgreSQL locale
+et sont ignorés si elle est indisponible.
+```
+cd api
+pytest
+```
+
 # Récupération de la donnée source
 Dossier : `sources`
 Pour chaque source, un ou plusieurs fichiers Python est utilisé. La donnée scrappée est chargée dans un dossier ayant le nom de la source.
