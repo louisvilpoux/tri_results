@@ -1,4 +1,5 @@
-// Types alignés sur GET /search (api/main.py).
+// Types alignés sur GET /search, GET /events et GET /athletes (api/main.py).
+import type { Pagination } from "@/types/result";
 
 export type SearchType = "all" | "athletes" | "races";
 
@@ -24,6 +25,19 @@ export interface RaceHit {
 export interface SearchGroup<T> {
   items: T[];
   total: number;
+}
+
+/** GET /events : liste des courses, avec les valeurs disponibles pour les filtres. */
+export interface EventListResponse {
+  items: RaceHit[];
+  pagination: Pagination;
+  filters: { years: string[]; types: string[] };
+}
+
+/** GET /athletes : liste des athlètes (un par unified_id). */
+export interface AthleteListResponse {
+  items: AthleteHit[];
+  pagination: Pagination;
 }
 
 export interface SearchResponse {

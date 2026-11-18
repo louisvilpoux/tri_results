@@ -4,7 +4,12 @@ import type {
   AthleteResultsResponse,
 } from "@/types/athlete";
 import type { Race, RaceEvent } from "@/types/race";
-import type { SearchResponse, SearchType } from "@/types/search";
+import type {
+  AthleteListResponse,
+  EventListResponse,
+  SearchResponse,
+  SearchType,
+} from "@/types/search";
 import type { RaceResultsQuery, RaceResultsResponse } from "@/types/result";
 
 const API_BASE_URL = process.env.API_BASE_URL;
@@ -42,6 +47,38 @@ async function apiGet<T>(path: string, params?: URLSearchParams): Promise<T> {
 
 export function getRace(raceId: string): Promise<Race> {
   return apiGet<Race>(`/races/${raceId}`);
+}
+
+/** Liste des courses (nom + année), les plus récentes d'abord (GET /events). */
+export function listEvents(filters: {
+  year: string | null;
+  discipline: string | null;
+  limit: number;
+  offset: number;
+}): Promise<EventListResponse> {
+  const params = new URLSearchParams({
+    limit: String(filters.limit),
+    offset: String(filters.offset),
+  });
+  if (filters.year) params.set("year", filters.year);
+  if (filters.discipline) params.set("type_epreuve", filters.discipline);
+  return apiGet<EventListResponse>("/events", params);
+}
+
+/** Liste des athlètes, les plus actifs d'abord (GET /athletes). */
+export function listAthletes(filters: {
+  q: string | null;
+  sexe: "M" | "F" | null;
+  limit: number;
+  offset: number;
+}): Promise<AthleteListResponse> {
+  const params = new URLSearchParams({
+    limit: String(filters.limit),
+    offset: String(filters.offset),
+  });
+  if (filters.q) params.set("q", filters.q);
+  if (filters.sexe) params.set("s", filters.sexe);
+  return apiGet<AthleteListResponse>("/athletes", params);
 }
 
 /** Recherche globale d'athlètes et de courses (GET /search). */

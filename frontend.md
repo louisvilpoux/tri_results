@@ -203,8 +203,16 @@ Réalisés
     - Athlètes : nom, club, nombre de courses (dédoublonné comme sur le profil), dernière saison ; les plus actifs d'abord.
     - Courses : regroupées par nom + année comme la page course, avec période, lieu et disciplines ; les plus récentes d'abord.
     - Code : `app/search/`, `components/search/`, `types/search.ts`, `searchSite` dans `lib/api.ts`.
-- composants partagés : `components/shared/sortable-header.tsx` et `components/shared/pagination-bar.tsx` ;
-  fonctions d'affichage communes dans `lib/format.ts` (dates, période, classement, ordinal).
+- liste des courses : `/races` (lien « Courses » du header), alimentée par `GET /events`.
+    - Courses (nom + année) les plus récentes d'abord, filtres saison et discipline, 20 par page.
+    - URL : `/races?annee=2022&discipline=duathlon&offset=20`.
+- liste des athlètes : `/athletes` (lien « Athlètes » du header), alimentée par `GET /athletes`.
+    - Athlètes les plus actifs d'abord, filtres nom (mêmes règles que la recherche) et sexe, 20 par page.
+    - URL : `/athletes?q=leroy&sexe=F&offset=20`.
+- header : le lien « Résultats » (`/results`) a été supprimé (doublon de « Courses » : un classement s'ouvre depuis sa course).
+- composants partagés : `components/shared/sortable-header.tsx`, `pagination-bar.tsx`, `filter-form.tsx`
+  (barre de filtres GET) et `list-loading.tsx` (squelette des listes) ; fonctions d'affichage communes dans
+  `lib/format.ts` (dates, période, classement, ordinal).
 
 En cours :
 - rien. Prochaine étape prévue : responsive mobile et optimisation SEO.
@@ -221,7 +229,12 @@ Points connus (données) :
 - Les noms prolivesport contiennent l'année (« Triathlon Bray-Dunes 2022 ») : leurs autres éditions ne sont pas retrouvées.
 - Une même course peut venir de deux sources sous deux noms différents (ex. « Triathlon De Ardres » et
   « DUATHLON TRIATHLON DU LAC D'ARDRES 2026 ») : elle apparaît deux fois dans l'historique.
-- Les liens du header `/races`, `/athletes` et `/results` mènent encore à des pages inexistantes.
+- Des lieux d'épreuve contiennent "nan" (valeurs vides converties en texte au scraping, ex. « nan Cabourg nan nan ») :
+  l'API les retire (`clean_lieu`).
+- L'ordre « les plus actifs d'abord » de `/athletes` utilise `athletes.nb_races`, qui compte les doublons prolivesport :
+  les athlètes prolivesport y sont surclassés (le nombre affiché, lui, est dédoublonné).
+- Le serveur de dev Turbopack ne voit parfois pas une nouvelle fonction exportée par `lib/api.ts` (« … is not a function »
+  alors que `tsc` et `next build` passent) : redémarrer `npm run dev` règle le problème.
 - Les identifiants d'athlètes (`unified_id`) changent à chaque relance du pipeline `transform/` : les liens vers
   `/athletes/[id]` ne sont pas stables dans le temps (ceux des courses le sont).
 - La recherche d'athlètes parcourt les 1,4 M lignes de `athletes` sans index (~200 ms) : un index trigramme

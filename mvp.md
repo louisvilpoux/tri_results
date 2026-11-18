@@ -3,8 +3,10 @@
 
 - API REST en Python (FastAPI)
 - endpoints : 
-    - /races : voir toutes les courses.
-    - /races/{id} : voir les informations d'une épreuve (un format) donnée.
+    - /races : voir toutes les épreuves (une ligne par format, filtres year/type/format/name).
+    - /events : liste des courses (nom + année, comme /races/{id}/event), les plus récentes d'abord ;
+      filtres `year` et `type_epreuve`, pagination ; renvoie aussi `filters.years` et `filters.types` disponibles.
+    - /races/{id} : voir les informations d'une épreuve (un format) donnée ; `lieu_epreuve` nettoyé des "nan".
     - /races/{id}/event : la course à laquelle appartient l'épreuve (même nom + même année) : période, lieu,
       participants distincts, formats (participants, vainqueur, première femme) et autres éditions (une épreuve par année).
       Les épreuves sans résultat sont ignorées ; pour prolivesport, seule la copie OPEN est gardée.
@@ -14,7 +16,8 @@
           `00:00:00`) sont toujours placés en fin de liste.
         - filtres : `s` (sexe), `categorie` (valeur exacte), `q` (nom de l'athlète, 2 caractères min.).
     - /races/{id}/categories : liste triée des catégories présentes dans les résultats d'une course.
-    - /athletes : voir tous les athlètes.
+    - /athletes : liste des athlètes, un par `unified_id` (sans ceux qui n'ont aucun résultat), les plus actifs
+      d'abord ; filtres `q` (nom, mêmes règles que /search) et `s` (sexe), pagination `limit` / `offset`.
     - /athletes/{id} : profil consolidé d'un athlète (id = `unified_id`) : nom, club, sexe, nb_races,
       nb_podiums, nb_top10, best_rank, seasons, disciplines, best_times. Calculé sur les résultats dédoublonnés.
     - /athletes/{id}/results : historique dédoublonné d'un athlète, avec `participants` (taille du classement).

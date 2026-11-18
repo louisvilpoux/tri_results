@@ -175,12 +175,22 @@ def list_races(
         }
     }
 
+def clean_lieu(lieu: str | None) -> str | None:
+    """Retire les "nan" (valeurs vides converties en texte au scraping) d'un lieu d'épreuve,
+    ex. "nan Cabourg nan nan" → "Cabourg", "nan nan nan nan" → None."""
+    if not lieu:
+        return None
+    return " ".join(part for part in lieu.split() if part.lower() != "nan") or None
+
+
 @app.get("/races/{race_id}")
-def get_race(race_id: int, db: Session = Depends(get_db)):
+def get_race(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
     race = db.query(Race).filter(Race.id == race_id).first()
     if not race:
         raise HTTPException(status_code=404, detail="Race not found")
-    return race
+    return {
+        column.name: getattr(race, column.name) for column in Race.__table__.columns
+    } | {"lieu_epreuve": clean_lieu(race.lieu_epreuve)}
 
 RaceResultSortBy = Literal[
     "clt",
@@ -399,7 +409,9 @@ def get_race_event(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any
         "id": race.id,
         "name_epreuve": race.name_epreuve,
         "year_epreuve": race.year_epreuve,
-        "lieu_epreuve": next((f.lieu_epreuve for f in siblings if f.lieu_epreuve), None),
+        "lieu_epreuve": next(
+            (clean_lieu(f.lieu_epreuve) for f in siblings if clean_lieu(f.lieu_epreuve)), None
+        ),
         "date_start": dates[0] if dates else race.date_epreuve,
         "date_end": dates[-1] if dates else race.date_epreuve,
         "participants": participants_total,
@@ -428,32 +440,18 @@ def get_race_event(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any
 
 
 @app.get("/athletes")
-def search_athletes(
-    q: str | None = Query(None, min_length=2),
-    s: str | None = Query(None),
+def list_athletes(
+    q: str | None = Query(None, min_length=2, max_length=100, description="Filtre sur le nom"),
+    s: str | None = Query(None, description="Sexe : M ou F"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
-):
-    query = db.query(Athlete)
-    if q:
-        query = query.filter(Athlete.nom.ilike(f"%{q}%"))
-    if s:
-        query = query.filter(Athlete.sexe == s.upper())
-    
-    total = query.count()
-    items = query.offset(offset).limit(limit).all()
-    has_next = (offset + limit) < total
-
-    return {
-        "items": items,
-        "pagination": {
-            "total": total,
-            "limit": limit,
-            "offset": offset,
-            "has_next": has_next
-        }
-    }
+) -> dict[str, Any]:
+    """Athlètes (un par unified_id), les plus actifs d'abord, filtrables par nom (mêmes règles
+    que /search) et par sexe. Les fonctions utilisées sont définies plus bas (Recherche)."""
+    words = search_words(q) if q else []
+    page = search_athletes_page(db, words, limit, offset, sexe=s.upper() if s else None)
+    return {"items": page["items"], "pagination": pagination(page["total"], limit, offset)}
 
 # ----------------------
 # Athlètes
@@ -695,21 +693,29 @@ def contains_word(column: ColumnElement, word: str) -> ColumnElement:
 
 
 def search_athletes_page(
-    db: Session, words: list[str], limit: int, offset: int
+    db: Session, words: list[str], limit: int, offset: int, sexe: str | None = None
 ) -> dict[str, Any]:
-    """Athlètes dont le nom contient tous les mots, les plus actifs d'abord."""
-    matching = (
-        select(
-            Athlete.unified_id,
-            func.max(Athlete.nb_races).label("nb_races"),
+    """Athlètes (un par unified_id) dont le nom contient tous les mots — tous les athlètes si
+    `words` est vide —, les plus actifs d'abord. Utilisé par /search et /athletes."""
+    # nb_races n'est renseigné que pour les athlètes ayant des résultats
+    # (transform/nb_races.sql) : on écarte les autres (souvent des équipes de relais).
+    sexe_filter = [Athlete.sexe == sexe] if sexe else []
+    if words:
+        # Un même athlète a plusieurs lignes (variantes du nom) : on cherche dans toutes.
+        matching = (
+            select(Athlete.unified_id, func.max(Athlete.nb_races).label("nb_races"))
+            .where(*sexe_filter, *(contains_word(Athlete.athlete_key, word) for word in words))
+            .group_by(Athlete.unified_id)
+            .having(func.max(Athlete.nb_races).isnot(None))
+            .subquery()
         )
-        .where(*(contains_word(Athlete.athlete_key, word) for word in words))
-        .group_by(Athlete.unified_id)
-        # nb_races n'est renseigné que pour les athlètes ayant des résultats
-        # (transform/nb_races.sql) : on écarte les autres (souvent des équipes de relais).
-        .having(func.max(Athlete.nb_races).isnot(None))
-        .subquery()
-    )
+    else:
+        # Sans recherche, la ligne de référence (id = unified_id) suffit : beaucoup plus rapide.
+        matching = (
+            select(Athlete.unified_id, Athlete.nb_races)
+            .where(Athlete.id == Athlete.unified_id, Athlete.nb_races.isnot(None), *sexe_filter)
+            .subquery()
+        )
     total = db.scalar(select(func.count()).select_from(matching)) or 0
     ids = db.scalars(
         select(matching.c.unified_id)
@@ -759,11 +765,24 @@ def search_athletes_page(
     return {"items": items, "total": total}
 
 
-def search_races_page(db: Session, words: list[str], limit: int, offset: int) -> dict[str, Any]:
-    """Courses (nom + année, comme /races/{id}/event) dont le nom contient tous les mots,
-    les plus récentes d'abord. Les épreuves sans résultat sont ignorées."""
+def search_races_page(
+    db: Session,
+    words: list[str],
+    limit: int,
+    offset: int,
+    year: str | None = None,
+    type_epreuve: str | None = None,
+) -> dict[str, Any]:
+    """Courses (nom + année, comme /races/{id}/event) dont le nom contient tous les mots —
+    toutes si `words` est vide —, les plus récentes d'abord. Les épreuves sans résultat sont
+    ignorées. Utilisé par /search et /events."""
     has_results = select(Result.id).where(Result.epreuve_id == Race.id).exists()
     normalized_name = func.unaccent(func.lower(Race.name_epreuve))
+    filters = [has_results, *(contains_word(normalized_name, word) for word in words)]
+    if year:
+        filters.append(Race.year_epreuve == year)
+    if type_epreuve:
+        filters.append(Race.type_epreuve == type_epreuve)
     events = (
         select(
             Race.name_epreuve,
@@ -778,7 +797,7 @@ def search_races_page(db: Session, words: list[str], limit: int, offset: int) ->
                 func.min(Race.id),
             ).label("race_id"),
         )
-        .where(has_results, *(contains_word(normalized_name, word) for word in words))
+        .where(*filters)
         .group_by(Race.name_epreuve, Race.year_epreuve)
         .subquery()
     )
@@ -797,7 +816,7 @@ def search_races_page(db: Session, words: list[str], limit: int, offset: int) ->
             "year_epreuve": row.year_epreuve,
             "date_start": row.date_start,
             "date_end": row.date_end,
-            "lieu_epreuve": row.lieu_epreuve,
+            "lieu_epreuve": clean_lieu(row.lieu_epreuve),
             "types": sorted(t for t in row.types if t),
         }
         for row in rows
@@ -825,3 +844,43 @@ def search(
     if type in ("all", "races"):
         response["races"] = search_races_page(db, words, limit, offset)
     return response
+
+
+# ----------------------
+# Listes (pages Courses et Athlètes)
+# ----------------------
+def pagination(total: int, limit: int, offset: int) -> dict[str, Any]:
+    return {"total": total, "limit": limit, "offset": offset, "has_next": (offset + limit) < total}
+
+
+@app.get("/events")
+def list_events(
+    year: str | None = Query(None, pattern=r"^\d{4}$", description="Année (ex: 2024)"),
+    type_epreuve: str | None = Query(None, description="Discipline (ex: triathlon)"),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Liste des courses (nom + année), les plus récentes d'abord, avec les années et
+    disciplines disponibles pour les filtres."""
+    page = search_races_page(db, [], limit, offset, year=year, type_epreuve=type_epreuve)
+
+    has_results = select(Result.id).where(Result.epreuve_id == Race.id).exists()
+    years = db.scalars(
+        select(Race.year_epreuve)
+        .where(has_results, Race.year_epreuve.isnot(None))
+        .distinct()
+        .order_by(Race.year_epreuve.desc())
+    ).all()
+    types = db.scalars(
+        select(Race.type_epreuve)
+        .where(has_results, Race.type_epreuve.isnot(None), Race.type_epreuve != "")
+        .distinct()
+        .order_by(Race.type_epreuve)
+    ).all()
+
+    return {
+        "items": page["items"],
+        "pagination": pagination(page["total"], limit, offset),
+        "filters": {"years": years, "types": types},
+    }

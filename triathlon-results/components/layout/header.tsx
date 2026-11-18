@@ -6,7 +6,6 @@ import { SearchForm } from "@/components/search/search-form";
 const navigation = [
   { label: "Courses", href: "/races" },
   { label: "Athlètes", href: "/athletes" },
-  { label: "Résultats", href: "/results" },
 ];
 
 export function Header() {
