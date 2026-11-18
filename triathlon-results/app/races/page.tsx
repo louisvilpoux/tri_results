@@ -6,7 +6,12 @@ import { PaginationBar } from "@/components/shared/pagination-bar";
 import { listEvents } from "@/lib/api";
 import { capitalize } from "@/lib/format";
 
-export const metadata: Metadata = { title: "Courses" };
+export const metadata: Metadata = {
+  title: "Courses",
+  description:
+    "Toutes les courses de triathlon, duathlon et bike & run : dates, lieux, formats et " +
+    "classements, filtrables par saison et par discipline.",
+};
 
 const PAGE_SIZE = 20;
 

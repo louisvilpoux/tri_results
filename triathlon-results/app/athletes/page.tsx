@@ -5,7 +5,12 @@ import { FILTER_FIELD_CLASS, FilterField, FilterForm } from "@/components/shared
 import { PaginationBar } from "@/components/shared/pagination-bar";
 import { listAthletes } from "@/lib/api";
 
-export const metadata: Metadata = { title: "Athlètes" };
+export const metadata: Metadata = {
+  title: "Athlètes",
+  description:
+    "Les athlètes de triathlon et duathlon : nombre de courses, club et dernière saison, " +
+    "avec recherche par nom.",
+};
 
 const PAGE_SIZE = 20;
 

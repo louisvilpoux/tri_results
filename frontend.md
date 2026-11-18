@@ -214,8 +214,25 @@ Réalisés
   (barre de filtres GET) et `list-loading.tsx` (squelette des listes) ; fonctions d'affichage communes dans
   `lib/format.ts` (dates, période, classement, ordinal).
 
+- responsive mobile (vérifié à 375 px, aucune page ne déborde horizontalement) :
+    - header : liens « Courses » et « Athlètes » visibles sur mobile (ils étaient masqués sous `md`).
+    - classement d'une course : sur mobile, seules les colonnes Clt., Athlète et Total sont affichées ;
+      catégorie, sexe et temps intermédiaires à partir de `md`.
+    - historique d'un athlète : sur mobile, Épreuve (date en dessous), Clt. et Temps ; date, format et
+      catégorie en colonnes à partir de `md`.
+    - cartes de format : un nom de vainqueur long ne fait plus déborder la page course.
+- SEO :
+    - `lib/seo.ts` : adresse du site (`SITE_URL`, `http://localhost:3000` par défaut, à renseigner au
+      déploiement), métadonnées des pages course, classement et athlète (titre, description, Open Graph).
+    - URL canoniques : `/races/[id]` pointe vers l'épreuve de référence de la course (la même que dans les
+      listes), quel que soit le format par lequel on y arrive ; les paramètres de tri et filtre sont exclus.
+    - Descriptions des listes `/races` et `/athletes` ; `/search` en `noindex, follow`.
+    - `app/robots.ts` : tout est explorable sauf `/search`. Pas de sitemap pour l'instant (choix : les id
+      d'athlètes ne sont pas stables).
+    - `app/not-found.tsx` : page 404 en français (`noindex`), avec liens vers les courses et la recherche.
+
 En cours :
-- rien. Prochaine étape prévue : responsive mobile et optimisation SEO.
+- rien.
 
 Points connus (données) :
 - La colonne `sexe` des résultats prolivesport contient des lettres de catégorie (S, J, P…) : le filtre sexe n'est fiable que pour fftri_t2_area.
@@ -237,5 +254,8 @@ Points connus (données) :
   alors que `tsc` et `next build` passent) : redémarrer `npm run dev` règle le problème.
 - Les identifiants d'athlètes (`unified_id`) changent à chaque relance du pipeline `transform/` : les liens vers
   `/athletes/[id]` ne sont pas stables dans le temps (ceux des courses le sont).
+- Une course ou un athlète inexistant renvoie le statut HTTP 200 (et non 404) : avec le rendu en streaming
+  (`cacheComponents`), l'en-tête est déjà envoyé quand l'API répond 404. La page affiche quand même la 404 et
+  porte `noindex`, ce que les moteurs de recherche respectent. Les URL inconnues (`/inconnu`) renvoient bien 404.
 - La recherche d'athlètes parcourt les 1,4 M lignes de `athletes` sans index (~200 ms) : un index trigramme
   (`pg_trgm`) sur `athlete_key` l'accélérerait si le volume augmente.

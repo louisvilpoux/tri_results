@@ -17,7 +17,7 @@ function LeaderLine({ label, leader }: { label: string; leader: PodiumLeader }) 
         </Link>
       </div>
       {leader.total_time && (
-        <span className="font-mono font-bold tabular-nums text-[#17202E]">
+        <span className="shrink-0 font-mono font-bold tabular-nums text-[#17202E]">
           {leader.total_time}
         </span>
       )}
@@ -32,9 +32,9 @@ export function RaceFormatCard({ raceFormat }: { raceFormat: RaceFormat }) {
     : "Toutes distances";
 
   return (
-    <li className="flex flex-col rounded-xl border border-gray-200 bg-white p-5">
+    <li className="flex min-w-0 flex-col rounded-xl border border-gray-200 bg-white p-5">
       <div className="flex items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-wide text-[#FC6B32]">
             {raceFormat.type_epreuve ? capitalize(raceFormat.type_epreuve) : "Épreuve"}
           </p>
@@ -44,7 +44,7 @@ export function RaceFormatCard({ raceFormat }: { raceFormat: RaceFormat }) {
           )}
         </div>
 
-        <span className="flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
+        <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
           <Users size={13} aria-hidden />
           {raceFormat.participants}
         </span>

@@ -40,7 +40,11 @@ function buildSearchUrl(q: string, type: SearchType, offset = 0): string {
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const { q } = parseQuery(await searchParams);
-  return { title: q ? `Recherche « ${q} »` : "Recherche" };
+  return {
+    title: q ? `Recherche « ${q} »` : "Recherche",
+    // Les pages de résultats de recherche n'ont pas vocation à être indexées.
+    robots: { index: false, follow: true },
+  };
 }
 
 function Tab({ href, label, count, active }: { href: string; label: string; count?: number; active: boolean }) {

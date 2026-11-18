@@ -16,6 +16,10 @@ const TIME_COLUMNS: { label: string; value: TimeColumn }[] = [
   { label: "Total", value: "total_time" },
 ];
 
+/** Sur mobile, seuls le rang, l'athlète et le temps total sont affichés. */
+const DESKTOP_ONLY = "hidden md:table-cell";
+const CELL = "px-3 py-4 sm:px-4";
+
 interface ResultsTableProps {
   raceId: string;
   query: RaceResultsQuery;
@@ -23,7 +27,12 @@ interface ResultsTableProps {
 }
 
 export function ResultsTable({ raceId, query, results }: ResultsTableProps) {
-  function sortHeader(column: RaceResultSortBy, label: string, align?: "left" | "right") {
+  function sortHeader(
+    column: RaceResultSortBy,
+    label: string,
+    align?: "left" | "right",
+    className?: string
+  ) {
     const isActive = query.sortBy === column;
     const href = buildRaceResultsUrl(raceId, query, {
       sortBy: column,
@@ -39,31 +48,39 @@ export function ResultsTable({ raceId, query, results }: ResultsTableProps) {
         isActive={isActive}
         order={query.order}
         align={align}
+        className={className}
       />
     );
   }
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[1000px] text-left text-sm">
+      <table className="w-full text-left text-sm md:min-w-[1000px]">
         <thead className="border-b border-gray-200 bg-gray-50 text-xs tracking-wide text-gray-500">
           <tr>
             {sortHeader("clt", "Clt.")}
             {sortHeader("nom_athlete", "Athlète")}
-            <th scope="col" className="px-4 py-4 uppercase">Catégorie</th>
-            <th scope="col" className="px-4 py-4 uppercase">Sexe</th>
-            {TIME_COLUMNS.map((column) => sortHeader(column.value, column.label, "right"))}
+            <th scope="col" className={`${CELL} uppercase ${DESKTOP_ONLY}`}>Catégorie</th>
+            <th scope="col" className={`${CELL} uppercase ${DESKTOP_ONLY}`}>Sexe</th>
+            {TIME_COLUMNS.map((column) =>
+              sortHeader(
+                column.value,
+                column.label,
+                "right",
+                column.value === "total_time" ? undefined : DESKTOP_ONLY
+              )
+            )}
           </tr>
         </thead>
 
         <tbody className="divide-y divide-gray-100">
           {results.map((result) => (
             <tr key={result.id} className="transition-colors hover:bg-orange-50/40">
-              <td className="px-4 py-4 font-bold text-[#FC6B32]">
+              <td className={`${CELL} whitespace-nowrap font-bold text-[#FC6B32]`}>
                 {formatRank(result.clt, result.rang_global)}
               </td>
 
-              <td className="px-4 py-4">
+              <td className={CELL}>
                 <Link
                   href={`/athletes/${result.athlete_id}`}
                   className="font-semibold text-[#17202E] hover:text-[#FC6B32]"
@@ -72,21 +89,21 @@ export function ResultsTable({ raceId, query, results }: ResultsTableProps) {
                 </Link>
               </td>
 
-              <td className="px-4 py-4">
+              <td className={`${CELL} ${DESKTOP_ONLY}`}>
                 <span className="rounded-md bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-600">
                   {result.categorie ?? result.cat ?? "—"}
                 </span>
               </td>
 
-              <td className="px-4 py-4 text-gray-500">{result.sexe ?? "—"}</td>
+              <td className={`${CELL} text-gray-500 ${DESKTOP_ONLY}`}>{result.sexe ?? "—"}</td>
 
               {TIME_COLUMNS.map((column) => (
                 <td
                   key={column.value}
                   className={
                     column.value === "total_time"
-                      ? "px-4 py-4 text-right font-mono font-bold text-[#17202E]"
-                      : "px-4 py-4 text-right font-mono text-gray-600"
+                      ? `${CELL} text-right font-mono font-bold text-[#17202E]`
+                      : `${CELL} text-right font-mono text-gray-600 ${DESKTOP_ONLY}`
                   }
                 >
                   {result[column.value] ?? "—"}

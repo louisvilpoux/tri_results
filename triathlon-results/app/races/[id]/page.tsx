@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -6,9 +7,20 @@ import { RaceEditions } from "@/components/races/race-editions";
 import { RaceEventHeader } from "@/components/races/race-event-header";
 import { RaceFormatCard } from "@/components/races/race-format-card";
 import { ApiError, getRaceEvent } from "@/lib/api";
+import { raceEventMetadata } from "@/lib/seo";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  try {
+    return raceEventMetadata(await getRaceEvent(id));
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) notFound();
+    return {}; // erreur d'API : la page affiche elle-même le message
+  }
 }
 
 export default async function RacePage({ params }: PageProps) {

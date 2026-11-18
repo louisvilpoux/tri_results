@@ -11,17 +11,25 @@ interface SortableHeaderProps {
   isActive: boolean;
   order: SortOrder;
   align?: "left" | "right";
+  className?: string;
 }
 
 /** En-tête de colonne de tableau cliquable, avec l'icône du sens de tri. */
-export function SortableHeader({ label, href, isActive, order, align = "left" }: SortableHeaderProps) {
+export function SortableHeader({
+  label,
+  href,
+  isActive,
+  order,
+  align = "left",
+  className,
+}: SortableHeaderProps) {
   const Icon = !isActive ? ArrowUpDown : order === "asc" ? ArrowUp : ArrowDown;
 
   return (
     <th
       scope="col"
       aria-sort={isActive ? (order === "asc" ? "ascending" : "descending") : "none"}
-      className={cn("px-4 py-4", align === "right" && "text-right")}
+      className={cn("px-3 py-4 sm:px-4", align === "right" && "text-right", className)}
     >
       <Link
         href={href}

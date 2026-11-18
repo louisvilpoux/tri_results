@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -14,10 +15,21 @@ import {
   parseAthleteResultsQuery,
   type AthleteResultsSearchParams,
 } from "@/lib/athlete-results-query";
+import { athleteMetadata } from "@/lib/seo";
 
 interface PageProps {
   params: Promise<{ id: string }>;
   searchParams: Promise<AthleteResultsSearchParams>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  try {
+    return athleteMetadata(await getAthlete(id));
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) notFound();
+    return {}; // erreur d'API : la page affiche elle-même le message
+  }
 }
 
 export default async function AthletePage({ params, searchParams }: PageProps) {
