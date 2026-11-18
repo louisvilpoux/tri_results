@@ -1,11 +1,11 @@
-import Link from "next/link";
 import {
   ArrowRight,
   Bike,
   Footprints,
-  Search,
   Waves,
 } from "lucide-react";
+
+import { SearchForm } from "@/components/search/search-form";
 
 const disciplines = [
   {
@@ -51,14 +51,9 @@ export default function Home() {
             et suis leurs performances au fil des saisons.
           </p>
 
-          <Link
-            href="/search"
-            className="mt-8 inline-flex items-center gap-3 rounded-lg bg-[#FC6B32] px-6 py-3.5 text-sm font-bold text-white transition-colors hover:bg-orange-600"
-          >
-            <Search size={18} />
-            Explorer les résultats
-            <ArrowRight size={17} />
-          </Link>
+          <div className="mt-8">
+            <SearchForm variant="hero" />
+          </div>
         </div>
 
         {/* Décoration */}

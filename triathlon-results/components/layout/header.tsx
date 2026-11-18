@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Activity, Search } from "lucide-react";
 
+import { SearchForm } from "@/components/search/search-form";
+
 const navigation = [
   { label: "Courses", href: "/races" },
   { label: "Athlètes", href: "/athletes" },
@@ -36,13 +38,16 @@ export function Header() {
           ))}
         </nav>
 
-        {/* Search */}
+        {/* Recherche : champ sur ordinateur, icône vers /search sur mobile */}
+        <div className="hidden md:block">
+          <SearchForm variant="header" />
+        </div>
         <Link
           href="/search"
-          className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:border-[#FC6B32] hover:text-[#FC6B32]"
+          aria-label="Rechercher"
+          className="flex items-center rounded-lg border border-gray-200 p-2 text-gray-600 transition-colors hover:border-[#FC6B32] hover:text-[#FC6B32] md:hidden"
         >
           <Search size={17} />
-          <span className="hidden sm:inline">Rechercher</span>
         </Link>
       </div>
     </header>

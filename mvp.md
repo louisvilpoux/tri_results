@@ -22,6 +22,12 @@
         - filtres : `year_epreuve`, `type_epreuve`, `format_epreuve`.
     - /athletes/{id}/races : voir toutes les courses auxquelles un athlète à participé.
 
+    - /search : recherche d'athlètes et de courses par nom (`q`, 2 caractères min.). Tous les mots doivent apparaître,
+      dans n'importe quel ordre, sans tenir compte des majuscules ni des accents.
+        - `type` : `all` (défaut), `athletes` ou `races` ; pagination `limit` (défaut 6, max 50) et `offset`.
+        - athlètes : recherche sur `athletes.athlete_key`, un résultat par `unified_id`, ceux sans résultat exclus.
+        - courses : regroupées par nom + année (comme /races/{id}/event), épreuves sans résultat exclues.
+
 Tri possible avec `sort_by` et ordre possible avec `order` (`asc` ou `desc`).
 
 ## Base de donnée

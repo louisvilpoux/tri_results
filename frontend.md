@@ -194,11 +194,20 @@ Réalisés
     - Autres éditions : liens vers les autres années de la même course.
     - Le lien « Retour » du classement d'un format ramène maintenant à la page course.
     - Code : `components/races/`, types `RaceEvent` / `RaceFormat` dans `types/race.ts`.
+- recherche globale : `/search?q=…` (alimentée par `GET /search`).
+    - Champ de recherche (formulaire GET `next/form`, validé par Entrée) dans le header (icône vers `/search` sur mobile),
+      dans le bandeau de l'accueil (à la place du bouton « Explorer les résultats ») et en haut de `/search`.
+    - Tous les mots doivent apparaître, dans n'importe quel ordre, sans tenir compte des majuscules ni des accents.
+    - Onglets « Tout » (6 athlètes + 6 courses, lien « Tout voir »), « Athlètes » et « Courses » (20 par page, pagination),
+      avec le nombre de résultats de chaque type. URL : `/search?q=deauville&type=races&offset=20`.
+    - Athlètes : nom, club, nombre de courses (dédoublonné comme sur le profil), dernière saison ; les plus actifs d'abord.
+    - Courses : regroupées par nom + année comme la page course, avec période, lieu et disciplines ; les plus récentes d'abord.
+    - Code : `app/search/`, `components/search/`, `types/search.ts`, `searchSite` dans `lib/api.ts`.
 - composants partagés : `components/shared/sortable-header.tsx` et `components/shared/pagination-bar.tsx` ;
   fonctions d'affichage communes dans `lib/format.ts` (dates, période, classement, ordinal).
 
 En cours :
-- rien. Prochaine étape prévue : recherche globale.
+- rien. Prochaine étape prévue : responsive mobile et optimisation SEO.
 
 Points connus (données) :
 - La colonne `sexe` des résultats prolivesport contient des lettres de catégorie (S, J, P…) : le filtre sexe n'est fiable que pour fftri_t2_area.
@@ -212,4 +221,8 @@ Points connus (données) :
 - Les noms prolivesport contiennent l'année (« Triathlon Bray-Dunes 2022 ») : leurs autres éditions ne sont pas retrouvées.
 - Une même course peut venir de deux sources sous deux noms différents (ex. « Triathlon De Ardres » et
   « DUATHLON TRIATHLON DU LAC D'ARDRES 2026 ») : elle apparaît deux fois dans l'historique.
-- Les liens du header (`/races`, `/athletes`, `/results`, `/search`) mènent encore à des pages inexistantes.
+- Les liens du header `/races`, `/athletes` et `/results` mènent encore à des pages inexistantes.
+- Les identifiants d'athlètes (`unified_id`) changent à chaque relance du pipeline `transform/` : les liens vers
+  `/athletes/[id]` ne sont pas stables dans le temps (ceux des courses le sont).
+- La recherche d'athlètes parcourt les 1,4 M lignes de `athletes` sans index (~200 ms) : un index trigramme
+  (`pg_trgm`) sur `athlete_key` l'accélérerait si le volume augmente.

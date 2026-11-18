@@ -4,6 +4,7 @@ import type {
   AthleteResultsResponse,
 } from "@/types/athlete";
 import type { Race, RaceEvent } from "@/types/race";
+import type { SearchResponse, SearchType } from "@/types/search";
 import type { RaceResultsQuery, RaceResultsResponse } from "@/types/result";
 
 const API_BASE_URL = process.env.API_BASE_URL;
@@ -41,6 +42,22 @@ async function apiGet<T>(path: string, params?: URLSearchParams): Promise<T> {
 
 export function getRace(raceId: string): Promise<Race> {
   return apiGet<Race>(`/races/${raceId}`);
+}
+
+/** Recherche globale d'athlètes et de courses (GET /search). */
+export function searchSite(
+  q: string,
+  type: SearchType,
+  limit: number,
+  offset: number
+): Promise<SearchResponse> {
+  const params = new URLSearchParams({
+    q,
+    type,
+    limit: String(limit),
+    offset: String(offset),
+  });
+  return apiGet<SearchResponse>("/search", params);
 }
 
 export function getRaceEvent(raceId: string): Promise<RaceEvent> {

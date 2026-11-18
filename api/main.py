@@ -51,6 +51,8 @@ class Athlete(Base):
     club = Column(String(100))
     sexe = Column(String(10))
     nb_races = Column(Integer)
+    # Nom en minuscules, sans accents, mots triés (transform/athletes.sql) : sert à la recherche.
+    athlete_key = Column(String)
     results = relationship("Result", back_populates="athlete")
 
 
@@ -673,3 +675,153 @@ def get_athlete_races(
             "has_next": has_next
         }
     }
+
+# ----------------------
+# Recherche globale
+# ----------------------
+SearchType = Literal["all", "athletes", "races"]
+MAX_SEARCH_WORDS = 6
+
+
+def search_words(q: str) -> list[str]:
+    """Mots de la recherche, en minuscules (les accents sont retirés côté SQL)."""
+    return q.lower().split()[:MAX_SEARCH_WORDS]
+
+
+def contains_word(column: ColumnElement, word: str) -> ColumnElement:
+    """`column` contient `word` (sans tenir compte des accents ; % et _ pris littéralement)."""
+    escaped = word.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return column.like("%" + func.unaccent(escaped) + "%", escape="\\")
+
+
+def search_athletes_page(
+    db: Session, words: list[str], limit: int, offset: int
+) -> dict[str, Any]:
+    """Athlètes dont le nom contient tous les mots, les plus actifs d'abord."""
+    matching = (
+        select(
+            Athlete.unified_id,
+            func.max(Athlete.nb_races).label("nb_races"),
+        )
+        .where(*(contains_word(Athlete.athlete_key, word) for word in words))
+        .group_by(Athlete.unified_id)
+        # nb_races n'est renseigné que pour les athlètes ayant des résultats
+        # (transform/nb_races.sql) : on écarte les autres (souvent des équipes de relais).
+        .having(func.max(Athlete.nb_races).isnot(None))
+        .subquery()
+    )
+    total = db.scalar(select(func.count()).select_from(matching)) or 0
+    ids = db.scalars(
+        select(matching.c.unified_id)
+        .order_by(matching.c.nb_races.desc().nulls_last(), matching.c.unified_id)
+        .offset(offset)
+        .limit(limit)
+    ).all()
+
+    # Nom et club : lignes `athletes` du même athlète ; nombre de courses et dernière saison :
+    # résultats dédoublonnés comme sur le profil (deduplicated_athlete_results).
+    identities: dict[int, list[Any]] = {athlete_id: [] for athlete_id in ids}
+    for row in db.execute(
+        select(Athlete.unified_id, Athlete.nom, Athlete.club).where(Athlete.unified_id.in_(ids))
+    ):
+        identities[row.unified_id].append(row)
+
+    activity = {
+        row.athlete_id: row
+        for row in db.execute(
+            select(
+                Result.athlete_id,
+                func.count(
+                    func.distinct(
+                        func.concat(Result.date_epreuve, Result.name_epreuve, Result.total_time)
+                    )
+                ).label("nb_races"),
+                func.max(Result.year_epreuve).label("last_season"),
+            )
+            .where(Result.athlete_id.in_(ids))
+            .group_by(Result.athlete_id)
+        )
+    }
+
+    items = []
+    for athlete_id in ids:
+        name = most_common([row.nom for row in identities[athlete_id]])
+        stats = activity.get(athlete_id)
+        items.append(
+            {
+                "id": athlete_id,
+                "nom": " ".join(name.split()) if name else None,
+                "club": most_common([row.club for row in identities[athlete_id]]),
+                "nb_races": stats.nb_races if stats else 0,
+                "last_season": stats.last_season if stats else None,
+            }
+        )
+    return {"items": items, "total": total}
+
+
+def search_races_page(db: Session, words: list[str], limit: int, offset: int) -> dict[str, Any]:
+    """Courses (nom + année, comme /races/{id}/event) dont le nom contient tous les mots,
+    les plus récentes d'abord. Les épreuves sans résultat sont ignorées."""
+    has_results = select(Result.id).where(Result.epreuve_id == Race.id).exists()
+    normalized_name = func.unaccent(func.lower(Race.name_epreuve))
+    events = (
+        select(
+            Race.name_epreuve,
+            Race.year_epreuve,
+            func.min(Race.date_epreuve).label("date_start"),
+            func.max(Race.date_epreuve).label("date_end"),
+            func.max(Race.lieu_epreuve).label("lieu_epreuve"),
+            func.array_agg(func.distinct(Race.type_epreuve)).label("types"),
+            # Même règle que les éditions de /races/{id}/event : OPEN en priorité.
+            func.coalesce(
+                func.min(Race.id).filter(Race.format_epreuve == KEPT_DUPLICATED_FORMAT),
+                func.min(Race.id),
+            ).label("race_id"),
+        )
+        .where(has_results, *(contains_word(normalized_name, word) for word in words))
+        .group_by(Race.name_epreuve, Race.year_epreuve)
+        .subquery()
+    )
+    total = db.scalar(select(func.count()).select_from(events)) or 0
+    rows = db.execute(
+        select(events)
+        .order_by(events.c.date_end.desc().nulls_last(), events.c.race_id)
+        .offset(offset)
+        .limit(limit)
+    ).all()
+
+    items = [
+        {
+            "id": row.race_id,
+            "name_epreuve": row.name_epreuve,
+            "year_epreuve": row.year_epreuve,
+            "date_start": row.date_start,
+            "date_end": row.date_end,
+            "lieu_epreuve": row.lieu_epreuve,
+            "types": sorted(t for t in row.types if t),
+        }
+        for row in rows
+    ]
+    return {"items": items, "total": total}
+
+
+@app.get("/search")
+def search(
+    q: str = Query(..., min_length=2, max_length=100, description="Texte recherché"),
+    type: SearchType = Query("all", description="all, athletes ou races"),
+    limit: int = Query(6, ge=1, le=50),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Recherche d'athlètes et de courses par nom : tous les mots doivent apparaître, dans
+    n'importe quel ordre, sans tenir compte des majuscules ni des accents."""
+    words = search_words(q)
+    if not words:
+        raise HTTPException(status_code=422, detail="Recherche vide")
+
+    response: dict[str, Any] = {"q": q, "type": type, "limit": limit, "offset": offset}
+    if type in ("all", "athletes"):
+        response["athletes"] = search_athletes_page(db, words, limit, offset)
+    if type in ("all", "races"):
+        response["races"] = search_races_page(db, words, limit, offset)
+    return response
