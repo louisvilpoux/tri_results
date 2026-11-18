@@ -171,6 +171,10 @@ L'objectif est de donner l'impression d'une véritable plateforme de résultats 
 
 Réalisés
 - page d'accueil
+    - Blocs Triathlon et Duathlon : liens vers `/races` filtré sur la discipline.
+    - Dernières compétitions : les 6 courses les plus récentes ayant des résultats (`GET /events`, même ordre
+      que `/races`), chargées en streaming avec un squelette, et lien « Toutes les courses ».
+      Code : `components/home/latest-races.tsx`.
 - page de résultats d'une course : `/races/[id]/results` (et non `/formats/[id]/results` comme prévu plus haut).
     - En-tête alimenté par `GET /races/{id}` (nom, date, format, lieu) ; 404 si l'épreuve n'existe pas.
     - Tri en cliquant sur les en-têtes : classement, athlète, natation, T1, vélo, T2, course, total.

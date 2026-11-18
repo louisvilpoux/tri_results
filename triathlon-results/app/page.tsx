@@ -6,7 +6,9 @@ import {
 } from "lucide-react";
 
 import Link from "next/link";
+import { Suspense } from "react";
 
+import { LatestRaces, LatestRacesLoading } from "@/components/home/latest-races";
 import { SearchForm } from "@/components/search/search-form";
 
 interface Discipline {
@@ -130,14 +132,29 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Placeholder */}
-      <section className="rounded-xl border border-dashed border-gray-300 bg-white/60 px-6 py-10 text-center">
-        <p className="text-sm font-semibold text-gray-500">
-          Les dernières compétitions apparaîtront ici.
-        </p>
-        <p className="mt-2 text-xs text-gray-400">
-          Cette section sera connectée à ton API FastAPI lors de la prochaine étape.
-        </p>
+      {/* Dernières compétitions */}
+      <section>
+        <div className="mb-6 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-[#FC6B32]">
+              Résultats
+            </p>
+            <h2 className="mt-2 text-2xl font-extrabold tracking-tight">
+              Dernières compétitions
+            </h2>
+          </div>
+          <Link
+            href="/races"
+            className="group flex shrink-0 items-center gap-1.5 text-sm font-bold text-[#FC6B32]"
+          >
+            Toutes les courses
+            <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+          </Link>
+        </div>
+
+        <Suspense fallback={<LatestRacesLoading />}>
+          <LatestRaces />
+        </Suspense>
       </section>
 
     </div>
