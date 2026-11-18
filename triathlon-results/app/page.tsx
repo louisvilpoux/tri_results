@@ -5,18 +5,30 @@ import {
   Waves,
 } from "lucide-react";
 
+import Link from "next/link";
+
 import { SearchForm } from "@/components/search/search-form";
 
-const disciplines = [
+interface Discipline {
+  name: string;
+  description: string;
+  icon: typeof Waves;
+  /** Liste des courses filtrée sur la discipline ; absent si aucune donnée. */
+  href?: string;
+}
+
+const disciplines: Discipline[] = [
   {
     name: "Triathlon",
     description: "Natation, cyclisme et course à pied",
     icon: Waves,
+    href: "/races?discipline=triathlon",
   },
   {
     name: "Duathlon",
     description: "Course à pied et cyclisme",
     icon: Bike,
+    href: "/races?discipline=duathlon",
   },
   {
     name: "Course à pied",
@@ -78,11 +90,8 @@ export default function Home() {
           {disciplines.map((discipline) => {
             const Icon = discipline.icon;
 
-            return (
-              <div
-                key={discipline.name}
-                className="group rounded-xl border border-gray-200 bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#FC6B32]/50 hover:shadow-lg"
-              >
+            const content = (
+              <>
                 <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-orange-50 text-[#FC6B32]">
                   <Icon size={24} />
                 </div>
@@ -102,6 +111,19 @@ export default function Home() {
                     className="transition-transform group-hover:translate-x-1"
                   />
                 </div>
+              </>
+            );
+
+            const cardClass =
+              "group rounded-xl border border-gray-200 bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#FC6B32]/50 hover:shadow-lg";
+
+            return discipline.href ? (
+              <Link key={discipline.name} href={discipline.href} className={`block ${cardClass}`}>
+                {content}
+              </Link>
+            ) : (
+              <div key={discipline.name} className={cardClass}>
+                {content}
               </div>
             );
           })}
