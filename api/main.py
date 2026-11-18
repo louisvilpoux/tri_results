@@ -1,9 +1,23 @@
+import re
+from collections import Counter
 from typing import Any, Literal
 
 from fastapi import FastAPI, Depends, HTTPException, Query
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, func, asc, desc, case
+from sqlalchemy import (
+    Column,
+    ForeignKey,
+    Integer,
+    String,
+    and_,
+    asc,
+    case,
+    create_engine,
+    desc,
+    func,
+)
+from sqlalchemy.sql import Select
 from sqlalchemy.sql.elements import ColumnElement
-from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session
+from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session, aliased
 import os
 from sqlalchemy import select
 from fastapi.responses import RedirectResponse
@@ -178,15 +192,38 @@ RaceResultSortBy = Literal[
 ]
 
 # Les temps sont stockés en texte "HH:MM:SS", mais certaines sources contiennent
-# aussi "—" ou des valeurs négatives : on ne trie que les temps au bon format.
+# aussi "—", des valeurs négatives ou "00:00:00" (non classés) : seuls les temps au bon
+# format et non nuls sont triés ou pris en compte dans les statistiques.
 VALID_TIME_PATTERN = r"^[0-9]{2}:[0-9]{2}:[0-9]{2}$"
+ZERO_TIME = "00:00:00"
+
+
+def valid_time_or_null(column: ColumnElement) -> ColumnElement:
+    """Expression SQL qui vaut le temps s'il est valide, NULL sinon."""
+    return case((and_(column.op("~")(VALID_TIME_PATTERN), column != ZERO_TIME), column))
+
+
+# prolivesport stocke les non-classés avec clt = 0 ou un code de statut entre 99991 et
+# 99999 (signification non documentée : DNF, DNS, DSQ…). Ce ne sont pas des classements.
+STATUS_RANK_MIN = 99990
+
+
+def is_valid_rank(rank: int | None) -> bool:
+    return rank is not None and 0 < rank < STATUS_RANK_MIN
+
+
+def valid_rank_or_null(column: ColumnElement) -> ColumnElement:
+    """Expression SQL qui vaut le classement s'il est valide (voir is_valid_rank), NULL sinon."""
+    return case((and_(column > 0, column < STATUS_RANK_MIN), column))
 
 
 def get_result_sort_expression(sort_by: RaceResultSortBy) -> ColumnElement:
     """Retourne l'expression SQL de tri ; les valeurs invalides deviennent NULL."""
     column = getattr(Result, sort_by)
+    if sort_by == "clt":
+        return valid_rank_or_null(column)
     if sort_by.endswith("_time"):
-        return case((column.op("~")(VALID_TIME_PATTERN), column))
+        return valid_time_or_null(column)
     return column
 
 
@@ -271,14 +308,117 @@ def search_athletes(
         }
     }
 
+# ----------------------
+# Athlètes
+# ----------------------
+# Une même participation peut être rattachée à plusieurs épreuves : chaque course
+# prolivesport est dupliquée, avec les mêmes participants, sur les formats OPEN, PTWC,
+# PTVI, PTS2-5-F, PTS2-5-M et PTS7-8. En attendant une correction dans transform/, on ne
+# garde qu'un résultat par (date, nom d'épreuve, temps total) : celui du format OPEN s'il
+# existe, sinon celui de l'épreuve au plus petit id.
+def deduplicated_athlete_results(athlete_id: int) -> Select:
+    return (
+        select(Result)
+        .where(Result.athlete_id == athlete_id)
+        .distinct(Result.date_epreuve, Result.name_epreuve, Result.total_time)
+        .order_by(
+            Result.date_epreuve,
+            Result.name_epreuve,
+            Result.total_time,
+            (Result.format_epreuve != "OPEN").asc(),
+            Result.epreuve_id,
+        )
+    )
+
+
+def result_to_dict(result: Result) -> dict[str, Any]:
+    return {column.name: getattr(result, column.name) for column in Result.__table__.columns}
+
+
+def most_common(values: list[str | None]) -> str | None:
+    """Valeur non vide la plus fréquente (la première rencontrée en cas d'égalité)."""
+    counter = Counter(value for value in values if value)
+    return counter.most_common(1)[0][0] if counter else None
+
+
+def is_valid_time(value: str | None) -> bool:
+    """Équivalent Python de valid_time_or_null."""
+    return (
+        value is not None
+        and re.fullmatch(VALID_TIME_PATTERN, value) is not None
+        and value != ZERO_TIME
+    )
+
+
+# Sources dont le format d'épreuve n'est pas fiable : chez prolivesport, les courses d'un
+# même événement (XS, M…) sont mélangées et étiquetées OPEN / PTWC / PTVI… au hasard.
+SOURCES_WITHOUT_RELIABLE_FORMAT = {"prolivesport"}
+
+
+def get_best_times(results: list[Result]) -> list[dict[str, Any]]:
+    """Meilleur temps total par discipline et format (sources au format fiable uniquement)."""
+    best: dict[tuple[str, str], Result] = {}
+    for result in results:
+        if result.source in SOURCES_WITHOUT_RELIABLE_FORMAT:
+            continue
+        if not is_valid_time(result.total_time):
+            continue
+        key = (result.type_epreuve or "", result.format_epreuve or "")
+        if key not in best or result.total_time < best[key].total_time:
+            best[key] = result
+
+    return [
+        {
+            "type_epreuve": result.type_epreuve,
+            "format_epreuve": result.format_epreuve,
+            "total_time": result.total_time,
+            "epreuve_id": result.epreuve_id,
+            "name_epreuve": result.name_epreuve,
+            "date_epreuve": result.date_epreuve,
+        }
+        for _, result in sorted(best.items())
+    ]
+
+
 @app.get("/athletes/{athlete_id}")
-def get_athlete(athlete_id: int, db: Session = Depends(get_db)):
-    athlete = db.query(Athlete)\
-                .filter(Athlete.unified_id == athlete_id)\
-                .all()#.first()
-    if not athlete:
+def get_athlete(athlete_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Profil consolidé d'un athlète (athlete_id = unified_id), calculé sur ses résultats
+    dédoublonnés."""
+    results = list(db.scalars(deduplicated_athlete_results(athlete_id)).all())
+    athlete_rows = (
+        db.query(Athlete.nom, Athlete.club).filter(Athlete.unified_id == athlete_id).all()
+    )
+    if not results and not athlete_rows:
         raise HTTPException(status_code=404, detail="Athlete not found")
-    return athlete
+
+    names = [result.nom_athlete for result in results] or [row.nom for row in athlete_rows]
+    name = most_common(names)
+    ranks = [result.clt for result in results if is_valid_rank(result.clt)]
+    years = sorted({result.year_epreuve for result in results if result.year_epreuve})
+    disciplines = Counter(result.type_epreuve for result in results if result.type_epreuve)
+
+    return {
+        "id": athlete_id,
+        # Certaines sources contiennent des espaces doubles dans les noms.
+        "nom": " ".join(name.split()) if name else None,
+        "club": most_common([row.club for row in athlete_rows]),
+        # La colonne sexe n'est fiable que pour M/F (voir frontend.md, points connus).
+        "sexe": most_common([r.sexe for r in results if r.sexe in ("M", "F")]),
+        "nb_races": len(results),
+        "nb_podiums": sum(1 for rank in ranks if rank <= 3),
+        "nb_top10": sum(1 for rank in ranks if rank <= 10),
+        "best_rank": min(ranks, default=None),
+        "seasons": list(reversed(years)),
+        "disciplines": [
+            {"type_epreuve": type_epreuve, "count": count}
+            for type_epreuve, count in disciplines.most_common()
+        ],
+        "best_times": get_best_times(results),
+    }
+
+
+AthleteResultSortBy = Literal["date_epreuve", "clt", "total_time"]
+
 
 @app.get("/athletes/{athlete_id}/results")
 def get_athlete_results(
@@ -286,41 +426,59 @@ def get_athlete_results(
     year_epreuve: str | None = Query(None),
     type_epreuve: str | None = Query(None),
     format_epreuve: str | None = Query(None),
-    sort_by: str | None = Query(None, description="Colonne à trier (ex: date_epreuve)"),
-    order: str = Query("asc", regex="^(asc|desc)$", description="Ordre de tri : asc ou desc"),
+    sort_by: AthleteResultSortBy = Query("date_epreuve", description="Colonne à trier"),
+    order: str = Query("desc", pattern="^(asc|desc)$", description="Ordre de tri : asc ou desc"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
-):
-    query = db.query(Result).filter(Result.athlete_id == athlete_id)
+) -> dict[str, Any]:
+    """Historique dédoublonné d'un athlète, avec le nombre de participants de chaque épreuve."""
+    deduplicated = deduplicated_athlete_results(athlete_id).subquery()
+    athlete_result = aliased(Result, deduplicated)
+
+    filters = []
     if year_epreuve:
-        query = query.filter(Result.year_epreuve == year_epreuve)
+        filters.append(athlete_result.year_epreuve == year_epreuve)
     if type_epreuve:
-        query = query.filter(Result.type_epreuve == type_epreuve.lower())
+        filters.append(athlete_result.type_epreuve == type_epreuve.lower())
     if format_epreuve:
-        query = query.filter(Result.format_epreuve == format_epreuve.upper())
-    total = query.count()
+        filters.append(athlete_result.format_epreuve == format_epreuve.upper())
 
-    if sort_by == "date":
-        sort_column = Result.date_epreuve
-        if order.lower() == "desc":
-            query = query.order_by(sort_column.desc())
-        else:
-            query = query.order_by(sort_column.asc())
-    else:
-        query = query.order_by(Result.id.desc(), Result.year_epreuve)
+    total = db.scalar(select(func.count()).select_from(athlete_result).where(*filters)) or 0
 
-    items = query.offset(offset).limit(limit).all()
-    has_next = (offset + limit) < total
+    field = aliased(Result)
+    participants = (
+        select(func.count(field.id))
+        .where(field.epreuve_id == athlete_result.epreuve_id)
+        .correlate_except(field)
+        .scalar_subquery()
+    )
+
+    sort_column = getattr(athlete_result, sort_by)
+    if sort_by == "clt":
+        sort_column = valid_rank_or_null(sort_column)
+    elif sort_by == "total_time":
+        sort_column = valid_time_or_null(sort_column)
+    direction = desc if order == "desc" else asc
+
+    rows = db.execute(
+        select(athlete_result, participants)
+        .where(*filters)
+        .order_by(direction(sort_column).nulls_last(), athlete_result.id.desc())
+        .offset(offset)
+        .limit(limit)
+    ).all()
 
     return {
-        "items": items,
+        "items": [
+            {**result_to_dict(result), "participants": count} for result, count in rows
+        ],
         "pagination": {
             "total": total,
             "limit": limit,
             "offset": offset,
-            "has_next": has_next
-        }
+            "has_next": (offset + limit) < total,
+        },
     }
 
 @app.get("/athletes/{athlete_id}/races")

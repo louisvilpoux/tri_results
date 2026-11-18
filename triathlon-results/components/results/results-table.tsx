@@ -1,6 +1,8 @@
 import Link from "next/link";
 
-import { SortableHeader } from "@/components/results/sortable-header";
+import { SortableHeader, nextSortOrder } from "@/components/shared/sortable-header";
+import { formatRank } from "@/lib/format";
+import { buildRaceResultsUrl } from "@/lib/results-query";
 import type { RaceResult, RaceResultSortBy, RaceResultsQuery } from "@/types/result";
 
 type TimeColumn = Extract<RaceResultSortBy, `${string}_time`>;
@@ -14,10 +16,6 @@ const TIME_COLUMNS: { label: string; value: TimeColumn }[] = [
   { label: "Total", value: "total_time" },
 ];
 
-function getRank(result: Pick<RaceResult, "clt" | "rang_global">) {
-  return result.clt ?? result.rang_global ?? "—";
-}
-
 interface ResultsTableProps {
   raceId: string;
   query: RaceResultsQuery;
@@ -25,33 +23,45 @@ interface ResultsTableProps {
 }
 
 export function ResultsTable({ raceId, query, results }: ResultsTableProps) {
+  function sortHeader(column: RaceResultSortBy, label: string, align?: "left" | "right") {
+    const isActive = query.sortBy === column;
+    const href = buildRaceResultsUrl(raceId, query, {
+      sortBy: column,
+      order: nextSortOrder(isActive, query.order),
+      offset: 0,
+    });
+
+    return (
+      <SortableHeader
+        key={column}
+        label={label}
+        href={href}
+        isActive={isActive}
+        order={query.order}
+        align={align}
+      />
+    );
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[1000px] text-left text-sm">
         <thead className="border-b border-gray-200 bg-gray-50 text-xs tracking-wide text-gray-500">
           <tr>
-            <SortableHeader raceId={raceId} query={query} column="clt" label="Clt." />
-            <SortableHeader raceId={raceId} query={query} column="nom_athlete" label="Athlète" />
+            {sortHeader("clt", "Clt.")}
+            {sortHeader("nom_athlete", "Athlète")}
             <th scope="col" className="px-4 py-4 uppercase">Catégorie</th>
             <th scope="col" className="px-4 py-4 uppercase">Sexe</th>
-
-            {TIME_COLUMNS.map((column) => (
-              <SortableHeader
-                key={column.value}
-                raceId={raceId}
-                query={query}
-                column={column.value}
-                label={column.label}
-                align="right"
-              />
-            ))}
+            {TIME_COLUMNS.map((column) => sortHeader(column.value, column.label, "right"))}
           </tr>
         </thead>
 
         <tbody className="divide-y divide-gray-100">
           {results.map((result) => (
             <tr key={result.id} className="transition-colors hover:bg-orange-50/40">
-              <td className="px-4 py-4 font-bold text-[#FC6B32]">{getRank(result)}</td>
+              <td className="px-4 py-4 font-bold text-[#FC6B32]">
+                {formatRank(result.clt, result.rang_global)}
+              </td>
 
               <td className="px-4 py-4">
                 <Link

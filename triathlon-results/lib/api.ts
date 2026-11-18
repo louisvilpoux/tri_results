@@ -1,3 +1,8 @@
+import type {
+  AthleteProfile,
+  AthleteResultsQuery,
+  AthleteResultsResponse,
+} from "@/types/athlete";
 import type { Race } from "@/types/race";
 import type { RaceResultsQuery, RaceResultsResponse } from "@/types/result";
 
@@ -58,4 +63,25 @@ export function getRaceResults(
   if (query.q) params.set("q", query.q);
 
   return apiGet<RaceResultsResponse>(`/races/${raceId}/results`, params);
+}
+
+export function getAthlete(athleteId: string): Promise<AthleteProfile> {
+  return apiGet<AthleteProfile>(`/athletes/${athleteId}`);
+}
+
+export function getAthleteResults(
+  athleteId: string,
+  query: AthleteResultsQuery
+): Promise<AthleteResultsResponse> {
+  const params = new URLSearchParams({
+    limit: String(query.limit),
+    offset: String(query.offset),
+    sort_by: query.sortBy,
+    order: query.order,
+  });
+
+  if (query.year) params.set("year_epreuve", query.year);
+  if (query.discipline) params.set("type_epreuve", query.discipline);
+
+  return apiGet<AthleteResultsResponse>(`/athletes/${athleteId}/results`, params);
 }

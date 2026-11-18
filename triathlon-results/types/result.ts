@@ -27,7 +27,12 @@ export interface RaceResult {
   type_epreuve: string;
 
   url: string | null;
+  source: string | null;
 }
+
+// Sources dont le format d'épreuve n'est pas fiable (voir api/main.py,
+// SOURCES_WITHOUT_RELIABLE_FORMAT) : leur format n'est pas affiché.
+export const SOURCES_WITHOUT_RELIABLE_FORMAT = ["prolivesport"];
 
 export interface Pagination {
   total: number;

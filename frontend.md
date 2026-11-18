@@ -177,11 +177,27 @@ Réalisés
     - Filtres (formulaire GET `next/form`) : nom de l'athlète, sexe, catégorie, nombre de lignes par page (20, 50, 100).
     - Tout l'état est dans l'URL : `?sexe=F&categorie=MS3&q=dupont&sort_by=total_time&order=desc&limit=50&offset=50`.
     - Code : `lib/results-query.ts` (lecture et construction de l'URL), `lib/api.ts` (appels API),
-      `components/results/` (tableau, en-tête triable, filtres, pagination), `loading.tsx` (squelette).
+      `components/results/` (tableau, filtres), `loading.tsx` (squelette).
+- page profil athlète : `/athletes/[id]` (id = `unified_id`, celui des liens du classement d'une course).
+    - En-tête : nom, club, sexe, saisons, disciplines avec leur nombre de courses.
+    - Chiffres clés : courses, podiums, top 10, meilleur classement, nombre de saisons.
+    - Meilleurs temps par discipline et format, avec lien vers le classement de la course.
+    - Historique : date, épreuve (lien vers son classement), format, catégorie, « clt / participants », temps.
+      Tri par date (défaut, plus récente d'abord), classement ou temps ; filtres saison et discipline ; pagination.
+    - URL : `/athletes/123?annee=2024&discipline=triathlon&sort_by=clt&order=asc&offset=20`.
+    - Code : `lib/athlete-results-query.ts`, `components/athletes/`, `types/athlete.ts`.
+- composants partagés : `components/shared/sortable-header.tsx` et `components/shared/pagination-bar.tsx` ;
+  fonctions d'affichage communes dans `lib/format.ts` (dates, classement, ordinal).
 
 En cours :
-- rien. Prochaine étape prévue : page profil athlète.
+- rien. Prochaine étape prévue : page course et liste des formats.
 
-Points connus :
+Points connus (données) :
 - La colonne `sexe` des résultats prolivesport contient des lettres de catégorie (S, J, P…) : le filtre sexe n'est fiable que pour fftri_t2_area.
-- Les liens du header (`/races`, `/athletes`, `/results`, `/search`) et `/athletes/[id]` mènent encore à des pages inexistantes.
+- prolivesport code les non-classés avec `clt = 0` ou `99991` à `99999` (et un temps `00:00:00`) : affichés « NC », placés en fin de tri, exclus des statistiques.
+- Chaque épreuve prolivesport est dupliquée sur 6 formats (OPEN, PTWC, PTVI, PTS2-5-F, PTS2-5-M, PTS7-8) avec les mêmes participants,
+  et ces formats ne correspondent pas aux vraies courses. Le profil athlète dédoublonne (en gardant OPEN), n'affiche pas
+  le format prolivesport et l'exclut des meilleurs temps. Les pages de course dupliquées existent toujours.
+- Une même course peut venir de deux sources sous deux noms différents (ex. « Triathlon De Ardres » et
+  « DUATHLON TRIATHLON DU LAC D'ARDRES 2026 ») : elle apparaît deux fois dans l'historique.
+- Les liens du header (`/races`, `/athletes`, `/results`, `/search`) mènent encore à des pages inexistantes.

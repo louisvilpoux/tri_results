@@ -3,10 +3,12 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, MapPin, Trophy } from "lucide-react";
 
 import { ResultsFilters } from "@/components/results/results-filters";
-import { ResultsPagination } from "@/components/results/results-pagination";
 import { ResultsTable } from "@/components/results/results-table";
+import { PaginationBar } from "@/components/shared/pagination-bar";
 import { ApiError, getRace, getRaceCategories, getRaceResults } from "@/lib/api";
+import { formatDate } from "@/lib/format";
 import {
+  buildRaceResultsUrl,
   hasActiveFilters,
   parseRaceResultsQuery,
   type RaceResultsSearchParams,
@@ -15,14 +17,6 @@ import {
 interface PageProps {
   params: Promise<{ id: string }>;
   searchParams: Promise<RaceResultsSearchParams>;
-}
-
-function formatDate(date: string) {
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date(`${date}T12:00:00`));
 }
 
 export default async function RaceResultsPage({ params, searchParams }: PageProps) {
@@ -124,11 +118,13 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
 
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
           <ResultsTable raceId={id} query={query} results={items} />
-          <ResultsPagination
-            raceId={id}
-            query={query}
+          <PaginationBar
             pagination={pagination}
             shownCount={items.length}
+            previousHref={buildRaceResultsUrl(id, query, {
+              offset: Math.max(query.offset - query.limit, 0),
+            })}
+            nextHref={buildRaceResultsUrl(id, query, { offset: query.offset + query.limit })}
           />
         </div>
       </section>

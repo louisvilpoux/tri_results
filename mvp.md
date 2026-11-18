@@ -7,12 +7,16 @@
     - /races/{id} : voir les informations d'une course donnée.
     - /races/{id}/results : voir les résultats d'une course donnée.
         - tri `sort_by` : `clt` (défaut), `nom_athlete`, `swim_time`, `t1_time`, `bike_time`, `t2_time`, `run_time`, `total_time` ; toute autre valeur renvoie 422.
-        - les valeurs vides et les temps invalides (`—`, négatifs) sont toujours placés en fin de liste.
+        - les valeurs vides, les non-classés (`clt` à 0 ou ≥ 99990) et les temps invalides (`—`, négatifs,
+          `00:00:00`) sont toujours placés en fin de liste.
         - filtres : `s` (sexe), `categorie` (valeur exacte), `q` (nom de l'athlète, 2 caractères min.).
     - /races/{id}/categories : liste triée des catégories présentes dans les résultats d'une course.
     - /athletes : voir tous les athlètes.
-    - /athletes/{id} : voir les informations d'un athlète donné.
-    - /athletes/{id}/results : voir les résultats d'un athlète donné.
+    - /athletes/{id} : profil consolidé d'un athlète (id = `unified_id`) : nom, club, sexe, nb_races,
+      nb_podiums, nb_top10, best_rank, seasons, disciplines, best_times. Calculé sur les résultats dédoublonnés.
+    - /athletes/{id}/results : historique dédoublonné d'un athlète, avec `participants` (taille du classement).
+        - tri `sort_by` : `date_epreuve` (défaut, `order=desc`), `clt`, `total_time`.
+        - filtres : `year_epreuve`, `type_epreuve`, `format_epreuve`.
     - /athletes/{id}/races : voir toutes les courses auxquelles un athlète à participé.
 
 Tri possible avec `sort_by` et ordre possible avec `order` (`asc` ou `desc`).

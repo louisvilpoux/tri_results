@@ -52,17 +52,26 @@ def get_results(race_id: int, **params: Any) -> dict[str, Any]:
     return response.json()
 
 
+def is_ranked(rank: int | None) -> bool:
+    """clt vide, à 0 ou code de statut ≥ 99990 (prolivesport) = pas de classement."""
+    return rank is not None and 0 < rank < 99990
+
+
+def is_valid_time(value: str | None) -> bool:
+    return value is not None and TIME_PATTERN.match(value) is not None and value != "00:00:00"
+
+
 def test_default_sort_is_rank_ascending_with_empty_ranks_last(race_id: int) -> None:
     items = get_results(race_id)["items"]
     ranks = [item["clt"] for item in items]
-    filled = [rank for rank in ranks if rank is not None]
+    filled = [rank for rank in ranks if is_ranked(rank)]
     assert filled == sorted(filled)
     assert ranks[: len(filled)] == filled
 
 
 def test_rank_descending_keeps_empty_ranks_last(race_id: int) -> None:
     ranks = [item["clt"] for item in get_results(race_id, sort_by="clt", order="desc")["items"]]
-    filled = [rank for rank in ranks if rank is not None]
+    filled = [rank for rank in ranks if is_ranked(rank)]
     assert filled == sorted(filled, reverse=True)
     assert ranks[: len(filled)] == filled
 
@@ -71,7 +80,7 @@ def test_rank_descending_keeps_empty_ranks_last(race_id: int) -> None:
 def test_time_sort_ignores_invalid_times(race_id: int, order: str) -> None:
     items = get_results(race_id, sort_by="swim_time", order=order)["items"]
     times = [item["swim_time"] for item in items]
-    valid = [t for t in times if t is not None and TIME_PATTERN.match(t)]
+    valid = [t for t in times if is_valid_time(t)]
     assert valid == sorted(valid, reverse=order == "desc")
     assert times[: len(valid)] == valid
 
