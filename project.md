@@ -552,3 +552,10 @@ Je commencerais par la page de résultats : elle permet de valider immédiatemen
 
 L'objectif est de donner l'impression d'une véritable plateforme de résultats sportifs, pas d'un tableau de bord administratif.
 
+# Développement réalisés et en cours
+
+Réalisés
+- page d'accueil
+
+En cours : 
+- page de résultat d'une course : il faut rendre le classement intéractif à présent.
