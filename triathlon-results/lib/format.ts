@@ -7,6 +7,18 @@ export function formatDate(date: string): string {
   }).format(new Date(`${date}T12:00:00`));
 }
 
+/** Période d'une course : "18 juin 2022" ou "17 – 19 juin 2022" sur plusieurs jours. */
+export function formatDateRange(start: string, end: string): string {
+  if (start === end) return formatDate(start);
+  const startDate = new Date(`${start}T12:00:00`);
+  const endDate = new Date(`${end}T12:00:00`);
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).formatRange(startDate, endDate);
+}
+
 /** "2025-03-30" → "30/03/2025", pour les tableaux denses. */
 export function formatShortDate(date: string): string {
   return new Intl.DateTimeFormat("fr-FR").format(new Date(`${date}T12:00:00`));

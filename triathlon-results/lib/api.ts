@@ -3,7 +3,7 @@ import type {
   AthleteResultsQuery,
   AthleteResultsResponse,
 } from "@/types/athlete";
-import type { Race } from "@/types/race";
+import type { Race, RaceEvent } from "@/types/race";
 import type { RaceResultsQuery, RaceResultsResponse } from "@/types/result";
 
 const API_BASE_URL = process.env.API_BASE_URL;
@@ -41,6 +41,10 @@ async function apiGet<T>(path: string, params?: URLSearchParams): Promise<T> {
 
 export function getRace(raceId: string): Promise<Race> {
   return apiGet<Race>(`/races/${raceId}`);
+}
+
+export function getRaceEvent(raceId: string): Promise<RaceEvent> {
+  return apiGet<RaceEvent>(`/races/${raceId}/event`);
 }
 
 export function getRaceCategories(raceId: string): Promise<string[]> {

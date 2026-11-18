@@ -186,18 +186,30 @@ Réalisés
       Tri par date (défaut, plus récente d'abord), classement ou temps ; filtres saison et discipline ; pagination.
     - URL : `/athletes/123?annee=2024&discipline=triathlon&sort_by=clt&order=asc&offset=20`.
     - Code : `lib/athlete-results-query.ts`, `components/athletes/`, `types/athlete.ts`.
+- page course : `/races/[id]` (id = n'importe quelle épreuve de la course), alimentée par `GET /races/{id}/event`.
+    - Une course = les épreuves de même nom et même année (ex. Deauville 2022 : XXL, L, M sur 3 jours).
+    - En-tête : nom, édition, période (« 17–19 juin 2022 »), lieu, nombre de formats, participants distincts.
+    - Une carte par format : discipline, format, date, participants, vainqueur et première femme
+      (liens vers leur profil, avec leur temps), bouton vers le classement.
+    - Autres éditions : liens vers les autres années de la même course.
+    - Le lien « Retour » du classement d'un format ramène maintenant à la page course.
+    - Code : `components/races/`, types `RaceEvent` / `RaceFormat` dans `types/race.ts`.
 - composants partagés : `components/shared/sortable-header.tsx` et `components/shared/pagination-bar.tsx` ;
-  fonctions d'affichage communes dans `lib/format.ts` (dates, classement, ordinal).
+  fonctions d'affichage communes dans `lib/format.ts` (dates, période, classement, ordinal).
 
 En cours :
-- rien. Prochaine étape prévue : page course et liste des formats.
+- rien. Prochaine étape prévue : recherche globale.
 
 Points connus (données) :
 - La colonne `sexe` des résultats prolivesport contient des lettres de catégorie (S, J, P…) : le filtre sexe n'est fiable que pour fftri_t2_area.
 - prolivesport code les non-classés avec `clt = 0` ou `99991` à `99999` (et un temps `00:00:00`) : affichés « NC », placés en fin de tri, exclus des statistiques.
 - Chaque épreuve prolivesport est dupliquée sur 6 formats (OPEN, PTWC, PTVI, PTS2-5-F, PTS2-5-M, PTS7-8) avec les mêmes participants,
   et ces formats ne correspondent pas aux vraies courses. Le profil athlète dédoublonne (en gardant OPEN), n'affiche pas
-  le format prolivesport et l'exclut des meilleurs temps. Les pages de course dupliquées existent toujours.
+  le format prolivesport et l'exclut des meilleurs temps. La page course n'affiche que la copie OPEN, intitulée
+  « Toutes distances », sans première femme (sexe non fiable). Son « vainqueur » est le premier d'un classement qui
+  mélange les distances (souvent la plus courte). Les pages de classement des copies PT* restent accessibles par URL.
+- 589 épreuves n'ont aucun résultat (souvent sans date, anciennes sources) : elles sont ignorées dans les formats d'une course.
+- Les noms prolivesport contiennent l'année (« Triathlon Bray-Dunes 2022 ») : leurs autres éditions ne sont pas retrouvées.
 - Une même course peut venir de deux sources sous deux noms différents (ex. « Triathlon De Ardres » et
   « DUATHLON TRIATHLON DU LAC D'ARDRES 2026 ») : elle apparaît deux fois dans l'historique.
 - Les liens du header (`/races`, `/athletes`, `/results`, `/search`) mènent encore à des pages inexistantes.

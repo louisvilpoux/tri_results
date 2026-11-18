@@ -4,7 +4,10 @@
 - API REST en Python (FastAPI)
 - endpoints : 
     - /races : voir toutes les courses.
-    - /races/{id} : voir les informations d'une course donnée.
+    - /races/{id} : voir les informations d'une épreuve (un format) donnée.
+    - /races/{id}/event : la course à laquelle appartient l'épreuve (même nom + même année) : période, lieu,
+      participants distincts, formats (participants, vainqueur, première femme) et autres éditions (une épreuve par année).
+      Les épreuves sans résultat sont ignorées ; pour prolivesport, seule la copie OPEN est gardée.
     - /races/{id}/results : voir les résultats d'une course donnée.
         - tri `sort_by` : `clt` (défaut), `nom_athlete`, `swim_time`, `t1_time`, `bike_time`, `t2_time`, `run_time`, `total_time` ; toute autre valeur renvoie 422.
         - les valeurs vides, les non-classés (`clt` à 0 ou ≥ 99990) et les temps invalides (`—`, négatifs,

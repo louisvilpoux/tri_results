@@ -217,6 +217,17 @@ def valid_rank_or_null(column: ColumnElement) -> ColumnElement:
     return case((and_(column > 0, column < STATUS_RANK_MIN), column))
 
 
+# Sources dont le format d'épreuve n'est pas fiable : chez prolivesport, chaque course est
+# dupliquée sur les formats OPEN, PTWC, PTVI, PTS2-5-F, PTS2-5-M et PTS7-8 avec les mêmes
+# participants, et les courses d'un même événement (XS, M…) y sont mélangées au hasard.
+SOURCES_WITHOUT_RELIABLE_FORMAT = {"prolivesport"}
+# Format conservé quand une source duplique ses épreuves (les autres sont des copies).
+KEPT_DUPLICATED_FORMAT = "OPEN"
+
+# Sources dont la colonne sexe n'est pas fiable (prolivesport : lettres de catégorie).
+SOURCES_WITHOUT_RELIABLE_SEXE = {"prolivesport"}
+
+
 def get_result_sort_expression(sort_by: RaceResultSortBy) -> ColumnElement:
     """Retourne l'expression SQL de tri ; les valeurs invalides deviennent NULL."""
     column = getattr(Result, sort_by)
@@ -279,6 +290,140 @@ def get_race_categories(race_id: int, db: Session = Depends(get_db)) -> list[str
         .all()
     )
     return [row.categorie for row in rows]
+
+
+# ----------------------
+# Course (événement)
+# ----------------------
+# La base n'a pas de table « événement » : chaque ligne de `races` est un format. Les formats
+# d'une même course sont ceux qui partagent le nom et l'année (ex. Deauville 2022 : XXL, L et M
+# sur trois jours). Les épreuves sans résultat (anciennes sources, souvent sans date) sont
+# ignorées.
+def get_podium_leaders(
+    db: Session, race_ids: list[int], women_only: bool = False
+) -> dict[int, dict[str, Any]]:
+    """Premier classé (ou première femme) de chaque épreuve : {race_id: {athlete_id, ...}}."""
+    rank = valid_rank_or_null(Result.clt)
+    query = (
+        select(Result.epreuve_id, Result.athlete_id, Result.nom_athlete, Result.total_time)
+        .where(Result.epreuve_id.in_(race_ids), rank.isnot(None))
+        .distinct(Result.epreuve_id)
+        .order_by(Result.epreuve_id, rank, Result.id)
+    )
+    if women_only:
+        query = query.where(Result.sexe == "F")
+
+    return {
+        row.epreuve_id: {
+            "athlete_id": row.athlete_id,
+            "nom_athlete": " ".join((row.nom_athlete or "").split()) or None,
+            "total_time": row.total_time if is_valid_time(row.total_time) else None,
+        }
+        for row in db.execute(query)
+    }
+
+
+@app.get("/races/{race_id}/event")
+def get_race_event(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Course à laquelle appartient l'épreuve `race_id` : ses formats et ses autres éditions."""
+    race = db.get(Race, race_id)
+    if race is None:
+        raise HTTPException(status_code=404, detail="Race not found")
+
+    same_name = Race.name_epreuve == race.name_epreuve
+    # Sans année connue, impossible de retrouver les autres formats : l'épreuve reste seule.
+    same_edition = (
+        Race.year_epreuve == race.year_epreuve if race.year_epreuve else Race.id == race.id
+    )
+    has_results = select(Result.id).where(Result.epreuve_id == Race.id).exists()
+    siblings = db.scalars(
+        select(Race)
+        .where(same_name, same_edition, has_results)
+        .order_by(Race.date_epreuve, Race.id)
+    ).all()
+    sibling_ids = [sibling.id for sibling in siblings]
+
+    # Nombre de participants et source de chaque épreuve.
+    stats = {
+        row.epreuve_id: row
+        for row in db.execute(
+            select(
+                Result.epreuve_id,
+                func.count(Result.id).label("participants"),
+                func.min(Result.source).label("source"),
+            )
+            .where(Result.epreuve_id.in_(sibling_ids))
+            .group_by(Result.epreuve_id)
+        )
+    }
+
+    # Sources qui dupliquent leurs épreuves : on ne garde que le format OPEN.
+    formats = [
+        sibling
+        for sibling in siblings
+        if stats[sibling.id].source not in SOURCES_WITHOUT_RELIABLE_FORMAT
+        or sibling.format_epreuve == KEPT_DUPLICATED_FORMAT
+    ]
+    format_ids = [race_format.id for race_format in formats]
+    winners = get_podium_leaders(db, format_ids)
+    first_women = get_podium_leaders(db, format_ids, women_only=True)
+
+    participants_total = (
+        db.scalar(
+            select(func.count(func.distinct(Result.athlete_id))).where(
+                Result.epreuve_id.in_(format_ids)
+            )
+        )
+        or 0
+    )
+
+    # Autres éditions : une épreuve par année (format OPEN en priorité, sinon la plus ancienne).
+    editions = db.execute(
+        select(
+            Race.year_epreuve,
+            func.coalesce(
+                func.min(Race.id).filter(Race.format_epreuve == KEPT_DUPLICATED_FORMAT),
+                func.min(Race.id),
+            ).label("race_id"),
+        )
+        .where(same_name, Race.year_epreuve.isnot(None), has_results)
+        .group_by(Race.year_epreuve)
+        .order_by(Race.year_epreuve.desc())
+    ).all()
+
+    dates = sorted(f.date_epreuve for f in formats if f.date_epreuve)
+
+    return {
+        "id": race.id,
+        "name_epreuve": race.name_epreuve,
+        "year_epreuve": race.year_epreuve,
+        "lieu_epreuve": next((f.lieu_epreuve for f in siblings if f.lieu_epreuve), None),
+        "date_start": dates[0] if dates else race.date_epreuve,
+        "date_end": dates[-1] if dates else race.date_epreuve,
+        "participants": participants_total,
+        "formats": [
+            {
+                "id": race_format.id,
+                "type_epreuve": race_format.type_epreuve,
+                "format_epreuve": race_format.format_epreuve,
+                "format_reliable": stats[race_format.id].source
+                not in SOURCES_WITHOUT_RELIABLE_FORMAT,
+                "date_epreuve": race_format.date_epreuve,
+                "participants": stats[race_format.id].participants,
+                "winner": winners.get(race_format.id),
+                # Le sexe n'est pas fiable pour certaines sources : pas de « première femme ».
+                "first_woman": first_women.get(race_format.id)
+                if stats[race_format.id].source not in SOURCES_WITHOUT_RELIABLE_SEXE
+                else None,
+            }
+            for race_format in formats
+        ],
+        "editions": [
+            {"year_epreuve": edition.year_epreuve, "race_id": edition.race_id}
+            for edition in editions
+        ],
+    }
+
 
 @app.get("/athletes")
 def search_athletes(
@@ -348,11 +493,6 @@ def is_valid_time(value: str | None) -> bool:
         and re.fullmatch(VALID_TIME_PATTERN, value) is not None
         and value != ZERO_TIME
     )
-
-
-# Sources dont le format d'épreuve n'est pas fiable : chez prolivesport, les courses d'un
-# même événement (XS, M…) sont mélangées et étiquetées OPEN / PTWC / PTVI… au hasard.
-SOURCES_WITHOUT_RELIABLE_FORMAT = {"prolivesport"}
 
 
 def get_best_times(results: list[Result]) -> list[dict[str, Any]]:

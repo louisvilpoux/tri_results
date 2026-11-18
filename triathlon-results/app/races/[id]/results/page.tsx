@@ -56,13 +56,13 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
 
   return (
     <div className="space-y-8">
-      {/* Retour */}
+      {/* Retour à la course (tous ses formats) */}
       <Link
-        href="/"
+        href={`/races/${id}`}
         className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-[#FC6B32]"
       >
         <ArrowLeft size={16} />
-        Retour à l’accueil
+        Retour à la course
       </Link>
 
       {/* En-tête de course */}
