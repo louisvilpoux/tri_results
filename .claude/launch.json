@@ -1,0 +1,16 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "/Users/maclv/Work/dev/tri_results/chrono/bin/uvicorn",
+      "runtimeArgs": ["main:app", "--reload", "--app-dir", "/Users/maclv/Work/dev/tri_results/api"],
+      "port": 8000,
+      "url": "http://localhost:8000"
+    },
+    {
+      "name": "web",
+      "url": "http://localhost:3000"
+    }
+  ]
+}
