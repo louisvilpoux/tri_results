@@ -13,7 +13,7 @@ export function Footer() {
         </Link>
 
         <p className="text-center text-xs text-gray-500">
-          Les résultats des sports d'endurance, réunis au même endroit.
+          Les résultats des sports d’endurance, réunis au même endroit.
         </p>
 
         <p className="text-xs text-gray-400">

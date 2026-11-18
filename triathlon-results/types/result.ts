@@ -1,12 +1,16 @@
+// Types alignés sur le modèle SQLAlchemy `Result` de l'API (api/main.py).
+
 export interface RaceResult {
   id: number;
   athlete_id: number;
+  epreuve_id: number;
   nom_athlete: string;
   sexe: string | null;
+  cat: string | null;
   categorie: string | null;
 
+  clt: number | null;
   rang_global: string | null;
-  clt: string | null;
   clt_cat: string | null;
 
   swim_time: string | null;
@@ -25,12 +29,14 @@ export interface RaceResult {
   url: string | null;
 }
 
-export interface ResultsResponse {
+export interface Pagination {
+  total: number;
+  limit: number;
+  offset: number;
+  has_next: boolean;
+}
+
+export interface RaceResultsResponse {
   items: RaceResult[];
-  pagination: {
-    total: number;
-    limit: number;
-    offset: number;
-    has_next: boolean;
-  };
+  pagination: Pagination;
 }

@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 
 import { getRaceResults } from "@/lib/api";
+import type { RaceResult } from "@/types/result";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -25,10 +26,7 @@ function formatDate(date: string) {
   }).format(new Date(`${date}T12:00:00`));
 }
 
-function getRank(result: {
-  clt: string | null;
-  rang_global: string | null;
-}) {
+function getRank(result: Pick<RaceResult, "clt" | "rang_global">) {
   return result.clt ?? result.rang_global ?? "—";
 }
 
@@ -122,7 +120,7 @@ export default async function RaceResultsPage({
         className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-[#FC6B32]"
       >
         <ArrowLeft size={16} />
-        Retour à l'accueil
+        Retour à l’accueil
       </Link>
 
       {/* En-tête de course */}
