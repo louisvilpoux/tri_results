@@ -57,6 +57,27 @@ def test_events_filters() -> None:
     assert by_type and all(discipline in item["types"] for item in by_type)
 
 
+def test_events_format_filter() -> None:
+    formats = get("/events", limit=1)["filters"]["formats"]
+    assert formats and "M" in formats
+    # Formats prolivesport (copies PTWC, PTVI…) non fiables : ni proposés ni filtrables.
+    assert not any(value.startswith("PT") for value in formats)
+    assert get("/events", format_epreuve="PTWC", limit=1)["pagination"]["total"] == 0
+
+    by_format = get("/events", format_epreuve="M", type_epreuve="triathlon", limit=30)["items"]
+    assert by_format
+    for item in by_format:
+        race = client.get(f"/races/{item['id']}").json()
+        assert race["format_epreuve"] == "M"
+        assert race["type_epreuve"] == "triathlon"
+
+
+def test_events_formats_short_to_long() -> None:
+    formats = get("/events", limit=1)["filters"]["formats"]
+    known = [value for value in ("XS", "S", "M", "L", "XL", "XXL") if value in formats]
+    assert formats[: len(known)] == known
+
+
 def test_events_reject_invalid_year() -> None:
     assert client.get("/events", params={"year": "abc"}).status_code == 422
 

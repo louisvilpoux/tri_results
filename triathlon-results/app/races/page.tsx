@@ -16,12 +16,18 @@ export const metadata: Metadata = {
 const PAGE_SIZE = 20;
 
 interface PageProps {
-  searchParams: Promise<{ annee?: string; discipline?: string; offset?: string }>;
+  searchParams: Promise<{
+    annee?: string;
+    discipline?: string;
+    format?: string;
+    offset?: string;
+  }>;
 }
 
 interface RacesQuery {
   year: string | null;
   discipline: string | null;
+  format: string | null;
   offset: number;
 }
 
@@ -30,6 +36,7 @@ function parseQuery(params: Awaited<PageProps["searchParams"]>): RacesQuery {
   return {
     year: params.annee && /^\d{4}$/.test(params.annee) ? params.annee : null,
     discipline: params.discipline || null,
+    format: params.format || null,
     offset: Number.isInteger(offset) && offset > 0 ? offset : 0,
   };
 }
@@ -38,6 +45,7 @@ function buildRacesUrl(query: RacesQuery): string {
   const params = new URLSearchParams();
   if (query.year) params.set("annee", query.year);
   if (query.discipline) params.set("discipline", query.discipline);
+  if (query.format) params.set("format", query.format);
   if (query.offset > 0) params.set("offset", String(query.offset));
   const search = params.toString();
   return `/races${search ? `?${search}` : ""}`;
@@ -61,7 +69,7 @@ export default async function RacesPage({ searchParams }: PageProps) {
   }
 
   const { items, pagination, filters } = data;
-  const hasFilters = query.year !== null || query.discipline !== null;
+  const hasFilters = query.year !== null || query.discipline !== null || query.format !== null;
 
   return (
     <div className="space-y-6">
@@ -96,6 +104,17 @@ export default async function RacesPage({ searchParams }: PageProps) {
             {filters.types.map((type) => (
               <option key={type} value={type}>
                 {capitalize(type)}
+              </option>
+            ))}
+          </select>
+        </FilterField>
+
+        <FilterField label="Format">
+          <select name="format" defaultValue={query.format ?? ""} className={FILTER_FIELD_CLASS}>
+            <option value="">Tous</option>
+            {filters.formats.map((format) => (
+              <option key={format} value={format}>
+                {format}
               </option>
             ))}
           </select>

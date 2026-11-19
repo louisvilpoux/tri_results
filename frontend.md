@@ -210,8 +210,11 @@ Réalisés
     - Courses : regroupées par nom + année comme la page course, avec période, lieu et disciplines ; les plus récentes d'abord.
     - Code : `app/search/`, `components/search/`, `types/search.ts`, `searchSite` dans `lib/api.ts`.
 - liste des courses : `/races` (lien « Courses » du header), alimentée par `GET /events`.
-    - Courses (nom + année) les plus récentes d'abord, filtres saison et discipline, 20 par page.
-    - URL : `/races?annee=2022&discipline=duathlon&offset=20`.
+    - Courses (nom + année) les plus récentes d'abord, filtres saison, discipline (`races.type_epreuve`) et
+      format (`races.format_epreuve`), 20 par page. Discipline et format s'appliquent à la même épreuve :
+      « triathlon + M » = les courses qui ont une épreuve de triathlon au format M.
+    - Le menu Format ne propose pas les formats prolivesport (copies OPEN, PTWC… non fiables).
+    - URL : `/races?annee=2022&discipline=triathlon&format=M&offset=20`.
 - liste des athlètes : `/athletes` (lien « Athlètes » du header), alimentée par `GET /athletes`.
     - Athlètes les plus actifs d'abord, filtres nom (mêmes règles que la recherche) et sexe, 20 par page.
     - URL : `/athletes?q=leroy&sexe=F&offset=20`.

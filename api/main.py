@@ -236,6 +236,10 @@ SOURCES_WITHOUT_RELIABLE_FORMAT = {"prolivesport"}
 # Format conservé quand une source duplique ses épreuves (les autres sont des copies).
 KEPT_DUPLICATED_FORMAT = "OPEN"
 
+# Ordre d'affichage des formats (du plus court au plus long) ;
+# les autres suivent par ordre alphabétique.
+FORMAT_DISPLAY_ORDER = ["XS", "S", "M", "L", "XL", "XXL"]
+
 # Sources dont la colonne sexe n'est pas fiable (prolivesport : lettres de catégorie).
 SOURCES_WITHOUT_RELIABLE_SEXE = {"prolivesport"}
 
@@ -765,6 +769,26 @@ def search_athletes_page(
     return {"items": items, "total": total}
 
 
+def has_reliable_format() -> ColumnElement:
+    """Vrai si l'épreuve a des résultats d'une source dont le format est fiable
+    (voir SOURCES_WITHOUT_RELIABLE_FORMAT)."""
+    return (
+        select(Result.id)
+        .where(
+            Result.epreuve_id == Race.id,
+            Result.source.not_in(SOURCES_WITHOUT_RELIABLE_FORMAT),
+        )
+        .exists()
+    )
+
+
+def format_sort_key(format_epreuve: str) -> tuple[int, str]:
+    """Clé de tri des formats : XS, S, M, L, XL, XXL, puis les autres par ordre alphabétique."""
+    if format_epreuve in FORMAT_DISPLAY_ORDER:
+        return FORMAT_DISPLAY_ORDER.index(format_epreuve), ""
+    return len(FORMAT_DISPLAY_ORDER), format_epreuve
+
+
 def search_races_page(
     db: Session,
     words: list[str],
@@ -772,6 +796,7 @@ def search_races_page(
     offset: int,
     year: str | None = None,
     type_epreuve: str | None = None,
+    format_epreuve: str | None = None,
 ) -> dict[str, Any]:
     """Courses (nom + année, comme /races/{id}/event) dont le nom contient tous les mots —
     toutes si `words` est vide —, les plus récentes d'abord. Les épreuves sans résultat sont
@@ -783,6 +808,8 @@ def search_races_page(
         filters.append(Race.year_epreuve == year)
     if type_epreuve:
         filters.append(Race.type_epreuve == type_epreuve)
+    if format_epreuve:
+        filters += [Race.format_epreuve == format_epreuve, has_reliable_format()]
     events = (
         select(
             Race.name_epreuve,
@@ -857,13 +884,23 @@ def pagination(total: int, limit: int, offset: int) -> dict[str, Any]:
 def list_events(
     year: str | None = Query(None, pattern=r"^\d{4}$", description="Année (ex: 2024)"),
     type_epreuve: str | None = Query(None, description="Discipline (ex: triathlon)"),
+    format_epreuve: str | None = Query(None, description="Format (ex: M), colonne format_epreuve"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    """Liste des courses (nom + année), les plus récentes d'abord, avec les années et
-    disciplines disponibles pour les filtres."""
-    page = search_races_page(db, [], limit, offset, year=year, type_epreuve=type_epreuve)
+    """Liste des courses (nom + année), les plus récentes d'abord, avec les années,
+    disciplines et formats disponibles pour les filtres. Les formats des sources non fiables
+    (prolivesport) ne sont ni proposés ni filtrables."""
+    page = search_races_page(
+        db,
+        [],
+        limit,
+        offset,
+        year=year,
+        type_epreuve=type_epreuve,
+        format_epreuve=format_epreuve,
+    )
 
     has_results = select(Result.id).where(Result.epreuve_id == Race.id).exists()
     years = db.scalars(
@@ -878,9 +915,18 @@ def list_events(
         .distinct()
         .order_by(Race.type_epreuve)
     ).all()
+    formats = db.scalars(
+        select(Race.format_epreuve)
+        .where(has_reliable_format(), Race.format_epreuve.isnot(None), Race.format_epreuve != "")
+        .distinct()
+    ).all()
 
     return {
         "items": page["items"],
         "pagination": pagination(page["total"], limit, offset),
-        "filters": {"years": years, "types": types},
+        "filters": {
+            "years": years,
+            "types": types,
+            "formats": sorted(formats, key=format_sort_key),
+        },
     }

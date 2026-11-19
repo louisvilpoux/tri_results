@@ -53,6 +53,7 @@ export function getRace(raceId: string): Promise<Race> {
 export function listEvents(filters: {
   year: string | null;
   discipline: string | null;
+  format: string | null;
   limit: number;
   offset: number;
 }): Promise<EventListResponse> {
@@ -62,6 +63,7 @@ export function listEvents(filters: {
   });
   if (filters.year) params.set("year", filters.year);
   if (filters.discipline) params.set("type_epreuve", filters.discipline);
+  if (filters.format) params.set("format_epreuve", filters.format);
   return apiGet<EventListResponse>("/events", params);
 }
 

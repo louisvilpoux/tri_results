@@ -31,7 +31,12 @@ export interface SearchGroup<T> {
 export interface EventListResponse {
   items: RaceHit[];
   pagination: Pagination;
-  filters: { years: string[]; types: string[] };
+  filters: {
+    years: string[];
+    types: string[];
+    /** Formats (colonne format_epreuve), hors sources au format non fiable. */
+    formats: string[];
+  };
 }
 
 /** GET /athletes : liste des athlètes (un par unified_id). */

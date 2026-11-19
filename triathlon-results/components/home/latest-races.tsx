@@ -10,6 +10,7 @@ export async function LatestRaces() {
     const data = await listEvents({
       year: null,
       discipline: null,
+      format: null,
       limit: LATEST_RACES_COUNT,
       offset: 0,
     });
