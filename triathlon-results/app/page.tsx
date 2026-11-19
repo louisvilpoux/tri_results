@@ -4,7 +4,9 @@ import {
   Clock,
   Footprints,
   Mountain,
+  TreePine,
   Waves,
+  WavesLadder,
   type LucideIcon,
 } from "lucide-react";
 
@@ -13,6 +15,7 @@ import { Suspense } from "react";
 
 import { LatestRaces, LatestRacesLoading } from "@/components/home/latest-races";
 import { PersonWithBike } from "@/components/home/person-with-bike-icon";
+import { TrailIntoWater } from "@/components/home/trail-into-water-icon";
 import { SearchForm } from "@/components/search/search-form";
 
 interface Discipline {
@@ -43,8 +46,26 @@ const disciplines: Discipline[] = [
     href: "/races?discipline=duathlon",
   },
   {
+    name: "Cross Duathlon",
+    description: "Trail, VTT et trail",
+    icon: TreePine,
+    href: "/races?discipline=cross%20duathlon",
+  },
+  {
+    name: "Aquathlon",
+    description: "Natation et course à pied",
+    icon: WavesLadder,
+    href: "/races?discipline=aquathlon",
+  },
+  {
+    name: "Swimrun",
+    description: "Nage et course en pleine nature, en alternance",
+    icon: TrailIntoWater,
+    href: "/races?discipline=swimrun",
+  },
+  {
     name: "Bike & Run",
-    description: "En équipe de deux, un vélo pour deux",
+    description: "En équipe de deux, un vélo pour deux, chacun ses baskets",
     icon: PersonWithBike,
     href: "/races?discipline=bike%26run",
   },
@@ -104,7 +125,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {disciplines.map((discipline) => {
             const Icon = discipline.icon;
 
