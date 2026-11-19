@@ -31,7 +31,7 @@ races = call_api_prolivesport(global_page_result)
 
 rows = []
 for r in races["result"]:
-    racelist_url = "https://api.prolivesport.fr/apiws/result/raceList/1262/"
+    racelist_url = f"https://api.prolivesport.fr/apiws/result/raceList/{r['eventId']}/"
     racelist = call_api_prolivesport(racelist_url)
     for rl in racelist["result"]:
         rows.append({"id":r["eventId"]+"/"+rl["race"],
