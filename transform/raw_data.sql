@@ -33,7 +33,9 @@ run as run_time, null as rang_run, null as rang_course_run, null as indice_perfo
 name_epreuve, format_epreuve, year_epreuve, date_epreuve, null as lieu_epreuve,
 scraped_at, 'fftri_t2_area' as source, SUBSTRING(cat FROM 1 FOR 1) as sexe,
 null as type_epreuve, null as format_normalise
-FROM raw_fftri_t2_area_0 
+FROM raw_fftri_t2_area_0
+-- épreuves contre-la-montre exclues, comme pour toutes les sources (voir prolivesport)
+WHERE format_epreuve !~* '\mclm\M'
 UNION ALL
 SELECT 
 CASE WHEN pg_input_is_valid(clt, 'integer') THEN clt::integer ELSE NULL END AS clt,
@@ -60,8 +62,8 @@ CROSS JOIN LATERAL (
 ) d
 -- discipline NULL : épreuve d'un autre sport (course à pied, natation seule…), exclue
 WHERE d.discipline IS NOT NULL
--- épreuves contre-la-montre (« CLM », « CLM S ») exclues : prolivesport y renvoie des colonnes
--- de temps décalées (ex. Villeneuve d'Ascq 2019 : temps total de 00:09:22)
+-- épreuves contre-la-montre (« CLM », « CLM S ») exclues de toutes les sources : prolivesport y
+-- renvoie des colonnes de temps décalées (ex. Villeneuve d'Ascq 2019 : temps total de 00:09:22)
 AND format_epreuve !~* '\mclm\M'
 UNION ALL
 SELECT 
@@ -80,6 +82,8 @@ scraped_at, 'chronoweb' as source, SUBSTRING(cat FROM 1 FOR 1) as sexe,
 null as type_epreuve, null as format_normalise
 FROM raw_chronoweb_0
 WHERE name_epreuve is not null
+-- épreuves contre-la-montre exclues, comme pour toutes les sources (voir prolivesport)
+AND format_epreuve !~* '\mclm\M'
 UNION ALL
 SELECT 
 CASE WHEN pg_input_is_valid(clt, 'integer') THEN clt::integer ELSE NULL END AS clt, 
