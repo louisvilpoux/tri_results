@@ -32,8 +32,14 @@ nom_de_la_source :
     - nom_de_la_source_0 : dossier contenant la donnée préparée pour être chargée en database.
 
 - chronoweb :
-    1. chronoweb_links.py : récupérér la liste des liens à scrapper. Génère un fichier urls.csv
+    1. chronoweb_links.py : lit chaque ligne d'épreuve de la page des résultats (`div.table-row`)
+       et génère urls.csv avec l'URL du fichier Excel, la date (AAAA-MM-JJ), le lieu et le nom
+       de l'épreuve (accents compris, année retirée ; le nom d'origine est gardé dans
+       name_epreuve_initial). Le fichier Excel est cherché dans toute la ligne : le site inverse
+       parfois les boutons PDF et XLS.
     2. chronoweb.py : pour chaque url du fichier urls.csv l'url est scrappée, convertie en dataframe, et des informations principales sont extraites et écrites dans un fichier unique csv par course.
+       Le nom, la date et le lieu viennent de urls.csv ; l'année vient de la date (à défaut, de la
+       fin du nom de fichier).
     3. chronoweb_organize.py : pour chaque fichier unique de course on vient nettoyer la donnée pour venir en extraire toutes nos informations (temps swim, temps bike, temps run, ...) et on écrit un csv final.
 
 - fftri_t2_area :
@@ -84,6 +90,9 @@ Dossier : `transform`
     - athletes_tmp.sql : table pour isoler les informations sur l'athlète
     - athletes.sql : table pour gérer les différentes entrées possible pour un même athlète en utilisant un unified_id.
     - results.sql : table finale pour retrouver pour chaque athlète unified l'ensemble de ses résultats en compétition.
+      Un résultat est relié à son épreuve par le nom, le format et la date ; quand la date est
+      absente des deux côtés, par l'année (NULL = NULL n'étant jamais vrai, ces résultats étaient
+      écartés : c'était le cas de tout chronoweb avant que la date soit scrappée).
       La colonne `equipe` marque les lignes d'équipe prolivesport (bike&run, relais) repérées par
       `prolivesport_team_name`, qui donne aussi leur nom affiché ; nb_races.sql ne les compte pas.
     - doublons_sources.sql : retire les épreuves prolivesport publiées aussi par fftri_t2_area (dates à un jour près,

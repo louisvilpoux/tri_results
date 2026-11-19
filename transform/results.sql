@@ -51,7 +51,11 @@ SELECT
 FROM raw_data AS rfta
 JOIN races AS r ON r.name_epreuve = rfta.name_epreuve
                 AND r.format_initial = rfta.format_epreuve
-                AND r.date_epreuve = rfta.date_epreuve
+                -- chronoweb ne fournit pas la date : on relie alors l'édition par son année
+                -- (NULL = NULL n'est jamais vrai, ces lignes étaient toutes écartées)
+                AND (r.date_epreuve = rfta.date_epreuve
+                     OR (r.date_epreuve IS NULL AND rfta.date_epreuve IS NULL
+                         AND r.year_epreuve = rfta.year_epreuve))
 JOIN athletes AS a ON a.nom = rfta.nom
 CROSS JOIN LATERAL (
     SELECT CASE
