@@ -114,20 +114,15 @@ for index, row in triathlon_events.iterrows():
 
     dt = datetime.strptime(row["date"], "%Y-%m-%d %H:%M:%S")
 
-    # format_epreuve = ""
-    # if "triathlon" in row["name"].lower():
-    #     format_epreuve = "triathlon " + row["format_epreuve"]
-    # if "duathlon" in row["name"].lower():
-    #     format_epreuve = "duathlon " + row["format_epreuve"]
-    # if "bike" in row["name"].lower() and "run" in row["name"].lower():
-    #     format_epreuve = "bike&run " + row["format_epreuve"]
-
     output_df = pd.DataFrame(rows)
     output_df["détails"] = indivresult_url
     output_df["name_epreuve"] = row["name"]
     output_df["format_epreuve"] = row["format_epreuve"]
     output_df["year_epreuve"] = dt.year
     output_df["date_epreuve"] = row["date"]
+    output_df["distance"] = row["distance"]
+    output_df["categorieevent"] = row["categorieevent"]
+    output_df["categorievar"] = row["categorievar"]
     output_df["lieu_epreuve"] = f"{row['zipcode']} {row['city']} {row['department']} {row['country']}"
     output_df.to_csv(f"./sources/prolivesport/prolivesport_0/{target_name}", index=False)
     print(f"{index}/{len(triathlon_events)} : {target_name}")
