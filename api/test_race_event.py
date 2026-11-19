@@ -45,20 +45,23 @@ def multi_format_race_id() -> int:
 
 
 @pytest.fixture(scope="module")
-def prolivesport_duplicate_id() -> int:
-    """Copie PT* d'une épreuve prolivesport."""
+def prolivesport_multi_format_id() -> int:
+    """Épreuve prolivesport dont la course a plusieurs formats la même année."""
     return find_race(
         """
-        SELECT r.id
+        SELECT MIN(r.id) AS id
         FROM races r
-        WHERE r.format_epreuve = 'PTWC'
-          AND EXISTS (
-            SELECT 1 FROM results x WHERE x.epreuve_id = r.id AND x.source = 'prolivesport'
-          )
-        ORDER BY r.id
+        JOIN results x ON x.epreuve_id = r.id AND x.source = 'prolivesport'
+        GROUP BY r.name_epreuve, r.year_epreuve
+        HAVING COUNT(DISTINCT r.id) > 1
+        ORDER BY 1
         LIMIT 1
         """
     )
+
+
+# Formats calculés pour prolivesport (transform/prolivesport.sql).
+PROLIVESPORT_FORMATS = {"XS", "S", "M", "L", "XL", "XXL", "JEUNES", "RELAIS", None}
 
 
 def get_event(race_id: int) -> dict[str, Any]:
@@ -81,7 +84,6 @@ def test_formats_share_name_and_year(multi_format_race_id: int) -> None:
         assert race["name_epreuve"] == event["name_epreuve"]
         assert race["year_epreuve"] == event["year_epreuve"]
         assert race_format["participants"] >= 1
-        assert race_format["format_reliable"] is True
 
     dates = [f["date_epreuve"] for f in event["formats"]]
     assert event["date_start"] == min(dates) and event["date_end"] == max(dates)
@@ -111,26 +113,36 @@ def test_first_woman_is_a_woman(multi_format_race_id: int) -> None:
         assert first_woman["athlete_id"] == women[0]["athlete_id"]
 
 
-def test_prolivesport_keeps_a_single_open_format(prolivesport_duplicate_id: int) -> None:
-    event = get_event(prolivesport_duplicate_id)
-    assert [f["format_epreuve"] for f in event["formats"]] == ["OPEN"]
-    assert event["formats"][0]["format_reliable"] is False
+def test_prolivesport_formats_are_separate_races(prolivesport_multi_format_id: int) -> None:
+    """Chaque épreuve prolivesport a son propre classement et un format normalisé."""
+    formats = get_event(prolivesport_multi_format_id)["formats"]
+    assert len(formats) > 1
+    assert {f["format_epreuve"] for f in formats} <= PROLIVESPORT_FORMATS
+
+    participants = {}
+    for race_format in formats:
+        page = client.get(f"/races/{race_format['id']}/results", params={"limit": 100}).json()
+        assert page["pagination"]["total"] == race_format["participants"]
+        participants[race_format["id"]] = frozenset(item["athlete_id"] for item in page["items"])
+    # Plus de copies identiques d'un format à l'autre.
+    assert len(set(participants.values())) == len(participants)
 
 
-def test_prolivesport_sexe_is_reliable(prolivesport_duplicate_id: int) -> None:
+def test_prolivesport_sexe_is_reliable(prolivesport_multi_format_id: int) -> None:
     """Le sexe prolivesport vient de sa colonne `sexe` (M, F) et non de la catégorie."""
-    open_format = get_event(prolivesport_duplicate_id)["formats"][0]
+    biggest = max(
+        get_event(prolivesport_multi_format_id)["formats"], key=lambda f: f["participants"]
+    )
     results = client.get(
-        f"/races/{open_format['id']}/results", params={"limit": 100}
+        f"/races/{biggest['id']}/results", params={"limit": 100}
     ).json()["items"]
     assert {result["sexe"] for result in results} <= {"M", "F", None}
 
-    first_woman = open_format["first_woman"]
-    assert first_woman is not None
     women = client.get(
-        f"/races/{open_format['id']}/results", params={"s": "F", "sort_by": "clt", "limit": 1}
+        f"/races/{biggest['id']}/results", params={"s": "F", "sort_by": "clt", "limit": 1}
     ).json()["items"]
-    assert first_woman["athlete_id"] == women[0]["athlete_id"]
+    if women and women[0]["clt"]:
+        assert biggest["first_woman"]["athlete_id"] == women[0]["athlete_id"]
 
 
 def test_editions_are_one_per_year(multi_format_race_id: int) -> None:

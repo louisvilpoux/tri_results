@@ -3,9 +3,16 @@ SELECT DISTINCT
     name_epreuve,
     format_epreuve as format_initial,
     --UPPER(SPLIT_PART(format_epreuve, ' ',1)) AS type_epreuve,
-    array_to_string((string_to_array(format_epreuve, ' '))[1 : cardinality(string_to_array(format_epreuve, ' ')) - 1], ' ') AS type_epreuve,
+    -- prolivesport : discipline et format calculés dans raw_data (voir prolivesport.sql).
+    COALESCE(
+        type_epreuve,
+        array_to_string((string_to_array(format_epreuve, ' '))[1 : cardinality(string_to_array(format_epreuve, ' ')) - 1], ' ')
+    ) AS type_epreuve,
     --UPPER(SPLIT_PART(format_epreuve, ' ',2)) AS format_epreuve,
-    UPPER((string_to_array(format_epreuve, ' '))[cardinality(string_to_array(format_epreuve, ' '))]) AS format_epreuve,
+    CASE
+        WHEN type_epreuve IS NOT NULL THEN format_normalise
+        ELSE UPPER((string_to_array(format_epreuve, ' '))[cardinality(string_to_array(format_epreuve, ' '))])
+    END AS format_epreuve,
     year_epreuve,
     date_epreuve,
     lieu_epreuve

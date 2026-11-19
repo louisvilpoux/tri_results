@@ -229,13 +229,6 @@ def valid_rank_or_null(column: ColumnElement) -> ColumnElement:
     return case((and_(column > 0, column < STATUS_RANK_MIN), column))
 
 
-# Sources dont le format d'épreuve n'est pas fiable : chez prolivesport, chaque course est
-# dupliquée sur les formats OPEN, PTWC, PTVI, PTS2-5-F, PTS2-5-M et PTS7-8 avec les mêmes
-# participants, et les courses d'un même événement (XS, M…) y sont mélangées au hasard.
-SOURCES_WITHOUT_RELIABLE_FORMAT = {"prolivesport"}
-# Format conservé quand une source duplique ses épreuves (les autres sont des copies).
-KEPT_DUPLICATED_FORMAT = "OPEN"
-
 # Ordre d'affichage des formats (du plus court au plus long) ;
 # les autres suivent par ordre alphabétique.
 FORMAT_DISPLAY_ORDER = ["XS", "S", "M", "L", "XL", "XXL"]
@@ -370,13 +363,7 @@ def get_race_event(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any
         )
     }
 
-    # Sources qui dupliquent leurs épreuves : on ne garde que le format OPEN.
-    formats = [
-        sibling
-        for sibling in siblings
-        if stats[sibling.id].source not in SOURCES_WITHOUT_RELIABLE_FORMAT
-        or sibling.format_epreuve == KEPT_DUPLICATED_FORMAT
-    ]
+    formats = siblings
     format_ids = [race_format.id for race_format in formats]
     winners = get_podium_leaders(db, format_ids)
     first_women = get_podium_leaders(db, format_ids, women_only=True)
@@ -390,15 +377,9 @@ def get_race_event(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any
         or 0
     )
 
-    # Autres éditions : une épreuve par année (format OPEN en priorité, sinon la plus ancienne).
+    # Autres éditions : une épreuve par année (celle au plus petit id).
     editions = db.execute(
-        select(
-            Race.year_epreuve,
-            func.coalesce(
-                func.min(Race.id).filter(Race.format_epreuve == KEPT_DUPLICATED_FORMAT),
-                func.min(Race.id),
-            ).label("race_id"),
-        )
+        select(Race.year_epreuve, func.min(Race.id).label("race_id"))
         .where(same_name, Race.year_epreuve.isnot(None), has_results)
         .group_by(Race.year_epreuve)
         .order_by(Race.year_epreuve.desc())
@@ -421,8 +402,6 @@ def get_race_event(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any
                 "id": race_format.id,
                 "type_epreuve": race_format.type_epreuve,
                 "format_epreuve": race_format.format_epreuve,
-                "format_reliable": stats[race_format.id].source
-                not in SOURCES_WITHOUT_RELIABLE_FORMAT,
                 "date_epreuve": race_format.date_epreuve,
                 "participants": stats[race_format.id].participants,
                 "winner": winners.get(race_format.id),
@@ -454,24 +433,9 @@ def list_athletes(
 # ----------------------
 # Athlètes
 # ----------------------
-# Une même participation peut être rattachée à plusieurs épreuves : chaque course
-# prolivesport est dupliquée, avec les mêmes participants, sur les formats OPEN, PTWC,
-# PTVI, PTS2-5-F, PTS2-5-M et PTS7-8. En attendant une correction dans transform/, on ne
-# garde qu'un résultat par (date, nom d'épreuve, temps total) : celui du format OPEN s'il
-# existe, sinon celui de l'épreuve au plus petit id.
-def deduplicated_athlete_results(athlete_id: int) -> Select:
-    return (
-        select(Result)
-        .where(Result.athlete_id == athlete_id)
-        .distinct(Result.date_epreuve, Result.name_epreuve, Result.total_time)
-        .order_by(
-            Result.date_epreuve,
-            Result.name_epreuve,
-            Result.total_time,
-            (Result.format_epreuve != "OPEN").asc(),
-            Result.epreuve_id,
-        )
-    )
+def athlete_results(athlete_id: int) -> Select:
+    """Résultats d'un athlète (athlete_id = unified_id)."""
+    return select(Result).where(Result.athlete_id == athlete_id)
 
 
 def result_to_dict(result: Result) -> dict[str, Any]:
@@ -494,11 +458,9 @@ def is_valid_time(value: str | None) -> bool:
 
 
 def get_best_times(results: list[Result]) -> list[dict[str, Any]]:
-    """Meilleur temps total par discipline et format (sources au format fiable uniquement)."""
+    """Meilleur temps total par discipline et format."""
     best: dict[tuple[str, str], Result] = {}
     for result in results:
-        if result.source in SOURCES_WITHOUT_RELIABLE_FORMAT:
-            continue
         if not is_valid_time(result.total_time):
             continue
         key = (result.type_epreuve or "", result.format_epreuve or "")
@@ -520,9 +482,8 @@ def get_best_times(results: list[Result]) -> list[dict[str, Any]]:
 
 @app.get("/athletes/{athlete_id}")
 def get_athlete(athlete_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
-    """Profil consolidé d'un athlète (athlete_id = unified_id), calculé sur ses résultats
-    dédoublonnés."""
-    results = list(db.scalars(deduplicated_athlete_results(athlete_id)).all())
+    """Profil consolidé d'un athlète (athlete_id = unified_id), calculé sur ses résultats."""
+    results = list(db.scalars(athlete_results(athlete_id)).all())
     athlete_rows = (
         db.query(Athlete.nom, Athlete.club).filter(Athlete.unified_id == athlete_id).all()
     )
@@ -570,9 +531,8 @@ def get_athlete_results(
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
 ) -> dict[str, Any]:
-    """Historique dédoublonné d'un athlète, avec le nombre de participants de chaque épreuve."""
-    deduplicated = deduplicated_athlete_results(athlete_id).subquery()
-    athlete_result = aliased(Result, deduplicated)
+    """Historique d'un athlète, avec le nombre de participants de chaque épreuve."""
+    athlete_result = aliased(Result, athlete_results(athlete_id).subquery())
 
     filters = []
     if year_epreuve:
@@ -723,7 +683,7 @@ def search_athletes_page(
     ).all()
 
     # Nom et club : lignes `athletes` du même athlète ; nombre de courses et dernière saison :
-    # résultats dédoublonnés comme sur le profil (deduplicated_athlete_results).
+    # résultats, comme sur le profil.
     identities: dict[int, list[Any]] = {athlete_id: [] for athlete_id in ids}
     for row in db.execute(
         select(Athlete.unified_id, Athlete.nom, Athlete.club).where(Athlete.unified_id.in_(ids))
@@ -735,11 +695,7 @@ def search_athletes_page(
         for row in db.execute(
             select(
                 Result.athlete_id,
-                func.count(
-                    func.distinct(
-                        func.concat(Result.date_epreuve, Result.name_epreuve, Result.total_time)
-                    )
-                ).label("nb_races"),
+                func.count(Result.id).label("nb_races"),
                 func.max(Result.year_epreuve).label("last_season"),
             )
             .where(Result.athlete_id.in_(ids))
@@ -761,19 +717,6 @@ def search_athletes_page(
             }
         )
     return {"items": items, "total": total}
-
-
-def has_reliable_format() -> ColumnElement:
-    """Vrai si l'épreuve a des résultats d'une source dont le format est fiable
-    (voir SOURCES_WITHOUT_RELIABLE_FORMAT)."""
-    return (
-        select(Result.id)
-        .where(
-            Result.epreuve_id == Race.id,
-            Result.source.not_in(SOURCES_WITHOUT_RELIABLE_FORMAT),
-        )
-        .exists()
-    )
 
 
 def format_sort_key(format_epreuve: str) -> tuple[int, str]:
@@ -803,7 +746,7 @@ def search_races_page(
     if type_epreuve:
         filters.append(Race.type_epreuve == type_epreuve)
     if format_epreuve:
-        filters += [Race.format_epreuve == format_epreuve, has_reliable_format()]
+        filters.append(Race.format_epreuve == format_epreuve)
     events = (
         select(
             Race.name_epreuve,
@@ -812,11 +755,8 @@ def search_races_page(
             func.max(Race.date_epreuve).label("date_end"),
             func.max(Race.lieu_epreuve).label("lieu_epreuve"),
             func.array_agg(func.distinct(Race.type_epreuve)).label("types"),
-            # Même règle que les éditions de /races/{id}/event : OPEN en priorité.
-            func.coalesce(
-                func.min(Race.id).filter(Race.format_epreuve == KEPT_DUPLICATED_FORMAT),
-                func.min(Race.id),
-            ).label("race_id"),
+            # Même règle que les éditions de /races/{id}/event : l'épreuve au plus petit id.
+            func.min(Race.id).label("race_id"),
         )
         .where(*filters)
         .group_by(Race.name_epreuve, Race.year_epreuve)
@@ -884,8 +824,7 @@ def list_events(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Liste des courses (nom + année), les plus récentes d'abord, avec les années,
-    disciplines et formats disponibles pour les filtres. Les formats des sources non fiables
-    (prolivesport) ne sont ni proposés ni filtrables."""
+    disciplines et formats disponibles pour les filtres."""
     page = search_races_page(
         db,
         [],
@@ -911,7 +850,7 @@ def list_events(
     ).all()
     formats = db.scalars(
         select(Race.format_epreuve)
-        .where(has_reliable_format(), Race.format_epreuve.isnot(None), Race.format_epreuve != "")
+        .where(has_results, Race.format_epreuve.isnot(None), Race.format_epreuve != "")
         .distinct()
     ).all()
 

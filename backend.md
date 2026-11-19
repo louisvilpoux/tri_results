@@ -41,8 +41,12 @@ nom_de_la_source :
     2. fftri_t2_area.py : pour chaque url, on vient scrapper la page et récupérer les informations voulues. La donnée est également nettoyée et mise au format csv avec les bonnes colonnes.
 
 - prolivesport : 
-    1. prolivesport_links.py : scrapping du site pour venir récupérer l'ensemble des liens vers les pages de résultats des épreuves.
-    2. prolivesport.py : pour chaque url, on vient scrapper la page et générer un csv avec les informations finales.
+    1. prolivesport_links.py : liste des événements et, pour chacun, de ses épreuves (`raceList/{eventId}`),
+       sans les épreuves « SUPP ».
+    2. prolivesport.py : un CSV par épreuve, pour les événements de triathlon, duathlon et aquathlon.
+       L'API `result/indiv/{eventId}/{épreuve}` renvoie tout l'événement quelle que soit l'épreuve demandée :
+       on l'appelle une fois par événement et on garde les lignes dont le champ `race` correspond.
+       Colonnes ajoutées : `distance` (km), `categorieevent` et `categorievar` (catégorie de l'événement).
 
 - protiming : 
     1. protiming_links.py : scrapping du site pour venir récupérer l'ensemble des liens vers les pages de résultats des épreuves.
@@ -61,6 +65,11 @@ Dossier : `transform`
 1. création des différentes tables :
     - create_tables.sql : on créé l'ensemble des tables source et spécifiques.
 2. génération table globale :
+    - prolivesport.sql : fonctions `prolivesport_discipline` et `prolivesport_format`, qui déduisent du nom libre
+      d'une épreuve prolivesport sa discipline (nom de l'épreuve, puis catégorie, puis nom de l'événement) et son
+      format (relais, jeunes, lettre XS…XXL, mots connus comme Sprint ou 70.3, puis distance en km). Les épreuves
+      d'autres sports (course à pied, natation seule, SUPP, distance ≥ 998) sont exclues. Détail des règles en
+      commentaire dans le fichier.
     - raw_data.sql : insertion dans la table raw_data des données en union all des différentes tables raw_ .
       Le sexe y est calculé une fois par ligne : colonne `sexe` de la source pour prolivesport (M ou F, vide pour
       les équipes mixtes X), première lettre de `cat` pour les autres sources. athletes_tmp et results le reprennent.

@@ -208,14 +208,13 @@ Réalisés
     - Tous les mots doivent apparaître, dans n'importe quel ordre, sans tenir compte des majuscules ni des accents.
     - Onglets « Tout » (6 athlètes + 6 courses, lien « Tout voir »), « Athlètes » et « Courses » (20 par page, pagination),
       avec le nombre de résultats de chaque type. URL : `/search?q=deauville&type=races&offset=20`.
-    - Athlètes : nom, club, nombre de courses (dédoublonné comme sur le profil), dernière saison ; les plus actifs d'abord.
+    - Athlètes : nom, club, nombre de courses, dernière saison ; les plus actifs d'abord.
     - Courses : regroupées par nom + année comme la page course, avec période, lieu et disciplines ; les plus récentes d'abord.
     - Code : `app/search/`, `components/search/`, `types/search.ts`, `searchSite` dans `lib/api.ts`.
 - liste des courses : `/races` (lien « Courses » du header), alimentée par `GET /events`.
     - Courses (nom + année) les plus récentes d'abord, filtres saison, discipline (`races.type_epreuve`) et
       format (`races.format_epreuve`), 20 par page. Discipline et format s'appliquent à la même épreuve :
       « triathlon + M » = les courses qui ont une épreuve de triathlon au format M.
-    - Le menu Format ne propose pas les formats prolivesport (copies OPEN, PTWC… non fiables).
     - URL : `/races?annee=2022&discipline=triathlon&format=M&offset=20`.
 - liste des athlètes : `/athletes` (lien « Athlètes » du header), alimentée par `GET /athletes`.
     - Athlètes les plus actifs d'abord, filtres nom (mêmes règles que la recherche) et sexe, 20 par page.
@@ -251,19 +250,18 @@ Points connus (données) :
   maintenant pour prolivesport ; les équipes mixtes (X) ont un sexe vide. fftri_t2_area garde quelques valeurs hors
   M/F (E, 4, J…, première lettre de sa catégorie), ignorées par l'API.
 - prolivesport code les non-classés avec `clt = 0` ou `99991` à `99999` (et un temps `00:00:00`) : affichés « NC », placés en fin de tri, exclus des statistiques.
-- Chaque épreuve prolivesport est dupliquée sur 6 formats (OPEN, PTWC, PTVI, PTS2-5-F, PTS2-5-M, PTS7-8) avec les mêmes participants,
-  et ces formats ne correspondent pas aux vraies courses. Le profil athlète dédoublonne (en gardant OPEN), n'affiche pas
-  le format prolivesport et l'exclut des meilleurs temps. La page course n'affiche que la copie OPEN, intitulée
-  « Toutes distances ». Son « vainqueur » et sa « première femme » sont les premiers d'un classement qui
-  mélange les distances (souvent la plus courte). Les pages de classement des copies PT* restent accessibles par URL.
+- prolivesport (corrigé le 19/11/2026) : l'ancien scraping copiait chaque événement sur 6 faux formats (OPEN, PTWC…)
+  avec toutes les distances mélangées. Le nouveau scraping a une épreuve par fichier, et `transform/prolivesport.sql`
+  en déduit discipline et format (dont JEUNES et RELAIS ; format vide si rien ne permet de le savoir, ~3 % des
+  résultats). Les contournements de l'API et du front (« Toutes distances », dédoublonnage OPEN, formats
+  prolivesport exclus) ont été retirés. Limite : quand la lettre du nom et la distance ne concordent pas (8 %), la
+  lettre l'emporte ; 18 épreuves jeunes d'événements « Triathlon / Duathlon » prennent la discipline de la catégorie.
 - 589 épreuves n'ont aucun résultat (souvent sans date, anciennes sources) : elles sont ignorées dans les formats d'une course.
 - Les noms prolivesport contiennent l'année (« Triathlon Bray-Dunes 2022 ») : leurs autres éditions ne sont pas retrouvées.
 - Une même course peut venir de deux sources sous deux noms différents (ex. « Triathlon De Ardres » et
   « DUATHLON TRIATHLON DU LAC D'ARDRES 2026 ») : elle apparaît deux fois dans l'historique.
 - Des lieux d'épreuve contiennent "nan" (valeurs vides converties en texte au scraping, ex. « nan Cabourg nan nan ») :
   l'API les retire (`clean_lieu`).
-- L'ordre « les plus actifs d'abord » de `/athletes` utilise `athletes.nb_races`, qui compte les doublons prolivesport :
-  les athlètes prolivesport y sont surclassés (le nombre affiché, lui, est dédoublonné).
 - Le serveur de dev Turbopack ne voit parfois pas une nouvelle fonction exportée par `lib/api.ts` (« … is not a function »
   alors que `tsc` et `next build` passent) : redémarrer `npm run dev` règle le problème.
 - Les identifiants d'athlètes (`unified_id`) changent à chaque relance du pipeline `transform/` : les liens vers

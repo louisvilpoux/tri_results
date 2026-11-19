@@ -26,10 +26,7 @@ function LeaderLine({ label, leader }: { label: string; leader: PodiumLeader }) 
 }
 
 export function RaceFormatCard({ raceFormat }: { raceFormat: RaceFormat }) {
-  // Format inconnu (prolivesport) : toutes les distances sont dans un même classement.
-  const formatLabel = raceFormat.format_reliable
-    ? (raceFormat.format_epreuve ?? "Format")
-    : "Toutes distances";
+  const formatLabel = raceFormat.format_epreuve ?? "Format non précisé";
 
   return (
     <li className="flex min-w-0 flex-col rounded-xl border border-gray-200 bg-white p-5">

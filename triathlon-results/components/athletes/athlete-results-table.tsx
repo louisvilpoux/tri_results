@@ -4,16 +4,11 @@ import { SortableHeader, nextSortOrder } from "@/components/shared/sortable-head
 import { buildAthleteUrl } from "@/lib/athlete-results-query";
 import { capitalize, formatRank, formatShortDate } from "@/lib/format";
 import type { AthleteResult, AthleteResultSortBy, AthleteResultsQuery } from "@/types/athlete";
-import { SOURCES_WITHOUT_RELIABLE_FORMAT } from "@/types/result";
 
 interface AthleteResultsTableProps {
   athleteId: string;
   query: AthleteResultsQuery;
   results: AthleteResult[];
-}
-
-function hasReliableFormat(result: AthleteResult): boolean {
-  return !SOURCES_WITHOUT_RELIABLE_FORMAT.includes(result.source ?? "");
 }
 
 /** Sur mobile : épreuve (date en dessous), rang et temps ; le reste à partir de `md`. */
@@ -89,7 +84,7 @@ export function AthleteResultsTable({ athleteId, query, results }: AthleteResult
 
               <td className={`${CELL} whitespace-nowrap text-gray-500 ${DESKTOP_ONLY}`}>
                 {result.type_epreuve ? capitalize(result.type_epreuve) : "—"}
-                {result.format_epreuve && hasReliableFormat(result) && (
+                {result.format_epreuve && (
                   <span className="ml-1.5 rounded-md bg-gray-100 px-1.5 py-0.5 text-xs font-semibold text-gray-600">
                     {result.format_epreuve}
                   </span>

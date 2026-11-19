@@ -29,21 +29,6 @@ def find_athlete(sql: str) -> int:
 
 
 @pytest.fixture(scope="module")
-def duplicated_athlete_id() -> int:
-    """Athlète dont un résultat est rattaché à plusieurs épreuves (même date, nom, temps)."""
-    return find_athlete(
-        """
-        SELECT athlete_id
-        FROM results
-        GROUP BY athlete_id, date_epreuve, name_epreuve, total_time
-        HAVING COUNT(*) > 1
-        ORDER BY athlete_id
-        LIMIT 1
-        """
-    )
-
-
-@pytest.fixture(scope="module")
 def active_athlete_id() -> int:
     """Athlète avec plusieurs disciplines et plusieurs saisons."""
     return find_athlete(
@@ -75,12 +60,6 @@ def test_unknown_athlete_returns_404() -> None:
     assert client.get("/athletes/0").status_code == 404
 
 
-def test_history_is_deduplicated(duplicated_athlete_id: int) -> None:
-    items = get_history(duplicated_athlete_id)["items"]
-    keys = [(i["date_epreuve"], i["name_epreuve"], i["total_time"]) for i in items]
-    assert len(keys) == len(set(keys))
-
-
 def test_profile_counts_match_history(active_athlete_id: int) -> None:
     profile = get_profile(active_athlete_id)
     history = get_history(active_athlete_id)
@@ -104,7 +83,6 @@ def test_best_times_are_the_minimum_per_format(active_athlete_id: int) -> None:
             for item in history
             if item["type_epreuve"] == best["type_epreuve"]
             and item["format_epreuve"] == best["format_epreuve"]
-            and item["source"] != "prolivesport"
             and is_valid_time(item["total_time"])
         ]
         assert best["total_time"] == min(times)

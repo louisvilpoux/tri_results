@@ -22,8 +22,6 @@ export interface RaceFormat {
   id: number;
   type_epreuve: string | null;
   format_epreuve: string | null;
-  /** false pour les sources dont le format est inconnu (prolivesport). */
-  format_reliable: boolean;
   date_epreuve: string | null;
   participants: number;
   winner: PodiumLeader | null;

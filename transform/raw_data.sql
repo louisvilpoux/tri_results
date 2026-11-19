@@ -18,7 +18,7 @@ bike_time, rang_bike, rang_course_bike, indice_performance_bike,
 t2_time, rang_t2, rang_course_t2, indice_performance_t2, 
 run_time, rang_run, rang_course_run, indice_performance_run,
 name_epreuve, format_epreuve, year_epreuve, date_epreuve, lieu_epreuve,
-scraped_at, source, sexe)
+scraped_at, source, sexe, type_epreuve, format_normalise)
 
 SELECT 
 CASE WHEN pg_input_is_valid(clt, 'integer') THEN clt::integer ELSE NULL END AS clt, 
@@ -31,7 +31,8 @@ bike as bike_time, null as rang_bike, null as rang_course_bike, null as indice_p
 t2 as t2_time, null as rang_t2, null as rang_course_t2, null as indice_performance_t2, 
 run as run_time, null as rang_run, null as rang_course_run, null as indice_performance_run,
 name_epreuve, format_epreuve, year_epreuve, date_epreuve, null as lieu_epreuve,
-scraped_at, 'fftri_t2_area' as source, SUBSTRING(cat FROM 1 FOR 1) as sexe
+scraped_at, 'fftri_t2_area' as source, SUBSTRING(cat FROM 1 FOR 1) as sexe,
+null as type_epreuve, null as format_normalise
 FROM raw_fftri_t2_area_0 
 UNION ALL
 SELECT 
@@ -49,8 +50,15 @@ date_epreuve::date::text as date_epreuve, lieu_epreuve,
 scraped_at, 'prolivesport' as source,
 -- prolivesport fournit le sexe (M, F, X pour les équipes mixtes) ; sa colonne cat contient
 -- des catégories (SE, MA, VE…) dont la première lettre n'est pas le sexe.
-CASE WHEN sexe IN ('M', 'F') THEN sexe END as sexe
+CASE WHEN sexe IN ('M', 'F') THEN sexe END as sexe,
+d.discipline as type_epreuve,
+prolivesport_format(format_epreuve, d.discipline, distance) as format_normalise
 from raw_prolivesport_0
+CROSS JOIN LATERAL (
+    SELECT prolivesport_discipline(format_epreuve, name_epreuve, categorieevent, distance) AS discipline
+) d
+-- discipline NULL : épreuve d'un autre sport (course à pied, natation seule…), exclue
+WHERE d.discipline IS NOT NULL
 UNION ALL
 SELECT 
 CASE WHEN pg_input_is_valid(clt, 'integer') THEN clt::integer ELSE NULL END AS clt, 
@@ -64,7 +72,8 @@ t2 as t2_time, null as rang_t2, null as rang_course_t2, null as indice_performan
 run as run_time, null as rang_run, null as rang_course_run, null as indice_performance_run,
 name_epreuve, format_epreuve, year_epreuve,
 date_epreuve, lieu_epreuve,
-scraped_at, 'chronoweb' as source, SUBSTRING(cat FROM 1 FOR 1) as sexe
+scraped_at, 'chronoweb' as source, SUBSTRING(cat FROM 1 FOR 1) as sexe,
+null as type_epreuve, null as format_normalise
 FROM raw_chronoweb_0
 WHERE name_epreuve is not null
 UNION ALL
@@ -80,6 +89,7 @@ t2 as t2_time, null as rang_t2, null as rang_course_t2, null as indice_performan
 run as run_time, null as rang_run, null as rang_course_run, null as indice_performance_run,
 name_epreuve, format_epreuve, EXTRACT(YEAR FROM to_date(date_epreuve, 'DD/MM/YYYY'))::text as year_epreuve, 
 date_epreuve, lieu_epreuve,
-scraped_at, 'protiming' as source, SUBSTRING(cat FROM 1 FOR 1) as sexe
+scraped_at, 'protiming' as source, SUBSTRING(cat FROM 1 FOR 1) as sexe,
+null as type_epreuve, null as format_normalise
 from raw_protiming_0
 ;

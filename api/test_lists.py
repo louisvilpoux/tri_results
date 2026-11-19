@@ -60,9 +60,8 @@ def test_events_filters() -> None:
 def test_events_format_filter() -> None:
     formats = get("/events", limit=1)["filters"]["formats"]
     assert formats and "M" in formats
-    # Formats prolivesport (copies PTWC, PTVI…) non fiables : ni proposés ni filtrables.
+    # Les anciennes copies prolivesport (PTWC, PTVI…) ont disparu avec le nouveau scraping.
     assert not any(value.startswith("PT") for value in formats)
-    assert get("/events", format_epreuve="PTWC", limit=1)["pagination"]["total"] == 0
 
     by_format = get("/events", format_epreuve="M", type_epreuve="triathlon", limit=30)["items"]
     assert by_format
