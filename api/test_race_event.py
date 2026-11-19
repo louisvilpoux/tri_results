@@ -152,3 +152,26 @@ def test_editions_are_one_per_year(multi_format_race_id: int) -> None:
     assert event["year_epreuve"] in years
     for edition in event["editions"]:
         assert get_event(edition["race_id"])["year_epreuve"] == edition["year_epreuve"]
+
+
+def test_prolivesport_names_have_no_year() -> None:
+    """L'année est retirée du nom prolivesport (elle reste dans year_epreuve) : les éditions
+    d'une même course partagent le même nom."""
+    try:
+        with engine.connect() as connection:
+            with_year = connection.execute(
+                text(
+                    """
+                    SELECT COUNT(*)
+                    FROM races r
+                    WHERE r.name_epreuve LIKE '%' || r.year_epreuve || '%'
+                      AND EXISTS (
+                        SELECT 1 FROM results x
+                        WHERE x.epreuve_id = r.id AND x.source = 'prolivesport'
+                      )
+                    """
+                )
+            ).scalar()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    assert with_year == 0

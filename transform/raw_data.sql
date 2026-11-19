@@ -45,7 +45,8 @@ t1 as t1_time, ((regexp_match(t1, '\((\d+)e\)'))[1]) as rang_t1, null as rang_co
 bike as bike_time, ((regexp_match(bike, '\((\d+)e\)'))[1]) as rang_bike, null as rang_course_bike, null as indice_performance_bike,
 t2 as t2_time, ((regexp_match(t2, '\((\d+)e\)'))[1]) as rang_t2, null as rang_course_t2, null as indice_performance_t2,
 run as run_time, ((regexp_match(run, '\((\d+)e\)'))[1]) as rang_run, null as rang_course_run, null as indice_performance_run,
-name_epreuve, format_epreuve, year_epreuve,
+-- l'année est retirée du nom pour relier les éditions (elle reste dans year_epreuve)
+prolivesport_event_name(name_epreuve, year_epreuve) as name_epreuve, format_epreuve, year_epreuve,
 date_epreuve::date::text as date_epreuve, lieu_epreuve,
 scraped_at, 'prolivesport' as source,
 -- prolivesport fournit le sexe (M, F, X pour les équipes mixtes) ; sa colonne cat contient

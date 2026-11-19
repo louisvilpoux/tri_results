@@ -124,3 +124,26 @@ BEGIN
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
+
+
+-- Nom d'un événement prolivesport sans son année.
+-- prolivesport écrit l'année dans le nom (« Triathlon Bray-Dunes 2022 », « Triathlon Open
+-- Quiberon 2026 - Samedi ») : sans ce nettoyage, les éditions d'une même course n'ont pas le
+-- même nom et ne sont pas reliées entre elles. L'année reste dans year_epreuve (elle y est
+-- toujours égale, vérifié le 19/11/2026 sur les 232 noms qui la contiennent). Seule l'année de
+-- l'édition est retirée ; les espaces et tirets laissés en trop sont nettoyés.
+CREATE OR REPLACE FUNCTION prolivesport_event_name(event_name text, year text)
+RETURNS text AS $$
+DECLARE
+    cleaned text := event_name;
+BEGIN
+    IF year IS NULL OR event_name IS NULL THEN
+        RETURN event_name;
+    END IF;
+    cleaned := regexp_replace(cleaned, '(?<![0-9])' || year || '(?![0-9])', ' ', 'g');
+    cleaned := regexp_replace(cleaned, '\s+-(\s+-)+\s+', ' - ', 'g');  -- « Douai  -  - Samedi »
+    cleaned := regexp_replace(cleaned, '\s+', ' ', 'g');
+    cleaned := btrim(cleaned, ' -');
+    RETURN nullif(cleaned, '');
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
