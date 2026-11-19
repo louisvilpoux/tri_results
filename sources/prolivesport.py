@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup, NavigableString
 import re
 import unicodedata
-from urllib.parse import urljoin, urlparse, parse_qs
+from urllib.parse import urljoin, urlparse, parse_qs, quote
 import certifi
 import ssl
 from io import StringIO
@@ -42,26 +42,53 @@ def call_api_prolivesport(url_target):
         print(f"Erreur réseau : {e}")
         return None
 
-df = pd.read_csv("./sources/prolivesport/url/urls.csv")
+# id et race sont du texte : sans dtype, pandas lit "1262" ou "111" comme des nombres.
+df = pd.read_csv("./sources/prolivesport/url/urls.csv", dtype={"id": str, "race": str})
 categorie = df["categorieevent"].str.lower()
 triathlon_events = df[categorie.str.contains("tri|duathlon|aquathlon", na=False)]
 
+# L'API renvoie les résultats de tout l'événement, quelle que soit l'épreuve demandée dans l'URL
+# (vérifié le 19/11/2026 : 782 lignes pour chacune des 4 épreuves de l'événement 1137). Chaque
+# ligne porte son épreuve dans le champ "race" : on appelle l'API une fois par événement, puis on
+# garde, pour chaque épreuve, les lignes dont "race" correspond.
+event_results = {}
+
+
+def get_event_results(event_id, race):
+    """Résultats de tout l'événement, mis en cache. `race` sert seulement à former une URL
+    valide : sans elle, l'API répond « param1 don't eventId »."""
+    if event_id not in event_results:
+        url = f"https://api.prolivesport.fr/apiws/result/indiv/{event_id}/{quote(race, safe='')}"
+        data = call_api_prolivesport(url)
+        if data is None or not data.get("success"):
+            return None  # erreur déjà affichée ou réponse d'erreur : on retentera au prochain lancement
+        event_results[event_id] = data["result"]
+    return event_results[event_id]
+
+
 # obtenir la liste des épreuves sur une compétition
 for index, row in triathlon_events.iterrows():
-    target_name = create_race_unicity(row["name"])
-    target_name = target_name + row['id'] + row['race'] + ".csv"
-    target_name = target_name.replace("/","_")
+    # même forme que les fichiers du scraping annulé du 18/11 : <nom>_<eventId>_<épreuve>.csv
+    target_name = f"{create_race_unicity(row['name'])}_{row['id']}_{create_race_unicity(row['race'])}.csv"
 
-    indivresult_url = f"https://api.prolivesport.fr/apiws/result/indiv/{row['id']}"
+    indivresult_url = f"https://api.prolivesport.fr/apiws/result/indiv/{row['id']}/"
 
     # do not compute already computed races
     files = os.listdir("./sources/prolivesport/prolivesport_0/")
     if target_name in files:
         continue
 
-    indivresult = call_api_prolivesport(indivresult_url)
+    results = get_event_results(row["id"], row["race"])
+    if results is None:
+        continue
+    race_results = [d for d in results if d["race"] == row["race"]]
+    if not race_results:
+        # pas de fichier vide : il servirait de modèle de colonnes incomplet à create_table_to_pg
+        print(f"{index}/{len(triathlon_events)} : aucun résultat pour {row['race']} ({row['id']})")
+        continue
+
     rows = []
-    for d in indivresult["result"]:
+    for d in race_results:
         rows.append({"nom":d["firstname"] + "  "+ d["lastname"],
                         "sexe":d["sex"],
                         "club":d["club"],
