@@ -69,8 +69,8 @@ Dossier : `transform`
       d'une épreuve prolivesport sa discipline (nom de l'épreuve, puis catégorie, puis nom de l'événement) et son
       format (relais, jeunes, lettre XS…XXL, mots connus comme Sprint ou 70.3, puis distance en km). Les épreuves
       d'autres sports (course à pied, natation seule, SUPP, distance ≥ 998) sont exclues. Détail des règles en
-      commentaire dans le fichier. `prolivesport_event_name` retire l'année du nom de l'événement (elle reste dans
-      year_epreuve) pour relier les éditions d'une même course.
+      commentaire dans le fichier. `prolivesport_event_name` retire l'année (elle reste dans year_epreuve) et le numéro
+      d'édition (« 38e ») du nom de l'événement pour relier les éditions d'une même course.
     - raw_data.sql : insertion dans la table raw_data des données en union all des différentes tables raw_ .
       Le sexe y est calculé une fois par ligne : colonne `sexe` de la source pour prolivesport (M ou F, vide pour
       les équipes mixtes X), première lettre de `cat` pour les autres sources. athletes_tmp et results le reprennent.

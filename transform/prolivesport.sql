@@ -126,21 +126,29 @@ END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
 
--- Nom d'un événement prolivesport sans son année.
+-- Nom d'un événement prolivesport sans son année ni son numéro d'édition.
 -- prolivesport écrit l'année dans le nom (« Triathlon Bray-Dunes 2022 », « Triathlon Open
--- Quiberon 2026 - Samedi ») : sans ce nettoyage, les éditions d'une même course n'ont pas le
--- même nom et ne sont pas reliées entre elles. L'année reste dans year_epreuve (elle y est
--- toujours égale, vérifié le 19/11/2026 sur les 232 noms qui la contiennent). Seule l'année de
--- l'édition est retirée ; les espaces et tirets laissés en trop sont nettoyés.
+-- Quiberon 2026 - Samedi ») et parfois le numéro d'édition (« 38e Triathlon / Duathlon de
+-- l'Audomarois », « 12e Triathlon et 6e Duathlon de Saint-Saulve »). Sans ce nettoyage, les
+-- éditions d'une même course n'ont pas le même nom et ne sont pas reliées entre elles.
+-- L'année reste dans year_epreuve (elle y est toujours égale, vérifié le 19/11/2026 sur les
+-- 232 noms qui la contiennent) ; seule l'année de l'édition est retirée. Les numéros
+-- d'édition (1er, 2e, 33ème…) sont retirés où qu'ils soient. Les espaces et tirets laissés en
+-- trop sont nettoyés.
 CREATE OR REPLACE FUNCTION prolivesport_event_name(event_name text, year text)
 RETURNS text AS $$
 DECLARE
     cleaned text := event_name;
 BEGIN
-    IF year IS NULL OR event_name IS NULL THEN
-        RETURN event_name;
+    IF event_name IS NULL THEN
+        RETURN NULL;
     END IF;
-    cleaned := regexp_replace(cleaned, '(?<![0-9])' || year || '(?![0-9])', ' ', 'g');
+    IF year IS NOT NULL THEN
+        cleaned := regexp_replace(cleaned, '(?<![0-9])' || year || '(?![0-9])', ' ', 'g');
+    END IF;
+    cleaned := regexp_replace(
+        cleaned, '(?<![[:alnum:].])[0-9]+ ?(ère|ere|ème|eme|er|è|e)(?![[:alnum:]])', ' ', 'gi'
+    );
     cleaned := regexp_replace(cleaned, '\s+-(\s+-)+\s+', ' - ', 'g');  -- « Douai  -  - Samedi »
     cleaned := regexp_replace(cleaned, '\s+', ' ', 'g');
     cleaned := btrim(cleaned, ' -');

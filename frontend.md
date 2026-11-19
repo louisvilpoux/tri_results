@@ -257,10 +257,10 @@ Points connus (données) :
   prolivesport exclus) ont été retirés. Limite : quand la lettre du nom et la distance ne concordent pas (8 %), la
   lettre l'emporte ; 18 épreuves jeunes d'événements « Triathlon / Duathlon » prennent la discipline de la catégorie.
 - 589 épreuves n'ont aucun résultat (souvent sans date, anciennes sources) : elles sont ignorées dans les formats d'une course.
-- Les noms prolivesport contenaient l'année (« Triathlon Bray-Dunes 2022 ») : elle est retirée dans `transform/`
-  (`prolivesport_event_name`, l'année reste dans `year_epreuve`), ce qui relie les éditions de 34 courses. Restent
-  séparés les noms qui changent d'une année à l'autre, surtout à cause du numéro d'édition (« 38e Triathlon… »,
-  « 39e Triathlon… », 24 noms) ou d'une formulation différente (« Triathlon Bray-Dunes » / « Triathlon de Bray-Dunes »).
+- Les noms prolivesport contenaient l'année (« Triathlon Bray-Dunes 2022 ») et parfois le numéro d'édition
+  (« 38e Triathlon… ») : les deux sont retirés dans `transform/` (`prolivesport_event_name`, l'année reste dans
+  `year_epreuve`), ce qui relie les éditions de 41 courses. Restent séparés les noms dont la formulation change
+  d'une année à l'autre (« Triathlon Bray-Dunes » / « Triathlon de Bray-Dunes »).
 - Une même course peut venir de deux sources sous deux noms différents (ex. « Triathlon De Ardres » et
   « DUATHLON TRIATHLON DU LAC D'ARDRES 2026 ») : elle apparaît deux fois dans l'historique.
 - Des lieux d'épreuve contiennent "nan" (valeurs vides converties en texte au scraping, ex. « nan Cabourg nan nan ») :

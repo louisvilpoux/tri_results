@@ -155,8 +155,8 @@ def test_editions_are_one_per_year(multi_format_race_id: int) -> None:
 
 
 def test_prolivesport_names_have_no_year() -> None:
-    """L'année est retirée du nom prolivesport (elle reste dans year_epreuve) : les éditions
-    d'une même course partagent le même nom."""
+    """L'année et le numéro d'édition sont retirés du nom prolivesport (l'année reste dans
+    year_epreuve) : les éditions d'une même course partagent le même nom."""
     try:
         with engine.connect() as connection:
             with_year = connection.execute(
@@ -164,7 +164,8 @@ def test_prolivesport_names_have_no_year() -> None:
                     """
                     SELECT COUNT(*)
                     FROM races r
-                    WHERE r.name_epreuve LIKE '%' || r.year_epreuve || '%'
+                    WHERE (r.name_epreuve LIKE '%' || r.year_epreuve || '%'
+                           OR r.name_epreuve ~* '(^|\\s)\\d+ ?(e|er|ème|eme)(\\s|$)')
                       AND EXISTS (
                         SELECT 1 FROM results x
                         WHERE x.epreuve_id = r.id AND x.source = 'prolivesport'
