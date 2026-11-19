@@ -155,3 +155,47 @@ BEGIN
     RETURN nullif(cleaned, '');
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
+
+
+-- Nom affiché d'une équipe prolivesport (bike&run, relais), ou NULL si la ligne est celle
+-- d'une seule personne.
+-- Le scraping écrit « prénom  nom » (deux espaces). Dans les bike&run et les relais,
+-- prolivesport remplit ces champs de plusieurs façons (comptées le 19/11/2026) :
+--   1. prénom vide ou « . », nom = nom d'équipe (« .  LES PELUCHOS ») → « LES PELUCHOS » ;
+--   2. équipiers séparés par « / » ou « | » dans le prénom, nom d'équipe dans le nom
+--      (« Cocquet Barnabe / Cochin Leo  GRAVELINES TRI ») → « Cocquet Barnabe & Cochin Leo
+--      (GRAVELINES TRI) » ;
+--   3. code court en majuscules dans le prénom, nom d'équipe dans le nom
+--      (« MI  BRETAGNE 2 ») → « BRETAGNE 2 » ;
+--   4. bike&run seulement : équipier 1 (« NOM Prénom ») dans le prénom, équipier 2 dans le
+--      nom (« MEEUS Theo  MOREAU TEOPHANE ») → « MEEUS Theo & MOREAU TEOPHANE » ;
+--   sinon (prénom d'un seul mot, ou prénom composé dans un relais : « Laly  CHAOUCH »,
+--   « Jean francois  DUHAMEL ») : une seule personne → NULL. La casse d'origine est gardée.
+CREATE OR REPLACE FUNCTION prolivesport_team_name(nom text, is_bike_and_run boolean)
+RETURNS text AS $$
+DECLARE
+    first_part text;
+    second_part text;
+BEGIN
+    IF nom IS NULL OR position('  ' in nom) = 0 THEN
+        RETURN NULL;
+    END IF;
+    first_part := btrim(split_part(nom, '  ', 1));
+    second_part := btrim(regexp_replace(substring(nom from position('  ' in nom) + 2), '\s+', ' ', 'g'));
+
+    IF first_part IN ('', '.') THEN
+        RETURN second_part;
+    END IF;
+    IF first_part ~ '[/|]' THEN
+        RETURN regexp_replace(first_part, '\s*[/|]\s*', ' & ', 'g')
+            || CASE WHEN second_part <> '' THEN ' (' || second_part || ')' ELSE '' END;
+    END IF;
+    IF first_part ~ '^[A-Z]{1,3}[0-9]?$' THEN
+        RETURN second_part;
+    END IF;
+    IF is_bike_and_run AND first_part ~ '\s' THEN
+        RETURN first_part || ' & ' || second_part;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;

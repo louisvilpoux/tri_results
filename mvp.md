@@ -12,7 +12,8 @@
     - /races/{id}/event : la course à laquelle appartient l'épreuve (même nom + même année) : période, lieu,
       participants distincts, formats (participants, vainqueur, première femme) et autres éditions (une épreuve par année).
       Les épreuves sans résultat sont ignorées.
-    - /races/{id}/results : voir les résultats d'une course donnée.
+    - /races/{id}/results : voir les résultats d'une course donnée. `equipe` vaut true pour une ligne d'équipe
+      (bike&run, relais) : `nom_athlete` contient alors les équipiers ou le nom d'équipe, sans profil d'athlète.
         - tri `sort_by` : `clt` (défaut), `nom_athlete`, `swim_time`, `t1_time`, `bike_time`, `t2_time`, `run_time`, `total_time` ; toute autre valeur renvoie 422.
         - les valeurs vides, les non-classés (`clt` à 0 ou ≥ 99990) et les temps invalides (`—`, négatifs,
           `00:00:00`) sont toujours placés en fin de liste.
@@ -23,6 +24,7 @@
     - /athletes/{id} : profil consolidé d'un athlète (id = `unified_id`) : nom, club, sexe, nb_races,
       nb_podiums, nb_top10, best_rank, seasons, disciplines, best_times.
     - /athletes/{id}/results : historique d'un athlète, avec `participants` (taille du classement).
+      Les résultats d'équipe ne font partie d'aucun profil : une « équipe » renvoie 404 sur /athletes/{id}.
         - tri `sort_by` : `date_epreuve` (défaut, `order=desc`), `clt`, `total_time`.
         - filtres : `year_epreuve`, `type_epreuve`, `format_epreuve`.
     - /athletes/{id}/races : voir toutes les courses auxquelles un athlète à participé.

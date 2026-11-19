@@ -118,3 +118,39 @@ def test_history_rank_sort_puts_unranked_last(active_athlete_id: int) -> None:
     ranks = [item["clt"] for item in items]
     filled = [rank for rank in ranks if is_ranked(rank)]
     assert ranks[: len(filled)] == sorted(filled)
+
+
+@pytest.fixture(scope="module")
+def team_only_athlete_id() -> int:
+    """« Athlète » qui n'a que des résultats d'équipe (bike&run, relais)."""
+    return find_athlete(
+        """
+        SELECT x.athlete_id
+        FROM results x
+        WHERE x.equipe
+          AND NOT EXISTS (
+            SELECT 1 FROM results y WHERE y.athlete_id = x.athlete_id AND NOT y.equipe
+          )
+        ORDER BY x.athlete_id
+        LIMIT 1
+        """
+    )
+
+
+def test_team_has_no_athlete_profile(team_only_athlete_id: int) -> None:
+    """Une équipe n'est pas un athlète : pas de profil ni d'historique."""
+    assert client.get(f"/athletes/{team_only_athlete_id}").status_code == 404
+    assert get_history(team_only_athlete_id)["pagination"]["total"] == 0
+
+
+def test_team_results_are_flagged(team_only_athlete_id: int) -> None:
+    with engine.connect() as connection:
+        race_id = connection.execute(
+            text("SELECT epreuve_id FROM results WHERE athlete_id = :id AND equipe LIMIT 1"),
+            {"id": team_only_athlete_id},
+        ).scalar()
+    items = client.get(f"/races/{race_id}/results", params={"limit": 100}).json()["items"]
+    teams = [item for item in items if item["equipe"]]
+    assert teams
+    # « prénom  nom » de prolivesport remis en forme (« A & B », nom d'équipe…).
+    assert all("  " not in item["nom_athlete"] for item in teams)

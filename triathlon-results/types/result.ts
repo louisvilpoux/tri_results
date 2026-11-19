@@ -6,6 +6,8 @@ export interface RaceResult {
   epreuve_id: number;
   nom_athlete: string;
   sexe: string | null;
+  /** Résultat d'une équipe (bike&run, relais) : pas de profil d'athlète. */
+  equipe: boolean;
   cat: string | null;
   categorie: string | null;
 

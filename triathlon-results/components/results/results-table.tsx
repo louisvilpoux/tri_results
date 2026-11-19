@@ -53,13 +53,16 @@ export function ResultsTable({ raceId, query, results }: ResultsTableProps) {
     );
   }
 
+  // Bike&run, relais : chaque ligne du classement est une équipe.
+  const isTeamRace = results.length > 0 && results.every((result) => result.equipe);
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-sm md:min-w-[1000px]">
         <thead className="border-b border-gray-200 bg-gray-50 text-xs tracking-wide text-gray-500">
           <tr>
             {sortHeader("clt", "Clt.")}
-            {sortHeader("nom_athlete", "Athlète")}
+            {sortHeader("nom_athlete", isTeamRace ? "Équipe" : "Athlète")}
             <th scope="col" className={`${CELL} uppercase ${DESKTOP_ONLY}`}>Catégorie</th>
             <th scope="col" className={`${CELL} uppercase ${DESKTOP_ONLY}`}>Sexe</th>
             {TIME_COLUMNS.map((column) =>
@@ -81,12 +84,17 @@ export function ResultsTable({ raceId, query, results }: ResultsTableProps) {
               </td>
 
               <td className={CELL}>
-                <Link
-                  href={`/athletes/${result.athlete_id}`}
-                  className="font-semibold text-[#17202E] hover:text-[#FC6B32]"
-                >
-                  {result.nom_athlete}
-                </Link>
+                {result.equipe ? (
+                  // Une équipe n'a pas de profil d'athlète.
+                  <span className="font-semibold text-[#17202E]">{result.nom_athlete}</span>
+                ) : (
+                  <Link
+                    href={`/athletes/${result.athlete_id}`}
+                    className="font-semibold text-[#17202E] hover:text-[#FC6B32]"
+                  >
+                    {result.nom_athlete}
+                  </Link>
+                )}
               </td>
 
               <td className={`${CELL} ${DESKTOP_ONLY}`}>

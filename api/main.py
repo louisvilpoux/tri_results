@@ -4,6 +4,7 @@ from typing import Any, Literal
 
 from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy import (
+    Boolean,
     Column,
     ForeignKey,
     Integer,
@@ -64,6 +65,9 @@ class Result(Base):
     epreuve_id = Column(Integer, ForeignKey("races.id"))
     name_epreuve = Column(String(50))
     sexe = Column(String(50))
+    # Résultat d'une équipe (bike&run, relais) : nom_athlete contient les équipiers et
+    # athlete_id ne correspond pas à une personne (voir transform/results.sql).
+    equipe = Column(Boolean)
     type_epreuve = Column(String(50))
     format_epreuve = Column(String(50))
     year_epreuve = Column(String(50))
@@ -311,7 +315,13 @@ def get_podium_leaders(
     """Premier classé (ou première femme) de chaque épreuve : {race_id: {athlete_id, ...}}."""
     rank = valid_rank_or_null(Result.clt)
     query = (
-        select(Result.epreuve_id, Result.athlete_id, Result.nom_athlete, Result.total_time)
+        select(
+            Result.epreuve_id,
+            Result.athlete_id,
+            Result.nom_athlete,
+            Result.equipe,
+            Result.total_time,
+        )
         .where(Result.epreuve_id.in_(race_ids), rank.isnot(None))
         .distinct(Result.epreuve_id)
         .order_by(Result.epreuve_id, rank, Result.id)
@@ -323,6 +333,7 @@ def get_podium_leaders(
         row.epreuve_id: {
             "athlete_id": row.athlete_id,
             "nom_athlete": " ".join((row.nom_athlete or "").split()) or None,
+            "equipe": row.equipe,
             "total_time": row.total_time if is_valid_time(row.total_time) else None,
         }
         for row in db.execute(query)
@@ -434,8 +445,9 @@ def list_athletes(
 # Athlètes
 # ----------------------
 def athlete_results(athlete_id: int) -> Select:
-    """Résultats d'un athlète (athlete_id = unified_id)."""
-    return select(Result).where(Result.athlete_id == athlete_id)
+    """Résultats individuels d'un athlète (athlete_id = unified_id) ; les résultats d'équipe
+    (bike&run, relais) ne sont rattachés à aucune personne."""
+    return select(Result).where(Result.athlete_id == athlete_id, Result.equipe.is_(False))
 
 
 def result_to_dict(result: Result) -> dict[str, Any]:
@@ -487,7 +499,7 @@ def get_athlete(athlete_id: int, db: Session = Depends(get_db)) -> dict[str, Any
     athlete_rows = (
         db.query(Athlete.nom, Athlete.club).filter(Athlete.unified_id == athlete_id).all()
     )
-    if not results and not athlete_rows:
+    if not results:  # aucun résultat individuel (ex. équipe de bike&run)
         raise HTTPException(status_code=404, detail="Athlete not found")
 
     names = [result.nom_athlete for result in results] or [row.nom for row in athlete_rows]
@@ -698,7 +710,7 @@ def search_athletes_page(
                 func.count(Result.id).label("nb_races"),
                 func.max(Result.year_epreuve).label("last_season"),
             )
-            .where(Result.athlete_id.in_(ids))
+            .where(Result.athlete_id.in_(ids), Result.equipe.is_(False))
             .group_by(Result.athlete_id)
         )
     }

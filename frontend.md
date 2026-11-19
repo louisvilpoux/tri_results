@@ -261,6 +261,12 @@ Points connus (données) :
   (« 38e Triathlon… ») : les deux sont retirés dans `transform/` (`prolivesport_event_name`, l'année reste dans
   `year_epreuve`), ce qui relie les éditions de 41 courses. Restent séparés les noms dont la formulation change
   d'une année à l'autre (« Triathlon Bray-Dunes » / « Triathlon de Bray-Dunes »).
+- Équipes (19/11/2026) : en bike&run et en relais, une ligne prolivesport peut être une équipe (5 683 lignes)
+  ou une seule personne (770 lignes). Les équipes sont affichées sans lien (« MEEUS Theo & MOREAU TEOPHANE »,
+  « LES PELUCHOS »), avec « Équipe gagnante » sur la page course et une colonne « Équipe » dans le classement ;
+  elles n'ont ni profil ni place dans la liste des athlètes ou la recherche. Les équipiers ne retrouvent pas encore
+  ces résultats dans leur profil (il faudrait garder prénom et nom séparés au scraping et relier un résultat à
+  plusieurs athlètes).
 - Doublons prolivesport / fftri_t2_area (corrigé le 19/11/2026) : une épreuve publiée par les deux sources est
   reconnue à ses participants (dates à un jour près, au moins la moitié des athlètes en commun) et seule la version
   fftri_t2_area est gardée (`transform/doublons_sources.sql`, 60 épreuves retirées, trace dans la table

@@ -9,12 +9,17 @@ function LeaderLine({ label, leader }: { label: string; leader: PodiumLeader }) 
     <div className="flex items-center justify-between gap-3 text-sm">
       <div className="min-w-0">
         <p className="text-xs font-semibold text-gray-400">{label}</p>
-        <Link
-          href={`/athletes/${leader.athlete_id}`}
-          className="block truncate font-semibold text-[#17202E] hover:text-[#FC6B32]"
-        >
-          {leader.nom_athlete ?? "Athlète"}
-        </Link>
+        {leader.equipe ? (
+          // Une équipe n'a pas de profil d'athlète.
+          <p className="truncate font-semibold text-[#17202E]">{leader.nom_athlete ?? "Équipe"}</p>
+        ) : (
+          <Link
+            href={`/athletes/${leader.athlete_id}`}
+            className="block truncate font-semibold text-[#17202E] hover:text-[#FC6B32]"
+          >
+            {leader.nom_athlete ?? "Athlète"}
+          </Link>
+        )}
       </div>
       {leader.total_time && (
         <span className="shrink-0 font-mono font-bold tabular-nums text-[#17202E]">
@@ -53,9 +58,17 @@ export function RaceFormatCard({ raceFormat }: { raceFormat: RaceFormat }) {
             <Medal size={14} aria-hidden className="text-[#FC6B32]" />
             Podium
           </p>
-          {raceFormat.winner && <LeaderLine label="Vainqueur" leader={raceFormat.winner} />}
+          {raceFormat.winner && (
+            <LeaderLine
+              label={raceFormat.winner.equipe ? "Équipe gagnante" : "Vainqueur"}
+              leader={raceFormat.winner}
+            />
+          )}
           {raceFormat.first_woman && (
-            <LeaderLine label="Première femme" leader={raceFormat.first_woman} />
+            <LeaderLine
+              label={raceFormat.first_woman.equipe ? "Première équipe féminine" : "Première femme"}
+              leader={raceFormat.first_woman}
+            />
           )}
         </div>
       )}

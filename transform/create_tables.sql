@@ -59,6 +59,8 @@ CREATE TABLE results (
     athlete_id INT NOT NULL REFERENCES athletes(id),
     nom_athlete TEXT,
     sexe TEXT,
+    -- résultat d'une équipe (bike&run, relais) : nom_athlete contient les équipiers
+    equipe BOOLEAN NOT NULL DEFAULT false,
     cat TEXT,
     clt_cat TEXT,
     id_league TEXT,

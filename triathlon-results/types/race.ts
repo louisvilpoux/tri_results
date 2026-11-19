@@ -15,6 +15,8 @@ export interface Race {
 export interface PodiumLeader {
   athlete_id: number;
   nom_athlete: string | null;
+  /** Équipe (bike&run, relais) : pas de profil d'athlète. */
+  equipe: boolean;
   total_time: string | null;
 }
 

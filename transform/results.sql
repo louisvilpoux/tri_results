@@ -9,7 +9,10 @@ SELECT
     r.date_epreuve,
     r.year_epreuve,
     a.unified_id AS athlete_id,
-    a.nom AS nom_athlete,
+    -- Bike&run et relais : une ligne peut être celle d'une équipe (pas d'un athlète), voir
+    -- prolivesport_team_name. Les lignes d'une seule personne restent des résultats d'athlète.
+    t.team_name IS NOT NULL AS equipe,
+    COALESCE(t.team_name, a.nom) AS nom_athlete,
     rfta.sexe,
     rfta.cat,
     rfta.clt_cat,
@@ -50,10 +53,17 @@ JOIN races AS r ON r.name_epreuve = rfta.name_epreuve
                 AND r.format_initial = rfta.format_epreuve
                 AND r.date_epreuve = rfta.date_epreuve
 JOIN athletes AS a ON a.nom = rfta.nom
+CROSS JOIN LATERAL (
+    SELECT CASE
+        WHEN rfta.source = 'prolivesport'
+             AND (r.type_epreuve = 'bike&run' OR r.format_epreuve = 'RELAIS')
+        THEN prolivesport_team_name(rfta.nom, r.type_epreuve = 'bike&run')
+    END AS team_name
+) t
 )
 
 INSERT INTO results (clt, clt_f, epreuve_id, name_epreuve, type_epreuve, 
-format_epreuve, date_epreuve, year_epreuve, athlete_id, nom_athlete, sexe, cat, 
+format_epreuve, date_epreuve, year_epreuve, athlete_id, nom_athlete, sexe, equipe, cat, 
 clt_cat, id_league, league, url, rang_global, rang_sexe, rang_categorie, 
 categorie, indice_performance, indice_performance_reference, total_time, 
 swim_time, rang_swim, rang_course_swim, indice_performance_swim, t1_time, 
@@ -63,7 +73,7 @@ indice_performance_t2, run_time, rang_run, rang_course_run,
 indice_performance_run, source)
 SELECT 
 clt, clt_f, epreuve_id, name_epreuve, type_epreuve, 
-format_epreuve, date_epreuve, year_epreuve, athlete_id, nom_athlete, sexe, cat, 
+format_epreuve, date_epreuve, year_epreuve, athlete_id, nom_athlete, sexe, equipe, cat, 
 clt_cat, id_league, league, url, rang_global, rang_sexe, rang_categorie, 
 categorie, indice_performance, indice_performance_reference, total_time, 
 swim_time, rang_swim, rang_course_swim, indice_performance_swim, t1_time, 
