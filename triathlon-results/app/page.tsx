@@ -123,7 +123,7 @@ export default function Home() {
                 </p>
 
                 {discipline.href ? (
-                  <div className="mt-5 flex items-center gap-2 text-sm font-bold text-[#FC6B32]">
+                  <div className="mt-auto flex items-center pt-5 gap-2 text-sm font-bold text-[#FC6B32]">
                     Explorer
                     <ArrowRight
                       size={16}
@@ -131,7 +131,7 @@ export default function Home() {
                     />
                   </div>
                 ) : (
-                  <div className="mt-5 flex items-center gap-2 text-sm font-semibold text-gray-500">
+                  <div className="mt-auto flex items-center pt-5 gap-2 text-sm font-semibold text-gray-500">
                     <Clock size={15} aria-hidden />
                     En cours de développement, bientôt disponible
                   </div>
@@ -143,14 +143,14 @@ export default function Home() {
               <Link
                 key={discipline.name}
                 href={discipline.href}
-                className="group block rounded-xl border border-gray-200 bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#FC6B32]/50 hover:shadow-lg"
+                className="group flex flex-col rounded-xl border border-gray-200 bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#FC6B32]/50 hover:shadow-lg"
               >
                 {content}
               </Link>
             ) : (
               <div
                 key={discipline.name}
-                className="rounded-xl border border-dashed border-gray-300 bg-white/60 p-6"
+                className="flex flex-col rounded-xl border border-dashed border-gray-300 bg-white/60 p-6"
               >
                 {content}
               </div>
