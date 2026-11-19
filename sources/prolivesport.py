@@ -43,14 +43,13 @@ def call_api_prolivesport(url_target):
         return None
 
 df = pd.read_csv("./sources/prolivesport/url/urls.csv")
-#triathlon_events = df[df["categorie"]=='FF Triathlon => Triathlon']
-triathlon_events = df[df["categorieevent"].str.contains("Triathlon")\
-                    | df["categorieevent"].str.contains("Duathlon")]
+categorie = df["categorieevent"].str.lower()
+triathlon_events = df[categorie.str.contains("tri|duathlon|aquathlon", na=False)]
 
 # obtenir la liste des épreuves sur une compétition
 for index, row in triathlon_events.iterrows():
     target_name = create_race_unicity(row["name"])
-    target_name = target_name + row['id'] + ".csv"
+    target_name = target_name + row['id'] + row['race'] + ".csv"
     target_name = target_name.replace("/","_")
 
     indivresult_url = f"https://api.prolivesport.fr/apiws/result/indiv/{row['id']}"
