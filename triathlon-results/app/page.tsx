@@ -1,6 +1,7 @@
 import {
   ArrowRight,
   Bike,
+  Clock,
   Footprints,
   Waves,
 } from "lucide-react";
@@ -15,7 +16,7 @@ interface Discipline {
   name: string;
   description: string;
   icon: typeof Waves;
-  /** Liste des courses filtrée sur la discipline ; absent si aucune donnée. */
+  /** Liste des courses filtrée sur la discipline ; absent tant que la discipline est en développement. */
   href?: string;
 }
 
@@ -106,25 +107,36 @@ export default function Home() {
                   {discipline.description}
                 </p>
 
-                <div className="mt-5 flex items-center gap-2 text-sm font-bold text-[#FC6B32]">
-                  Explorer
-                  <ArrowRight
-                    size={16}
-                    className="transition-transform group-hover:translate-x-1"
-                  />
-                </div>
+                {discipline.href ? (
+                  <div className="mt-5 flex items-center gap-2 text-sm font-bold text-[#FC6B32]">
+                    Explorer
+                    <ArrowRight
+                      size={16}
+                      className="transition-transform group-hover:translate-x-1"
+                    />
+                  </div>
+                ) : (
+                  <div className="mt-5 flex items-center gap-2 text-sm font-semibold text-gray-500">
+                    <Clock size={15} aria-hidden />
+                    En cours de développement, bientôt disponible
+                  </div>
+                )}
               </>
             );
 
-            const cardClass =
-              "group rounded-xl border border-gray-200 bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#FC6B32]/50 hover:shadow-lg";
-
             return discipline.href ? (
-              <Link key={discipline.name} href={discipline.href} className={`block ${cardClass}`}>
+              <Link
+                key={discipline.name}
+                href={discipline.href}
+                className="group block rounded-xl border border-gray-200 bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#FC6B32]/50 hover:shadow-lg"
+              >
                 {content}
               </Link>
             ) : (
-              <div key={discipline.name} className={cardClass}>
+              <div
+                key={discipline.name}
+                className="rounded-xl border border-dashed border-gray-300 bg-white/60 p-6"
+              >
                 {content}
               </div>
             );

@@ -172,6 +172,8 @@ L'objectif est de donner l'impression d'une véritable plateforme de résultats 
 Réalisés
 - page d'accueil
     - Blocs Triathlon et Duathlon : liens vers `/races` filtré sur la discipline.
+    - Bloc Course à pied : non cliquable, bordure en pointillés et mention « En cours de développement,
+      bientôt disponible » (aucune course à pied en base).
     - Dernières compétitions : les 6 courses les plus récentes ayant des résultats (`GET /events`, même ordre
       que `/races`), chargées en streaming avec un squelette, et lien « Toutes les courses ».
       Code : `components/home/latest-races.tsx`.
