@@ -75,7 +75,9 @@ Dossier : `transform`
       Le sexe y est calculé une fois par ligne : colonne `sexe` de la source pour prolivesport (M ou F, vide pour
       les équipes mixtes X), première lettre de `cat` pour les autres sources. athletes_tmp et results le reprennent.
 3. génération des tables spécifiques :
-    - races.sql : table pour décrire chaque épreuve.
+    - races.sql : table pour décrire chaque épreuve. La discipline est ce qui précède la lettre de distance dans
+      format_epreuve et le format est cette lettre (« cross triathlon m clm » → cross triathlon, M ; la variante
+      CLM, EQ ou OPEN reste dans format_initial). prolivesport : voir prolivesport.sql.
     - nb_races.sql : table pour obtenir le nombre de courses différentes auquel un athlète a participé.
     - athletes_tmp.sql : table pour isoler les informations sur l'athlète
     - athletes.sql : table pour gérer les différentes entrées possible pour un même athlète en utilisant un unified_id.

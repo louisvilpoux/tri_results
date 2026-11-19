@@ -107,3 +107,11 @@ def test_athletes_sexe_filter() -> None:
     women = get("/athletes", s="F", limit=5)["items"]
     for item in women:
         assert client.get(f"/athletes/{item['id']}").json()["sexe"] in ("F", None)
+
+
+def test_events_disciplines_have_no_format() -> None:
+    """La discipline ne contient pas de lettre de format (« triathlon m clm » → triathlon, M)."""
+    filters = get("/events", limit=1)["filters"]
+    letters = {"xs", "s", "m", "l", "xl", "xxl", "clm", "eq", "open"}
+    assert all(discipline.split()[-1] not in letters for discipline in filters["types"])
+    assert not {"CLM", "EQ"} & set(filters["formats"])
