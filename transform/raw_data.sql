@@ -60,6 +60,9 @@ CROSS JOIN LATERAL (
 ) d
 -- discipline NULL : épreuve d'un autre sport (course à pied, natation seule…), exclue
 WHERE d.discipline IS NOT NULL
+-- épreuves contre-la-montre (« CLM », « CLM S ») exclues : prolivesport y renvoie des colonnes
+-- de temps décalées (ex. Villeneuve d'Ascq 2019 : temps total de 00:09:22)
+AND format_epreuve !~* '\mclm\M'
 UNION ALL
 SELECT 
 CASE WHEN pg_input_is_valid(clt, 'integer') THEN clt::integer ELSE NULL END AS clt, 

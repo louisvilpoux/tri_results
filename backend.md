@@ -74,6 +74,8 @@ Dossier : `transform`
     - raw_data.sql : insertion dans la table raw_data des données en union all des différentes tables raw_ .
       Le sexe y est calculé une fois par ligne : colonne `sexe` de la source pour prolivesport (M ou F, vide pour
       les équipes mixtes X), première lettre de `cat` pour les autres sources. athletes_tmp et results le reprennent.
+      Les épreuves prolivesport contre-la-montre (`format_epreuve` « CLM », « CLM S ») sont exclues : leurs
+      colonnes de temps sont décalées. Les épreuves CLM des autres sources sont gardées.
 3. génération des tables spécifiques :
     - races.sql : table pour décrire chaque épreuve. La discipline est ce qui précède la lettre de distance dans
       format_epreuve et le format est cette lettre (« cross triathlon m clm » → cross triathlon, M ; la variante
