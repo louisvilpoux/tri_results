@@ -261,8 +261,14 @@ Points connus (données) :
   (« 38e Triathlon… ») : les deux sont retirés dans `transform/` (`prolivesport_event_name`, l'année reste dans
   `year_epreuve`), ce qui relie les éditions de 41 courses. Restent séparés les noms dont la formulation change
   d'une année à l'autre (« Triathlon Bray-Dunes » / « Triathlon de Bray-Dunes »).
-- Une même course peut venir de deux sources sous deux noms différents (ex. « Triathlon De Ardres » et
-  « DUATHLON TRIATHLON DU LAC D'ARDRES 2026 ») : elle apparaît deux fois dans l'historique.
+- Doublons prolivesport / fftri_t2_area (corrigé le 19/11/2026) : une épreuve publiée par les deux sources est
+  reconnue à ses participants (dates à un jour près, au moins la moitié des athlètes en commun) et seule la version
+  fftri_t2_area est gardée (`transform/doublons_sources.sql`, 60 épreuves retirées, trace dans la table
+  `doublons_sources`). Les épreuves que seul prolivesport publie (souvent XS, S, jeunes, relais) restent, sous le
+  nom fftri_t2_area de la course, pour toutes les années de leur nom prolivesport : la course n'apparaît qu'une fois
+  (ex. Étaples : 7 courses au lieu de 11). Le nom affiché est donc celui de fftri_t2_area (« triathlon d etaples
+  sur mer »), et une course mixte peut prendre le nom de sa partie fftri (« Triathlon/Duathlon des Géants - Douai »
+  → « duathlon de douai »).
 - Des lieux d'épreuve contiennent "nan" (valeurs vides converties en texte au scraping, ex. « nan Cabourg nan nan ») :
   l'API les retire (`clean_lieu`).
 - Le serveur de dev Turbopack ne voit parfois pas une nouvelle fonction exportée par `lib/api.ts` (« … is not a function »

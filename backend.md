@@ -80,6 +80,10 @@ Dossier : `transform`
     - athletes_tmp.sql : table pour isoler les informations sur l'athlète
     - athletes.sql : table pour gérer les différentes entrées possible pour un même athlète en utilisant un unified_id.
     - results.sql : table finale pour retrouver pour chaque athlète unified l'ensemble de ses résultats en compétition.
+    - doublons_sources.sql : retire les épreuves prolivesport publiées aussi par fftri_t2_area (dates à un jour près,
+      au moins la moitié des athlètes en commun) ; la version fftri_t2_area est gardée et la table doublons_sources
+      garde la trace des paires retirées. Les autres épreuves prolivesport de ces courses prennent le nom
+      fftri_t2_area pour être regroupées avec elles. Exécuté avant nb_races.sql.
 4. génération des index :
     - pg_index.sql : création des index pour améliorer les performances des requêtes sur les tables.
 

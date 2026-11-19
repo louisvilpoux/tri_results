@@ -176,3 +176,36 @@ def test_prolivesport_names_have_no_year() -> None:
     except OperationalError:
         pytest.skip("Base PostgreSQL indisponible")
     assert with_year == 0
+
+
+def test_no_prolivesport_duplicate_of_fftri() -> None:
+    """Une épreuve prolivesport qui partage au moins la moitié de ses athlètes avec une épreuve
+    fftri_t2_area datée à un jour près est un doublon : elle est retirée
+    (transform/doublons_sources.sql)."""
+    try:
+        with engine.connect() as connection:
+            max_overlap = connection.execute(
+                text(
+                    """
+                    WITH epreuves AS (
+                        SELECT epreuve_id, COUNT(*) AS participants FROM results GROUP BY epreuve_id
+                    ),
+                    communs AS (
+                        SELECT p.epreuve_id AS pid, f.epreuve_id AS fid, COUNT(*) AS athletes
+                        FROM results p
+                        JOIN results f
+                          ON f.athlete_id = p.athlete_id
+                         AND abs(f.date_epreuve::date - p.date_epreuve::date) <= 1
+                        WHERE p.source = 'prolivesport' AND f.source = 'fftri_t2_area'
+                        GROUP BY 1, 2
+                    )
+                    SELECT MAX(c.athletes::float / LEAST(ep.participants, ef.participants))
+                    FROM communs c
+                    JOIN epreuves ep ON ep.epreuve_id = c.pid
+                    JOIN epreuves ef ON ef.epreuve_id = c.fid
+                    """
+                )
+            ).scalar()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    assert max_overlap is None or max_overlap < 0.5
