@@ -3,19 +3,22 @@ import {
   Bike,
   Clock,
   Footprints,
+  Mountain,
   Waves,
+  type LucideIcon,
 } from "lucide-react";
 
 import Link from "next/link";
 import { Suspense } from "react";
 
 import { LatestRaces, LatestRacesLoading } from "@/components/home/latest-races";
+import { PersonWithBike } from "@/components/home/person-with-bike-icon";
 import { SearchForm } from "@/components/search/search-form";
 
 interface Discipline {
   name: string;
   description: string;
-  icon: typeof Waves;
+  icon: LucideIcon;
   /** Liste des courses filtrée sur la discipline ; absent tant que la discipline est en développement. */
   href?: string;
 }
@@ -28,10 +31,22 @@ const disciplines: Discipline[] = [
     href: "/races?discipline=triathlon",
   },
   {
+    name: "Cross Triathlon",
+    description: "Natation, VTT et trail",
+    icon: Mountain,
+    href: "/races?discipline=cross%20triathlon",
+  },
+  {
     name: "Duathlon",
     description: "Course à pied et cyclisme",
     icon: Bike,
     href: "/races?discipline=duathlon",
+  },
+  {
+    name: "Bike & Run",
+    description: "En équipe de deux, un vélo pour deux",
+    icon: PersonWithBike,
+    href: "/races?discipline=bike%26run",
   },
   {
     name: "Course à pied",
@@ -89,7 +104,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {disciplines.map((discipline) => {
             const Icon = discipline.icon;
 

@@ -171,7 +171,9 @@ L'objectif est de donner l'impression d'une véritable plateforme de résultats 
 
 Réalisés
 - page d'accueil
-    - Blocs Triathlon et Duathlon : liens vers `/races` filtré sur la discipline.
+    - Blocs Triathlon, Cross Triathlon, Duathlon et Bike & Run : liens vers `/races` filtré sur la discipline
+      (`triathlon`, `cross triathlon`, `duathlon`, `bike&run`). Icône Bike & Run dessinée dans le style lucide
+      (`components/home/person-with-bike-icon.tsx`, personne qui tient son vélo) ; Cross Triathlon : montagne.
     - Bloc Course à pied : non cliquable, bordure en pointillés et mention « En cours de développement,
       bientôt disponible » (aucune course à pied en base).
     - Dernières compétitions : les 6 courses les plus récentes ayant des résultats (`GET /events`, même ordre
