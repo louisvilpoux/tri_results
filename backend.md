@@ -55,8 +55,8 @@ nom_de_la_source :
 
 # Chargement de la donnée source dans la base de données
 Dossier : `load`
-1. create_table_to_pg : on vient créer pour chaque source de données la table raw_ dans laquelle la donnée sera écrite. On créé un schéma propre avec le bon nom de colonne et les timestamp nécessaires. Pour ce faire, on prend un fichier d'exemple pour chaque source de données.
-2. load_csv_to_pg : on vient récupérer la liste de tous les fichiers présents dans input_files, on lit le fichier csv et on l'insère dans la database avec une commande COPY. La table d'écriture est préfixée raw_ avant le nom de la source.
+1. create_table_to_pg : on vient créer pour chaque source de données la table raw_ dans laquelle la donnée sera écrite. On créé un schéma propre avec le bon nom de colonne et les timestamp nécessaires. Pour ce faire, on prend un fichier d'exemple pour chaque source de données : le premier CSV non vide (les fichiers sans résultat peuvent avoir un autre en-tête).
+2. load_csv_to_pg : on vient récupérer la liste de tous les fichiers présents dans input_files, on lit le fichier csv et on l'insère dans la database avec une commande COPY. La table d'écriture est préfixée raw_ avant le nom de la source. Les fichiers sans résultat (épreuves sans classement, créés par le scraping pour ne pas les retélécharger) sont ignorés.
 
 # Application de transformations pour obtenir une donnée unifiée et utilisable
 Dossier : `transform`

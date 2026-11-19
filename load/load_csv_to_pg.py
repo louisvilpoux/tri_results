@@ -32,6 +32,10 @@ for target in input_files:
     print(f"Trying to load all data from {target} ...")
     for path_file in input_files[target]:
         df = pd.read_csv(path_file)
+        if df.empty:
+            # fichier sans résultat (épreuve sans classement) : rien à charger, et son en-tête
+            # peut différer de celui de la table
+            continue
         columns = [c.replace("/","_").replace(".", "_").replace("#", "_").replace(" ", "_").replace("-","_").replace("+","_") for c in df.columns]
         try:
             with open(path_file, "r", encoding="utf-8") as f:

@@ -3,9 +3,14 @@ import pandas as pd
 from pathlib import Path
 
 def get_example_file(directory):
+    """Premier CSV non vide du dossier : il sert de modèle pour les colonnes de la table raw_.
+    Les fichiers sans résultat sont écartés, car leur en-tête peut différer (voir
+    create_empty_file dans sources/fftri_t2_area.py)."""
     path = Path(directory)
-    file_list = [p for p in path.iterdir() if not p.is_dir()]
-    return "./"+str(file_list[0])
+    for p in sorted(path.glob("*.csv")):
+        if not pd.read_csv(p, nrows=1).empty:
+            return "./" + str(p)
+    raise FileNotFoundError(f"Aucun fichier CSV avec des données dans {directory}")
 
 def clean_col_name(col_name):
     return col_name.replace("/","_").replace(".", "_").replace("#", "_").replace(" ", "_").replace("-","_").replace("+","_")

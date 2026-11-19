@@ -165,7 +165,9 @@ def fill_missing_sport_time(sport_time_dict):
     return sport_time_dict
 
 def create_empty_file(url):
-    df_empty = pd.DataFrame(columns=["clt","temps","nom","club","cat","détails","categorie","total_time","swim_time","t1_time","bike_time","t2_time","run_time","name_epreuve","format_epreuve","year_epreuve","date_epreuve"])
+    """Fichier sans résultat pour une épreuve sans classement : il évite de la retélécharger.
+    Mêmes colonnes et même nom que le fichier d'une épreuve avec résultats (voir process_data)."""
+    df_empty = pd.DataFrame(columns=["clt","nom","club","cat","temps","swim","t1","bike","t2","run","détails","name_epreuve","format_epreuve","year_epreuve","date_epreuve"])
     df_empty.to_csv(f"./sources/fftri_t2_area/fftri_t2_area_0/{create_race_unicity(url)}.csv", index=False)
 
 def get_response(url):
@@ -189,7 +191,7 @@ def process_data(url):
         url_page_event = "/".join(url.split("/")[:-1])
         response_page_event = get_response(url_page_event)
         if not is_valid_page(response_page_event):
-            create_empty_file(url_page_event)
+            create_empty_file(url)
             return
 
         response_main_page = get_response(url)
@@ -204,7 +206,7 @@ def process_data(url):
         elif len(result_blocks_a) > len(result_blocks_div):
             result_blocks = result_blocks_a
         else:
-            create_empty_file(url_page_event)
+            create_empty_file(url)
             return
         for block in result_blocks:
             # extraction du classement
