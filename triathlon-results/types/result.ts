@@ -72,3 +72,7 @@ export interface RaceResultsQuery {
   categorie: string | null;
   q: string | null;
 }
+
+// Disciplines dont le classement n'affiche que le temps total : leurs temps intermédiaires ne
+// correspondent pas aux colonnes natation / T1 / vélo / T2 / course d'un triathlon.
+export const DISCIPLINES_WITHOUT_SPLITS = ["aquathlon", "bike&run", "swimrun"];

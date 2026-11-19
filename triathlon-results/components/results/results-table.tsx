@@ -24,9 +24,15 @@ interface ResultsTableProps {
   raceId: string;
   query: RaceResultsQuery;
   results: RaceResult[];
+  /** false : seul le temps total est affiché (aquathlon, bike&run, swimrun). */
+  showSplits: boolean;
 }
 
-export function ResultsTable({ raceId, query, results }: ResultsTableProps) {
+export function ResultsTable({ raceId, query, results, showSplits }: ResultsTableProps) {
+  const timeColumns = showSplits
+    ? TIME_COLUMNS
+    : TIME_COLUMNS.filter((column) => column.value === "total_time");
+
   function sortHeader(
     column: RaceResultSortBy,
     label: string,
@@ -58,14 +64,14 @@ export function ResultsTable({ raceId, query, results }: ResultsTableProps) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-left text-sm md:min-w-[1000px]">
+      <table className={`w-full text-left text-sm ${showSplits ? "md:min-w-[1000px]" : ""}`}>
         <thead className="border-b border-gray-200 bg-gray-50 text-xs tracking-wide text-gray-500">
           <tr>
             {sortHeader("clt", "Clt.")}
             {sortHeader("nom_athlete", isTeamRace ? "Équipe" : "Athlète")}
             <th scope="col" className={`${CELL} uppercase ${DESKTOP_ONLY}`}>Catégorie</th>
             <th scope="col" className={`${CELL} uppercase ${DESKTOP_ONLY}`}>Sexe</th>
-            {TIME_COLUMNS.map((column) =>
+            {timeColumns.map((column) =>
               sortHeader(
                 column.value,
                 column.label,
@@ -105,7 +111,7 @@ export function ResultsTable({ raceId, query, results }: ResultsTableProps) {
 
               <td className={`${CELL} text-gray-500 ${DESKTOP_ONLY}`}>{result.sexe ?? "—"}</td>
 
-              {TIME_COLUMNS.map((column) => (
+              {timeColumns.map((column) => (
                 <td
                   key={column.value}
                   className={

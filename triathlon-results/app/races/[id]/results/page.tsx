@@ -9,6 +9,7 @@ import { PaginationBar } from "@/components/shared/pagination-bar";
 import { ApiError, getRace, getRaceCategories, getRaceResults } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { raceResultsMetadata } from "@/lib/seo";
+import { DISCIPLINES_WITHOUT_SPLITS } from "@/types/result";
 import {
   buildRaceResultsUrl,
   hasActiveFilters,
@@ -129,7 +130,12 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
         <ResultsFilters raceId={id} query={query} categories={categories} />
 
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-          <ResultsTable raceId={id} query={query} results={items} />
+          <ResultsTable
+            raceId={id}
+            query={query}
+            results={items}
+            showSplits={!DISCIPLINES_WITHOUT_SPLITS.includes(race.type_epreuve ?? "")}
+          />
           <PaginationBar
             pagination={pagination}
             shownCount={items.length}
