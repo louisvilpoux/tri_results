@@ -34,17 +34,19 @@ for r in races["result"]:
     racelist_url = f"https://api.prolivesport.fr/apiws/result/raceList/{r['eventId']}/"
     racelist = call_api_prolivesport(racelist_url)
     for rl in racelist["result"]:
-        rows.append({"id":r["eventId"]+"/"+rl["race"],
-                    "name":r["eventName"], 
-                    "date":r["eventDateStart"], 
-                    "distance":rl["distance"],
-                    "format_epreuve":rl["race"],
-                    "categorieevent":r["categoryName"], 
-                    "categorievar":r["categoryVar"],
-                    "zipcode":r["zipcode"],
-                    "city":r["city"],
-                    "department":r["department"],
-                    "country":r["country"]})
+        if rl["race"] != "SUPP":
+            rows.append({"id":r["eventId"],
+                        "race":rl["race"],
+                        "name":r["eventName"], 
+                        "date":r["eventDateStart"], 
+                        "distance":rl["distance"],
+                        "format_epreuve":rl["race"],
+                        "categorieevent":r["categoryName"], 
+                        "categorievar":r["categoryVar"],
+                        "zipcode":r["zipcode"],
+                        "city":r["city"],
+                        "department":r["department"],
+                        "country":r["country"]})
 
 df = pd.DataFrame(rows)
 df.to_csv("./sources/prolivesport/url/urls.csv", index=False)
