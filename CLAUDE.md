@@ -34,3 +34,5 @@ cd triathlon-results && npm run dev # application web de développement
 - `frontend.md` - specifications et détails techniques du front-end.
 - `mvp.md` - brève définition d'un MVP.
 - `roadmap.md` - définition d'une roadmap.
+- `retour_utilisateur.md` - retour d'un test utilisateur : problèmes de données, d'interface et
+  fonctionnalités manquantes, avec une priorisation.
