@@ -62,6 +62,8 @@ Dossier : `transform`
     - create_tables.sql : on créé l'ensemble des tables source et spécifiques.
 2. génération table globale :
     - raw_data.sql : insertion dans la table raw_data des données en union all des différentes tables raw_ .
+      Le sexe y est calculé une fois par ligne : colonne `sexe` de la source pour prolivesport (M ou F, vide pour
+      les équipes mixtes X), première lettre de `cat` pour les autres sources. athletes_tmp et results le reprennent.
 3. génération des tables spécifiques :
     - races.sql : table pour décrire chaque épreuve.
     - nb_races.sql : table pour obtenir le nombre de courses différentes auquel un athlète a participé.

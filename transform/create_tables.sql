@@ -11,7 +11,7 @@ CREATE TABLE raw_data (
     indice_performance_t2 TEXT, run_time TEXT, rang_run TEXT, rang_course_run TEXT, 
     indice_performance_run TEXT, name_epreuve TEXT, format_epreuve TEXT, 
     year_epreuve TEXT, date_epreuve TEXT, lieu_epreuve TEXT, scraped_at TEXT,
-    source TEXT
+    source TEXT, sexe TEXT
 );
 
 CREATE TABLE races (

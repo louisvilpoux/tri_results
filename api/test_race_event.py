@@ -115,7 +115,22 @@ def test_prolivesport_keeps_a_single_open_format(prolivesport_duplicate_id: int)
     event = get_event(prolivesport_duplicate_id)
     assert [f["format_epreuve"] for f in event["formats"]] == ["OPEN"]
     assert event["formats"][0]["format_reliable"] is False
-    assert event["formats"][0]["first_woman"] is None
+
+
+def test_prolivesport_sexe_is_reliable(prolivesport_duplicate_id: int) -> None:
+    """Le sexe prolivesport vient de sa colonne `sexe` (M, F) et non de la catégorie."""
+    open_format = get_event(prolivesport_duplicate_id)["formats"][0]
+    results = client.get(
+        f"/races/{open_format['id']}/results", params={"limit": 100}
+    ).json()["items"]
+    assert {result["sexe"] for result in results} <= {"M", "F", None}
+
+    first_woman = open_format["first_woman"]
+    assert first_woman is not None
+    women = client.get(
+        f"/races/{open_format['id']}/results", params={"s": "F", "sort_by": "clt", "limit": 1}
+    ).json()["items"]
+    assert first_woman["athlete_id"] == women[0]["athlete_id"]
 
 
 def test_editions_are_one_per_year(multi_format_race_id: int) -> None:

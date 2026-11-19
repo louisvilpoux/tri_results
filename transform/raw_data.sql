@@ -18,7 +18,7 @@ bike_time, rang_bike, rang_course_bike, indice_performance_bike,
 t2_time, rang_t2, rang_course_t2, indice_performance_t2, 
 run_time, rang_run, rang_course_run, indice_performance_run,
 name_epreuve, format_epreuve, year_epreuve, date_epreuve, lieu_epreuve,
-scraped_at, source)
+scraped_at, source, sexe)
 
 SELECT 
 CASE WHEN pg_input_is_valid(clt, 'integer') THEN clt::integer ELSE NULL END AS clt, 
@@ -31,7 +31,7 @@ bike as bike_time, null as rang_bike, null as rang_course_bike, null as indice_p
 t2 as t2_time, null as rang_t2, null as rang_course_t2, null as indice_performance_t2, 
 run as run_time, null as rang_run, null as rang_course_run, null as indice_performance_run,
 name_epreuve, format_epreuve, year_epreuve, date_epreuve, null as lieu_epreuve,
-scraped_at, 'fftri_t2_area' as source
+scraped_at, 'fftri_t2_area' as source, SUBSTRING(cat FROM 1 FOR 1) as sexe
 FROM raw_fftri_t2_area_0 
 UNION ALL
 SELECT 
@@ -46,7 +46,10 @@ t2 as t2_time, ((regexp_match(t2, '\((\d+)e\)'))[1]) as rang_t2, null as rang_co
 run as run_time, ((regexp_match(run, '\((\d+)e\)'))[1]) as rang_run, null as rang_course_run, null as indice_performance_run,
 name_epreuve, format_epreuve, year_epreuve,
 date_epreuve::date::text as date_epreuve, lieu_epreuve,
-scraped_at, 'prolivesport' as source
+scraped_at, 'prolivesport' as source,
+-- prolivesport fournit le sexe (M, F, X pour les équipes mixtes) ; sa colonne cat contient
+-- des catégories (SE, MA, VE…) dont la première lettre n'est pas le sexe.
+CASE WHEN sexe IN ('M', 'F') THEN sexe END as sexe
 from raw_prolivesport_0
 UNION ALL
 SELECT 
@@ -61,7 +64,7 @@ t2 as t2_time, null as rang_t2, null as rang_course_t2, null as indice_performan
 run as run_time, null as rang_run, null as rang_course_run, null as indice_performance_run,
 name_epreuve, format_epreuve, year_epreuve,
 date_epreuve, lieu_epreuve,
-scraped_at, 'chronoweb' as source
+scraped_at, 'chronoweb' as source, SUBSTRING(cat FROM 1 FOR 1) as sexe
 FROM raw_chronoweb_0
 WHERE name_epreuve is not null
 UNION ALL
@@ -77,6 +80,6 @@ t2 as t2_time, null as rang_t2, null as rang_course_t2, null as indice_performan
 run as run_time, null as rang_run, null as rang_course_run, null as indice_performance_run,
 name_epreuve, format_epreuve, EXTRACT(YEAR FROM to_date(date_epreuve, 'DD/MM/YYYY'))::text as year_epreuve, 
 date_epreuve, lieu_epreuve,
-scraped_at, 'protiming' as source
+scraped_at, 'protiming' as source, SUBSTRING(cat FROM 1 FOR 1) as sexe
 from raw_protiming_0
 ;

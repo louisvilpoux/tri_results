@@ -246,12 +246,15 @@ En cours :
 - rien.
 
 Points connus (données) :
-- La colonne `sexe` des résultats prolivesport contient des lettres de catégorie (S, J, P…) : le filtre sexe n'est fiable que pour fftri_t2_area.
+- Sexe prolivesport : corrigé le 19/11/2026 dans `transform/` (il était déduit de la première lettre de la catégorie,
+  SE/MA/VE → S/M/V, au lieu de la colonne `sexe` de la source). Le filtre sexe et la « première femme » fonctionnent
+  maintenant pour prolivesport ; les équipes mixtes (X) ont un sexe vide. fftri_t2_area garde quelques valeurs hors
+  M/F (E, 4, J…, première lettre de sa catégorie), ignorées par l'API.
 - prolivesport code les non-classés avec `clt = 0` ou `99991` à `99999` (et un temps `00:00:00`) : affichés « NC », placés en fin de tri, exclus des statistiques.
 - Chaque épreuve prolivesport est dupliquée sur 6 formats (OPEN, PTWC, PTVI, PTS2-5-F, PTS2-5-M, PTS7-8) avec les mêmes participants,
   et ces formats ne correspondent pas aux vraies courses. Le profil athlète dédoublonne (en gardant OPEN), n'affiche pas
   le format prolivesport et l'exclut des meilleurs temps. La page course n'affiche que la copie OPEN, intitulée
-  « Toutes distances », sans première femme (sexe non fiable). Son « vainqueur » est le premier d'un classement qui
+  « Toutes distances ». Son « vainqueur » et sa « première femme » sont les premiers d'un classement qui
   mélange les distances (souvent la plus courte). Les pages de classement des copies PT* restent accessibles par URL.
 - 589 épreuves n'ont aucun résultat (souvent sans date, anciennes sources) : elles sont ignorées dans les formats d'une course.
 - Les noms prolivesport contiennent l'année (« Triathlon Bray-Dunes 2022 ») : leurs autres éditions ne sont pas retrouvées.

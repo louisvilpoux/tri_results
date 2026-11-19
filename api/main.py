@@ -240,9 +240,6 @@ KEPT_DUPLICATED_FORMAT = "OPEN"
 # les autres suivent par ordre alphabétique.
 FORMAT_DISPLAY_ORDER = ["XS", "S", "M", "L", "XL", "XXL"]
 
-# Sources dont la colonne sexe n'est pas fiable (prolivesport : lettres de catégorie).
-SOURCES_WITHOUT_RELIABLE_SEXE = {"prolivesport"}
-
 
 def get_result_sort_expression(sort_by: RaceResultSortBy) -> ColumnElement:
     """Retourne l'expression SQL de tri ; les valeurs invalides deviennent NULL."""
@@ -429,10 +426,7 @@ def get_race_event(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any
                 "date_epreuve": race_format.date_epreuve,
                 "participants": stats[race_format.id].participants,
                 "winner": winners.get(race_format.id),
-                # Le sexe n'est pas fiable pour certaines sources : pas de « première femme ».
-                "first_woman": first_women.get(race_format.id)
-                if stats[race_format.id].source not in SOURCES_WITHOUT_RELIABLE_SEXE
-                else None,
+                "first_woman": first_women.get(race_format.id),
             }
             for race_format in formats
         ],

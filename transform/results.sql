@@ -10,7 +10,7 @@ SELECT
     r.year_epreuve,
     a.unified_id AS athlete_id,
     a.nom AS nom_athlete,
-    a.sexe,
+    rfta.sexe,
     rfta.cat,
     rfta.clt_cat,
     rfta.id_league,
