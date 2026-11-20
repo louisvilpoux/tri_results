@@ -183,7 +183,9 @@ Réalisés
     - En-tête alimenté par `GET /races/{id}` (nom, date, format, lieu) ; 404 si l'épreuve n'existe pas.
     - Tri en cliquant sur les en-têtes : classement, athlète, natation, T1, vélo, T2, course, total.
     - Aquathlon, bike&run et swimrun : seul le temps total est affiché (pas de colonnes natation, T1, vélo, T2,
-      course), via `DISCIPLINES_WITHOUT_SPLITS` dans `types/result.ts`.
+      course), via `DISCIPLINES_WITHOUT_SPLITS` dans `types/result.ts`. Il en va de même pour toute épreuve dont la
+      source n'a publié aucun temps intermédiaire (`avec_segments` de `GET /races/{id}`, 20/11/2026) : environ 80
+      triathlons (Chantilly 2025 XXL…) et 50 épreuves d'autres disciplines n'affichent plus des colonnes vides.
     - Filtres (formulaire GET `next/form`) : nom de l'athlète, sexe, catégorie, nombre de lignes par page (20, 50, 100).
     - Tout l'état est dans l'URL : `?sexe=F&categorie=MS3&q=dupont&sort_by=total_time&order=desc&limit=50&offset=50`.
     - Code : `lib/results-query.ts` (lecture et construction de l'URL), `lib/api.ts` (appels API),

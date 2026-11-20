@@ -241,3 +241,31 @@ def test_wrong_totals_are_recalculated_from_segments() -> None:
         pytest.skip("Tribreizh 2022 absent de la base")
     assert winner.total_time == "04:18:04"
     assert str(winner.somme) == "4:18:04"
+
+
+def test_race_without_splits_is_flagged() -> None:
+    """Une épreuve dont la source ne publie que le temps total (aucun temps intermédiaire) est
+    marquée avec_segments = false : la page n'affiche que la colonne du total."""
+    try:
+        with engine.connect() as connection:
+            row = connection.execute(
+                text(
+                    """
+                    SELECT
+                        (SELECT epreuve_id FROM results GROUP BY epreuve_id
+                         HAVING bool_and(coalesce(swim_time, '') || coalesce(t1_time, '')
+                                         || coalesce(bike_time, '') || coalesce(t2_time, '')
+                                         || coalesce(run_time, '') !~ '\\d{2}:\\d{2}:\\d{2}')
+                            AND bool_or(total_time ~ '^\\d{2}:\\d{2}:\\d{2}$')
+                         ORDER BY epreuve_id LIMIT 1) AS sans_segments,
+                        (SELECT epreuve_id FROM results WHERE bike_time ~ '^\\d{2}:\\d{2}:\\d{2}$'
+                         ORDER BY epreuve_id LIMIT 1) AS avec_segments
+                    """
+                )
+            ).one()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    if row.sans_segments is None or row.avec_segments is None:
+        pytest.skip("Pas d'épreuve des deux sortes dans la base")
+    assert client.get(f"/races/{row.sans_segments}").json()["avec_segments"] is False
+    assert client.get(f"/races/{row.avec_segments}").json()["avec_segments"] is True

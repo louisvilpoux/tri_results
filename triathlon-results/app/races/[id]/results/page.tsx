@@ -154,7 +154,11 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
             raceId={id}
             query={query}
             results={items}
-            showSplits={!DISCIPLINES_WITHOUT_SPLITS.includes(race.type_epreuve ?? "")}
+            // Colonnes natation / T1 / vélo / T2 / course seulement quand la discipline s'y prête
+            // et que la source a publié au moins un temps intermédiaire.
+            showSplits={
+              race.avec_segments && !DISCIPLINES_WITHOUT_SPLITS.includes(race.type_epreuve ?? "")
+            }
             sansTemps={sansTemps}
           />
           <PaginationBar

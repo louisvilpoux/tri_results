@@ -150,7 +150,8 @@ Dossier : `transform`
       le 20/11/2026. Marque ensuite `temps_suspect` (colonne de results) sur les totaux classés de moins de la moitié
       du temps médian des classés de l'épreuve (au moins 10 classés) : 19 résultats dans 7 épreuves, souvent un temps
       d'abandon publié avec un classement (Openlakes Champagne 2026 L : natation et T1 seulement). L'API les renvoie
-      (`temps_suspect` sur chaque résultat et chaque leader du podium, `temps_suspects` sur GET /races/{id}) et les
+      (`temps_suspect` sur chaque résultat et chaque leader du podium, `temps_suspects` sur GET /races/{id} ; `avec_segments` y indique si l'épreuve a au moins
+      un temps intermédiaire, sinon seule la colonne du total est affichée) et les
       exclut des meilleurs temps du profil. Exécuté après homonymes.sql.
     - doublons_sources.sql : retire les épreuves prolivesport ou chronoweb publiées aussi par fftri_t2_area (dates à
       un jour près, au moins la moitié des athlètes en commun) ; la version fftri_t2_area est gardée et la table

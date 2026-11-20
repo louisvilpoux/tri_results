@@ -208,6 +208,7 @@ def get_race(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
     } | {
         "lieu_epreuve": clean_lieu(race.lieu_epreuve),
         "sans_temps": race.id in races_without_time(db, [race.id]),
+        "avec_segments": race_has_splits(db, race.id),
         # nombre de temps signalés comme probablement faux (bandeau sur la page de l'épreuve)
         "temps_suspects": db.scalar(
             select(func.count(Result.id)).where(
@@ -291,6 +292,21 @@ def races_without_time(db: Session, race_ids: list[int]) -> set[int]:
         .distinct()
     )
     return set(race_ids) - set(with_time_or_rank)
+
+
+SPLIT_TIME_COLUMNS = ["swim_time", "t1_time", "bike_time", "t2_time", "run_time"]
+
+
+def race_has_splits(db: Session, race_id: int) -> bool:
+    """Vrai si au moins un résultat de l'épreuve a un temps intermédiaire (natation, T1, vélo,
+    T2 ou course) : sinon la page de classement n'affiche que le temps total (Chantilly 2025
+    XXL, environ 80 triathlons dont la source ne publie que le total)."""
+    any_split = or_(
+        *(valid_time_or_null(getattr(Result, column)).isnot(None) for column in SPLIT_TIME_COLUMNS)
+    )
+    return bool(
+        db.scalar(select(select(Result.id).where(Result.epreuve_id == race_id, any_split).exists()))
+    )
 
 
 def get_result_sort_expression(sort_by: RaceResultSortBy) -> ColumnElement:

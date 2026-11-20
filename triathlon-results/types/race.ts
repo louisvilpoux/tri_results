@@ -10,6 +10,8 @@ export interface Race {
   lieu_epreuve: string | null;
   /** Aucun temps total publié par la source : pas de classement (participants seulement). */
   sans_temps: boolean;
+  /** Au moins un temps intermédiaire publié : sinon seul le temps total est affiché. */
+  avec_segments: boolean;
   /** Nombre de temps signalés comme probablement faux dans la source. */
   temps_suspects: number;
 }
