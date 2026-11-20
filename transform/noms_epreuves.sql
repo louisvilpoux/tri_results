@@ -21,7 +21,8 @@
 -- Clé de regroupement d'un nom de course : ses mots en minuscules, sans accents ni ponctuation,
 -- sans les petits mots (de, du, la, le, et, and…), ni « open », ni le jour quand un événement
 -- est publié en deux parties (« Triathlon Open Quiberon - Samedi », « … - Epreuves du
--- Dimanche »), triés par ordre alphabétique.
+-- Dimanche »), triés par ordre alphabétique. « St », « Ste » et « Sainte » comptent pour
+-- « Saint » (« Duathlon de Saint Aldegonde » / « Duathlon de Sainte Aldegonde »).
 -- « Touquet Bike and Run » et « Bike & Run Le Touquet » ont la même clé (« bike run touquet ») ;
 -- « Triathlon Open de Cabourg » et « Triathlon Open Cabourg » aussi. La discipline reste dans
 -- la clé : « Duathlon de Bray-Dunes » et « Triathlon de Bray-Dunes » restent deux courses.
@@ -30,7 +31,10 @@ CREATE OR REPLACE FUNCTION nom_course_cle(nom text)
 RETURNS text AS $$
     SELECT array_to_string(
         ARRAY(
-            SELECT regexp_replace(mot, '^(tri|du)athlons$', '\1athlon')
+            SELECT regexp_replace(
+                regexp_replace(mot, '^(tri|du)athlons$', '\1athlon'),
+                '^(st|ste|sainte)$', 'saint'
+            )
             FROM regexp_split_to_table(lower(unaccent(nom)), '[^a-z0-9]+') AS mot
             WHERE mot <> ''
               AND mot NOT IN ('de', 'du', 'des', 'd', 'la', 'le', 'les', 'l', 'et', 'en', 'a',
@@ -106,7 +110,10 @@ INSERT INTO alias_courses (alias, nom_garde) VALUES
      'Duathlon de Noyon'),
     ('Championnats de France FF TRI Duathlon Individuel S et Jeunes - Noyon', 'Duathlon de Noyon'),
     ('Championnats de France FF TRI Duathlon Individuel S - Noyon', 'Duathlon de Noyon'),
-    ('Championnats de France FF TRI Duathlon Jeunes - Noyon', 'Duathlon de Noyon');
+    ('Championnats de France FF TRI Duathlon Jeunes - Noyon', 'Duathlon de Noyon'),
+    -- Sainte Aldegonde (sainte patronne de Maubeuge) ; la source écrit « Pays de mormal »
+    ('Duathlon de Sainte Aldegonde - Pays de mormal',
+     'Duathlon de Sainte Aldegonde - Pays de Mormal');
 
 -- Les étapes travaillent sur la liste des noms distincts (nom_initial → nom), appliquée à
 -- raw_data à la fin.

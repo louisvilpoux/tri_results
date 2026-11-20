@@ -9,7 +9,7 @@ Audit initial du 20/11/2026 au commit `007557a`, mis à jour le 20/11/2026 au co
 | Table | Lignes |
 |-------|--------|
 | results | 839 101 (fftri_t2_area 697 692, prolivesport 85 574, chronoweb 55 835) |
-| races (épreuves) | 3 575, sous 472 noms de course |
+| races (épreuves) | 3 575, sous 471 noms de course |
 | athlètes (`unified_id`) | 273 319 |
 | lignes d'équipe | 9 615 |
 | lignes de sous-classement | 7 680 (38 épreuves) |
@@ -35,7 +35,7 @@ classement cohérent avec le temps dans 99 % des épreuves.
 | Q8 | Club manquant ou parasite | 341 436 lignes athletes sans club, 5 694 avec \`, 347 parasites | Ouvert (D5) |
 | Q9 | Noms mal encodés | 0 | **Corrigé** |
 | Q10 | Segments incohérents avec le total (prolivesport) | 00:00:00 vidés ; segments décalés restants | Partiel |
-| Q11 | Noms de course encore séparés | « Saint » / « Sainte » Aldegonde | Partiel (D3) |
+| Q11 | Noms de course encore séparés | 0 cas connu ; accents fftri manquants | **Corrigé** (D3) |
 | Q12 | Athlètes avec résultats des deux sexes | 634 athlètes | Atténué : le sexe affiché est le plus fréquent |
 | Q13 | Épreuves sans format | 57 épreuves | Ouvert |
 
@@ -49,7 +49,7 @@ classement cohérent avec le temps dans 99 % des épreuves.
 | Q2 / Q3 | `70eb4c1` | 00:00:00 vidé dans results.sql (total et segments). Les 270 épreuves sans temps ni classement sont marquées `sans_temps` : page « Participants » par ordre alphabétique, pas de podium. Pas de recalcul : la somme des segments prolivesport ne correspond au total à 2 s près que dans 60 % des cas. |
 | Q6 | `816340e` | `sous_classements.sql` : une épreuve dont ≥ 95 % des athlètes sont dans une épreuve plus grande du même jour est un sous-classement (26 « Championnat de France Fftri » publiés à côté de leur course hôte, catégories para de Cabourg 2025, « Open » / « Jeunes » des Moines 2020…). Visible sur sa page, non compté dans les profils. 2 doublons identiques supprimés. |
 | Q9 | `c4ec3f4` | `corrige_encodage` (raw_data.sql) : 218 noms et 29 clubs corrigés (« ThÃ©o » → « Théo ») ; les résultats rejoignent le bon athlète. |
-| Q11 | `8e1542c` | Normalisation des noms de course (504 → 472) : clé sans petits mots ni ponctuation, alias, noms fftri mis en forme. |
+| Q11 | `8e1542c` puis « Saint / Sainte » | Normalisation des noms de course (504 → 471) : clé sans petits mots ni ponctuation, « St / Ste / Sainte » = « Saint », alias, noms fftri mis en forme. |
 | Q12 | `8e1542c` | `athletes_sexe.sql` : le filtre sexe de la liste suit le sexe le plus fréquent du profil. |
 
 ---
@@ -105,11 +105,11 @@ source de la même course, ou le récupérer dans le calendrier FFTRI.
 - 347 valeurs parasites : « NON LICENCIE », « NONE », « - », « . ».
 - 5 694 clubs contiennent \` au lieu de ' (D5, inchangé).
 
-### Q11 — Noms de course (D3, partiellement corrigé)
-« Duathlon de Saint Aldegonde - Pays de mormal » et « Duathlon de Sainte Aldegonde - Pays de
-mormal » restent séparés, et « Pays de mormal » garde une minuscule. Les accents des noms
-fftri_t2_area ne peuvent pas être retrouvés automatiquement (« Triathlon d'Angouleme »).
-Piste : un alias dans `transform/noms_epreuves.sql`.
+### Q11 — Noms de course (D3, corrigé)
+« Saint » / « Sainte » Aldegonde sont réunis en « Duathlon de Sainte Aldegonde - Pays de
+Mormal » (2023-2026). Reste une limite : les accents des noms fftri_t2_area ne peuvent pas être
+retrouvés automatiquement (« Triathlon d'Angouleme ») ; ils s'ajoutent au cas par cas par un
+alias dans `transform/noms_epreuves.sql`.
 
 ### Q12 / Q13
 - 634 athlètes ont des résultats marqués M et F : homonymes fusionnés ou sexe mal renseigné.
@@ -125,7 +125,7 @@ Piste : un alias dans `transform/noms_epreuves.sql`.
 |---|--------|
 | D1 Meilleur temps impossible | Corrigé pour Villeneuve-d'Ascq (CLM exclus) ; **même erreur ailleurs** (Q1) |
 | D2 Catégories incohérentes | Non corrigé (Q5) |
-| D3 Éditions non regroupées | Largement corrigé (504 → 472 noms) ; quelques cas restants (Q11) |
+| D3 Éditions non regroupées | Corrigé (504 → 471 noms) ; accents fftri manquants (Q11) |
 | D4 Ordre nom/prénom | Affichage en NOM Prénom sur les classements ; à revérifier dans les listes de recherche |
 | D5 Caractère \` dans les clubs | Non corrigé (5 694 lignes) |
 | D6 Format qui change entre éditions | Non audité : plusieurs formats par course sont normaux, le contrôle demande une règle plus fine ; l'ordre des formats est désormais stable (`007557a`) |
@@ -140,4 +140,4 @@ reconstruction de la base, ce qui casse les liens de profil et de course.
 2. **Q10** : masquer les segments prolivesport incohérents avec le total.
 3. **Q5** : table de correspondance des catégories.
 4. Identifiants d'athlète et d'épreuve stables.
-5. Q8, Q7, Q11, Q13.
+5. Q8, Q7, Q13.

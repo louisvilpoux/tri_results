@@ -100,7 +100,7 @@ Dossier : `transform`
       2. les noms tout en minuscules (fftri_t2_area) sont mis en forme par `nom_course_lisible`
          (« triathlon d angouleme » → « Triathlon d'Angouleme » ; les accents ne peuvent pas être retrouvés) ;
       3. les noms qui ont la même clé `nom_course_cle` (mots sans accents ni ponctuation, sans petits mots, « open »
-         ni jour, triés) sont ramenés au plus lisible (majuscules, puis accents, puis le plus fréquent) :
+         ni jour, triés ; « St », « Ste » et « Sainte » comptent pour « Saint ») sont ramenés au plus lisible (majuscules, puis accents, puis le plus fréquent) :
          « Triathlon Bray-Dunes » / « Triathlon de Bray-Dunes », « Touquet Bike & Run » / « Bike & Run Le Touquet ».
       Exécuté avant races.sql.
 3. génération des tables spécifiques :

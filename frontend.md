@@ -311,7 +311,9 @@ Points connus (données) :
   regroupe aussi les noms qui ne diffèrent que par les petits mots, « open », le jour ou l'ordre des mots
   (« Triathlon Bray-Dunes » / « Triathlon de Bray-Dunes », « Triathlon Open Quiberon - Samedi », « Touquet Bike &
   Run » / « Bike & Run Le Touquet »), plus quelques alias écrits à la main (Audomarois, Noyon, Triath'Elles,
-  Chtriman, Le Touquet, Quiberon) : 504 → 472 noms de course. Les noms fftri_t2_area en minuscules sont mis en forme
+  Chtriman, Le Touquet, Quiberon) : 504 → 472 noms de course. Puis (Q11) « St », « Ste » et « Sainte » comptent pour
+  « Saint » : « Duathlon de Saint Aldegonde » et « … de Sainte Aldegonde » forment une seule course, « Duathlon de
+  Sainte Aldegonde - Pays de Mormal » (2023-2026) : 471 noms. Les noms fftri_t2_area en minuscules sont mis en forme
   (« Triathlon Jura Vouglans », « Triathlon d'Angouleme ») ; leurs accents manquent toujours.
 - Équipes (19/11/2026) : en bike&run et en relais, une ligne prolivesport peut être une équipe (5 683 lignes)
   ou une seule personne (770 lignes). Les équipes sont affichées sans lien (« MEEUS Theo & MOREAU TEOPHANE »,
