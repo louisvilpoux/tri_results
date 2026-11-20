@@ -269,6 +269,12 @@ Points connus (données) :
   (« 38e Triathlon… ») : les deux sont retirés dans `transform/` (`prolivesport_event_name`, l'année reste dans
   `year_epreuve`), ce qui relie les éditions de 41 courses. Restent séparés les noms dont la formulation change
   d'une année à l'autre (« Triathlon Bray-Dunes » / « Triathlon de Bray-Dunes »).
+- Noms qui ne diffèrent que par la casse, les accents ou la ponctuation (corrigé le 20/11/2026) : 24 groupes
+  (« Triathlon de l'Omois » / « Triathlon de L'omois », « Swimrun du Levézou » / « Swimrun du levezou »,
+  « Cross-Duathlon du Haricot » / « Cross Duathlon du Haricot »…) sont ramenés à un seul nom par
+  `transform/noms_epreuves.sql`, et leurs éditions à une seule course. Le nom gardé est le plus lisible : les
+  courses fftri_t2_area qui ont aussi un nom écrit avec majuscules dans une autre source s'affichent maintenant
+  ainsi (« Triathlon de Dijon », « Altriman », « Triathlon de Toulouse »).
 - Équipes (19/11/2026) : en bike&run et en relais, une ligne prolivesport peut être une équipe (5 683 lignes)
   ou une seule personne (770 lignes). Les équipes sont affichées sans lien (« MEEUS Theo & MOREAU TEOPHANE »,
   « LES PELUCHOS »), avec « Équipe gagnante » sur la page course et une colonne « Équipe » dans le classement ;

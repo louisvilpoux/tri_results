@@ -85,6 +85,10 @@ Dossier : `transform`
       les équipes mixtes X), première lettre de `cat` pour les autres sources. athletes_tmp et results le reprennent.
       Les épreuves contre-la-montre (`format_epreuve` contenant le mot « CLM ») sont exclues de toutes les
       sources : chez prolivesport, leurs colonnes de temps sont décalées.
+    - noms_epreuves.sql : quand des noms de course ne diffèrent que par la casse, les accents ou la ponctuation
+      (« Triathlon de l'Omois » / « Triathlon de L'omois », « Bike & Run Halluin » / « Bike&Run Halluin »,
+      « triathlon de dijon » / « Triathlon de Dijon »), un seul est gardé dans raw_data : le plus lisible (avec
+      majuscules, puis avec accents, puis le plus fréquent). Exécuté avant races.sql.
 3. génération des tables spécifiques :
     - races.sql : table pour décrire chaque épreuve. La discipline est ce qui précède la lettre de distance dans
       format_epreuve et le format est cette lettre (« cross triathlon m clm » → cross triathlon, M ; la variante

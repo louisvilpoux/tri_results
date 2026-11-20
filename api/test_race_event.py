@@ -234,3 +234,29 @@ def test_chronoweb_detail_sheets_are_excluded() -> None:
     except OperationalError:
         pytest.skip("Base PostgreSQL indisponible")
     assert count == 0
+
+
+def test_race_names_differ_by_more_than_case_accents_or_punctuation() -> None:
+    """Deux noms de course qui ne diffèrent que par la casse, les accents ou la ponctuation
+    (« Triathlon de l'Omois » / « Triathlon de L'omois ») sont ramenés à un seul nom
+    (transform/noms_epreuves.sql) : leurs éditions forment une seule course."""
+    try:
+        with engine.connect() as connection:
+            groups = connection.execute(
+                text(
+                    """
+                    SELECT COUNT(*)
+                    FROM (
+                        SELECT 1
+                        FROM races
+                        GROUP BY btrim(regexp_replace(
+                            lower(unaccent(name_epreuve)), '[^a-z0-9]+', ' ', 'g'
+                        ))
+                        HAVING COUNT(DISTINCT name_epreuve) > 1
+                    ) variantes
+                    """
+                )
+            ).scalar()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    assert groups == 0
