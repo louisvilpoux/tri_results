@@ -19,6 +19,13 @@ def clean_col_name(col_name):
             std_name = matching_columns[c]
     return std_name
 
+def has_name_or_time(df: pd.DataFrame) -> bool:
+    """Vrai si au moins une ligne a un nom ou un temps. Sinon, les colonnes du fichier n'ont
+    pas été reconnues (en-tête ailleurs que sur la 2e ligne de l'onglet, colonnes nommées
+    autrement) et le fichier ne contient rien d'exploitable."""
+    values = df[["nom", "temps"]].astype("string").apply(lambda col: col.str.strip())
+    return bool(values.replace("", pd.NA).notna().any().any())
+
 def simplify_df(df):
     final_columns = ["clt", "temps", "nom", "club", "cat", "détails", "sexe", 
                      "swim", "t1", "bike", "t2", "run", "date_epreuve", 
@@ -57,5 +64,9 @@ for local_path in list_files:
         for c in list(df.columns):
             df = df.rename(columns={c: clean_col_name(c)})
         df = simplify_df(df)
+        if not has_name_or_time(df):
+            # pas chargé : il créerait des épreuves sans aucun résultat affichable
+            print(f"ignoré (ni nom ni temps) : {local_path}")
+            continue
         final_path = local_path.replace("raw", f"{target}_0")
         df.to_csv(final_path, index=False)

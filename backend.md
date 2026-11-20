@@ -41,6 +41,10 @@ nom_de_la_source :
        Le nom, la date et le lieu viennent de urls.csv ; l'année vient de la date (à défaut, de la
        fin du nom de fichier).
     3. chronoweb_organize.py : pour chaque fichier unique de course on vient nettoyer la donnée pour venir en extraire toutes nos informations (temps swim, temps bike, temps run, ...) et on écrit un csv final.
+       Un fichier dont aucune ligne n'a de nom ni de temps n'est pas écrit, donc pas chargé : ses colonnes n'ont pas
+       été reconnues (40 fichiers le 20/11/2026 : en-tête sur la 1re ligne de l'onglet ou plus bas que la 2e, comme
+       le Swimrun du Levézou, le Triathlon du Pilon 2020, le Super Tri de Nevers, le championnat d'aquathlon 2019 ;
+       colonnes nommées autrement, comme l'UTA 2021).
 
 - fftri_t2_area :
     1. fftri_t2_area_links.py : scrapping du site pour récupérer l'ensemble des liens vers les pages de résultats des épreuves.
