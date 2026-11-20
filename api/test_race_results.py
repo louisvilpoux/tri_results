@@ -216,3 +216,28 @@ def test_race_without_time_lists_participants_alphabetically(race_without_time_i
 
 def test_race_with_times_is_not_flagged(race_id: int) -> None:
     assert client.get(f"/races/{race_id}").json()["sans_temps"] is False
+
+
+def test_wrong_totals_are_recalculated_from_segments() -> None:
+    """Tribreizh 2022 L : la source donnait au vainqueur 00:01:03 alors que ses segments font
+    04:18:04. Le total est recalculé depuis les segments (transform/temps_totaux.sql)."""
+    try:
+        with engine.connect() as connection:
+            winner = connection.execute(
+                text(
+                    """
+                    SELECT total_time,
+                           swim_time::interval + t1_time::interval + bike_time::interval
+                           + t2_time::interval + run_time::interval AS somme
+                    FROM results
+                    WHERE name_epreuve = 'Tribreizh' AND year_epreuve = '2022'
+                      AND format_epreuve = 'L' AND clt = 1
+                    """
+                )
+            ).first()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    if winner is None:
+        pytest.skip("Tribreizh 2022 absent de la base")
+    assert winner.total_time == "04:18:04"
+    assert str(winner.somme) == "4:18:04"

@@ -191,7 +191,8 @@ Réalisés
 - page profil athlète : `/athletes/[id]` (id = `unified_id`, celui des liens du classement d'une course).
     - En-tête : nom, club, sexe, saisons, disciplines avec leur nombre de courses.
     - Chiffres clés : courses, podiums, top 10, meilleur classement, nombre de saisons.
-    - Meilleurs temps par discipline et format, avec lien vers le classement de la course.
+    - Meilleurs temps par discipline et format, avec lien vers le classement de la course. Seuls les résultats
+      classés comptent : le temps d'un non-classé est souvent celui de son abandon (00:32:50 sur un M).
     - Historique : date, épreuve (lien vers son classement), format, catégorie, « clt / participants », temps.
       Tri par date (défaut, plus récente d'abord), classement ou temps ; filtres saison et discipline ; pagination.
     - URL : `/athletes/123?annee=2024&discipline=triathlon&sort_by=clt&order=asc&offset=20`.
@@ -294,6 +295,12 @@ Points connus (données) :
   recherche : 2 268 profils rejoignent l'athlète existant (270 455 → 268 187 athlètes). Effet de bord voulu : le
   Triathlon de Dijon 2026 chronoweb, écrit en « NOM, Prénom », est reconnu comme doublon de la version fftri_t2_area
   (297 athlètes en commun sur 312) et retiré (839 492 → 839 180 résultats).
+- Temps totaux faux (20/11/2026) : la source affichait au vainqueur de Tribreizh 2022 L un temps de 00:01:03 (le
+  4e à 00:00:18) alors que ses segments font 04:18:04 ; « MACQ Guillaume » avait donc un meilleur temps L de
+  00:01:03. Dans les 4 épreuves où les totaux ne suivent pas le classement mais où la somme des segments le suit
+  (Tribreizh 2022, Saint Remy sur Durolle 2005, Roybon 2021, Paris 2022), le total est recalculé depuis les
+  segments (`transform/temps_totaux.sql`). Les meilleurs temps du profil ne prennent plus que les résultats classés
+  (603 temps de non-classés écartés, dont ceux de Douai 2017 S, où tous les temps sont inutilisables).
 - Clubs (corrigé le 20/11/2026) : 5 694 clubs écrits avec « ` » au lieu d'une apostrophe (« TRIATHLON CLUB
   D`HAZEBROUCK ») sont corrigés ; 1 519 valeurs qui disaient seulement « pas de club » (« NON LICENCIE », « NL »,
   « NONE », « 0 », « - », « ??? »…) sont vidées, comme les licences individuelles (« INDIVIDUEL », « LICENCE

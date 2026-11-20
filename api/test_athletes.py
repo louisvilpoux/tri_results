@@ -84,6 +84,7 @@ def test_best_times_are_the_minimum_per_format(active_athlete_id: int) -> None:
             if item["type_epreuve"] == best["type_epreuve"]
             and item["format_epreuve"] == best["format_epreuve"]
             and is_valid_time(item["total_time"])
+            and is_ranked(item["clt"])
         ]
         assert best["total_time"] == min(times)
 

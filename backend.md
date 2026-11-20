@@ -142,6 +142,12 @@ Dossier : `transform`
     - homonymes.sql : deux lignes du même athlète avec des temps différents dans une épreuve sont deux homonymes. Le
       mieux classé garde l'athlète ; chacun des autres reçoit un nouvel athlète (club repris de raw_data) dont le
       profil n'a que cette épreuve. Exécuté après results.sql et avant doublons_sources.sql.
+    - temps_totaux.sql : recalcule le temps total depuis les 5 segments dans les épreuves dont le total de la source
+      est corrompu (Tribreizh 2022 L : vainqueur à 00:01:03, segments à 04:18:04). Une épreuve est corrigée quand
+      ses totaux ne suivent pas le classement (< 90 % des classés consécutifs dans l'ordre) et que la somme des
+      segments le suit (≥ 95 %, pour ≥ 90 % des classés) : le classement dit lequel des deux est juste (à l'Ironman
+      de Nice 2019, ce sont les segments qui sont faux). Une ligne sans ses 5 segments y perd son total. 4 épreuves
+      le 20/11/2026. Exécuté après homonymes.sql.
     - doublons_sources.sql : retire les épreuves prolivesport ou chronoweb publiées aussi par fftri_t2_area (dates à
       un jour près, au moins la moitié des athlètes en commun) ; la version fftri_t2_area est gardée et la table
       doublons_sources garde la trace des paires retirées (colonne `source`). Les autres épreuves de la source dans

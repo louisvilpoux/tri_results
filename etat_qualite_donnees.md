@@ -25,7 +25,7 @@ classement cohérent avec le temps dans 99 % des épreuves.
 
 | # | Problème | Ampleur actuelle | Statut |
 |---|----------|------------------|--------|
-| Q1 | Temps total faux alors que les segments sont bons | ≥ 22 épreuves, 341 lignes < 5 min hors jeunes | **Ouvert** : meilleur temps faux sur le profil |
+| Q1 | Temps total faux alors que les segments sont bons | 4 épreuves recalculées, 603 temps de non-classés | **Corrigé** ; restent quelques totaux isolés de classés |
 | Q2 | Épreuves sans aucun temps total | 270 épreuves prolivesport, 17 584 lignes | **Traité** (affichage) : liste de participants, pas de recalcul |
 | Q3 | Temps total à 00:00:00 | 0 ligne | **Corrigé** : vidé, affiché « — » |
 | Q4 | Temps chronoweb illisibles | 0 temps hors format hh:mm:ss | **Corrigé** |
@@ -53,15 +53,30 @@ classement cohérent avec le temps dans 99 % des épreuves.
 | Q9 | `c4ec3f4` | `corrige_encodage` (raw_data.sql) : 218 noms et 29 clubs corrigés (« ThÃ©o » → « Théo ») ; les résultats rejoignent le bon athlète. |
 | Q11 | `8e1542c` puis « Saint / Sainte » | Normalisation des noms de course (504 → 471) : clé sans petits mots ni ponctuation, « St / Ste / Sainte » = « Saint », alias, noms fftri mis en forme. |
 | Q12 | `8e1542c` | `athletes_sexe.sql` : le filtre sexe de la liste suit le sexe le plus fréquent du profil. |
+| Q1 | `temps_totaux.sql` | Total recalculé depuis les segments quand les totaux ne suivent pas le classement mais que la somme des segments le suit (Tribreizh 2022, Saint Remy sur Durolle 2005, Roybon 2021, Paris 2022). Meilleurs temps du profil limités aux résultats classés. |
 | Q14 | noms d'athlètes | Clé d'athlète sans tirets, apostrophes ni virgules (« Jean-Marc » = « Jean Marc », « MEUNIER, Paul » = « MEUNIER Paul ») ; `athletes_tronques.sql` rattache 477 noms coupés par la source (« BASSETTO JEAN MA ») ; `homonymes.sql` garde les deux homonymes d'une même épreuve (temps différents) comme deux athlètes : 395 résultats retrouvés. |
 
 ---
 
 ## Détail des points ouverts
 
-### Q1 — Temps total faux, segments corrects (priorité 1)
-Le successeur direct de D1 : l'exclusion des CLM a corrigé Villeneuve-d'Ascq, mais le même
-type d'erreur existe ailleurs.
+### Q1 — Temps total faux, segments corrects (corrigé le 20/11/2026)
+Le successeur direct de D1. La source elle-même affiche des totaux corrompus (vérifié sur
+fftri.t2area.com pour Tribreizh 2022 : vainqueur à 00:01:03, temps médian 0:01:03).
+
+**Correction** (`transform/temps_totaux.sql`) : le classement départage le total et les
+segments. Une épreuve dont les totaux ne suivent pas le classement (< 90 % des classés
+consécutifs dans l'ordre) alors que la somme des segments le suit (≥ 95 %) voit son total
+recalculé : Tribreizh 2022 L (MACQ Guillaume : 04:18:04), Saint Remy sur Durolle 2005 L,
+Roybon 2021 M, Paris 2022 M. Sur les 3 184 autres épreuves de 10 classés ou plus, plus de
+89 % des totaux sont dans l'ordre. Un recalcul dès que total et somme diffèrent aurait été
+faux : à l'Ironman de Nice 2019 ou à Belfort 2017, ce sont les segments qui sont faux.
+Les meilleurs temps du profil ne prennent plus que les résultats classés : les temps des
+non-classés (603, souvent le temps de l'abandon, ex. 00:32:50 sur un M à Bordeaux 2018) et
+ceux de Duathlon de Douai 2017 S (prolivesport, tous non classés, temps de 1 à 36 s) sont
+écartés.
+
+Restes (état avant correction ci-dessous) :
 
 - **Tribreizh 2022, L** (fftri_t2_area) : 31 lignes, médiane du total à 00:01:06 alors que
   les segments sont normaux (1er : total 00:01:03, natation 00:29:51, vélo 02:30:39, course
@@ -74,10 +89,8 @@ type d'erreur existe ailleurs.
 - Vainqueurs trop rapides pour le format (triathlon) : 20 en L, 20 en M, 12 en S, 3 en XL,
   3 en XS, 2 en XXL.
 
-Piste : quand les 5 segments sont valides et que le total est incohérent (écart > 5 % avec
-leur somme), recalculer le total — ces cas viennent surtout de fftri, dont les segments sont
-fiables (somme cohérente avec le total dans 98 % des lignes) ; sinon, exclure la ligne des
-meilleurs temps. Ajouter un seuil minimal par discipline et format pour les meilleurs temps.
+Reste à faire : quelques classés aux totaux isolés trop courts (Openlakes Champagne 2026, 751e
+en 00:57:17 sur un L) ; seuil minimal par discipline et format pour les meilleurs temps.
 
 ### Q10 — Segments prolivesport décalés
 Les segments à 00:00:00 sont maintenant vides. Restent des colonnes décalées : au
@@ -129,7 +142,7 @@ alias dans `transform/noms_epreuves.sql`.
 
 | # | Statut |
 |---|--------|
-| D1 Meilleur temps impossible | Corrigé pour Villeneuve-d'Ascq (CLM exclus) ; **même erreur ailleurs** (Q1) |
+| D1 Meilleur temps impossible | Corrigé : Villeneuve-d'Ascq (CLM exclus), totaux recalculés et non-classés écartés (Q1) |
 | D2 Catégories incohérentes | Non corrigé (Q5) |
 | D3 Éditions non regroupées | Corrigé (504 → 471 noms) ; accents fftri manquants (Q11) |
 | D4 Ordre nom/prénom | Affichage en NOM Prénom sur les classements ; à revérifier dans les listes de recherche |
@@ -141,9 +154,7 @@ reconstruction de la base, ce qui casse les liens de profil et de course.
 
 ## Ordre de travail proposé
 
-1. **Q1** : recalcul ou exclusion des totaux incohérents, seuil minimal sur les meilleurs
-   temps. C'est ce qui rend un profil faux.
-2. **Q10** : masquer les segments prolivesport incohérents avec le total.
-3. **Q5** : table de correspondance des catégories.
-4. Identifiants d'athlète et d'épreuve stables.
-5. Q7, Q13.
+1. **Q10** : masquer les segments prolivesport incohérents avec le total.
+2. **Q5** : table de correspondance des catégories.
+3. Identifiants d'athlète et d'épreuve stables.
+4. Restes de Q1 (totaux isolés de classés, seuil minimal sur les meilleurs temps), Q7, Q13.
