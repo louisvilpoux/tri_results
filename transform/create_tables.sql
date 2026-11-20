@@ -12,7 +12,7 @@ CREATE TABLE raw_data (
     indice_performance_run TEXT, name_epreuve TEXT, format_epreuve TEXT, 
     year_epreuve TEXT, date_epreuve TEXT, lieu_epreuve TEXT, scraped_at TEXT,
     source TEXT, sexe TEXT,
-    -- discipline et format déjà calculés (prolivesport, voir prolivesport.sql) ; NULL ailleurs
+    -- discipline et format déjà calculés (prolivesport et chronoweb, voir disciplines.sql) ; NULL ailleurs
     type_epreuve TEXT, format_normalise TEXT
 );
 

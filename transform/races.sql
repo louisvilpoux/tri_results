@@ -1,5 +1,5 @@
 -- Discipline et format d'une épreuve, à partir de format_epreuve :
---   - prolivesport : déjà calculés dans raw_data (voir prolivesport.sql) ;
+--   - prolivesport et chronoweb : déjà calculés dans raw_data (voir disciplines.sql) ;
 --   - autres sources : « <discipline> <distance> [variante] », ex. « triathlon m »,
 --     « cross triathlon m clm » (contre-la-montre), « triathlon m eq » (équipe),
 --     « triathlon s open ». La discipline est ce qui précède la lettre de distance

@@ -60,7 +60,7 @@ def prolivesport_multi_format_id() -> int:
     )
 
 
-# Formats calculés pour prolivesport (transform/prolivesport.sql).
+# Formats calculés pour prolivesport (transform/disciplines.sql).
 PROLIVESPORT_FORMATS = {"XS", "S", "M", "L", "XL", "XXL", "JEUNES", "RELAIS", None}
 
 
@@ -209,3 +209,26 @@ def test_no_prolivesport_duplicate_of_fftri() -> None:
     except OperationalError:
         pytest.skip("Base PostgreSQL indisponible")
     assert max_overlap is None or max_overlap < 0.5
+
+
+def test_chronoweb_detail_sheets_are_excluded() -> None:
+    """Les onglets chronoweb « Détails CàP / Vélo » et les manches intermédiaires ne sont pas
+    des classements : ils ne deviennent pas des épreuves (transform/disciplines.sql)."""
+    try:
+        with engine.connect() as connection:
+            count = connection.execute(
+                text(
+                    """
+                    SELECT COUNT(*)
+                    FROM races r
+                    WHERE unaccent(r.format_initial) ~* '\\mdetails?\\M|\\mma+nche \\d\\M(?! ?\\+)'
+                      AND EXISTS (
+                        SELECT 1 FROM results x
+                        WHERE x.epreuve_id = r.id AND x.source = 'chronoweb'
+                      )
+                    """
+                )
+            ).scalar()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    assert count == 0

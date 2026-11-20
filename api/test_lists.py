@@ -115,3 +115,15 @@ def test_events_disciplines_have_no_format() -> None:
     letters = {"xs", "s", "m", "l", "xl", "xxl", "clm", "eq", "open"}
     assert all(discipline.split()[-1] not in letters for discipline in filters["types"])
     assert not {"CLM", "EQ"} & set(filters["formats"])
+
+
+def test_events_disciplines_are_known() -> None:
+    """Le filtre Discipline ne propose que les 7 disciplines connues : les noms libres
+    prolivesport et les onglets Excel chronoweb (« Half », « Benjamins »…) sont normalisés
+    (transform/disciplines.sql)."""
+    filters = get("/events", limit=1)["filters"]
+    known = {
+        "triathlon", "duathlon", "cross triathlon", "cross duathlon",
+        "aquathlon", "bike&run", "swimrun",
+    }
+    assert set(filters["types"]) <= known

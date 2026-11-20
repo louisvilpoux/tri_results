@@ -71,12 +71,15 @@ Dossier : `transform`
 1. création des différentes tables :
     - create_tables.sql : on créé l'ensemble des tables source et spécifiques.
 2. génération table globale :
-    - prolivesport.sql : fonctions `prolivesport_discipline` et `prolivesport_format`, qui déduisent du nom libre
-      d'une épreuve prolivesport sa discipline (nom de l'épreuve, puis catégorie, puis nom de l'événement) et son
-      format (relais, jeunes, lettre XS…XXL, mots connus comme Sprint ou 70.3, puis distance en km). Les épreuves
-      d'autres sports (course à pied, natation seule, SUPP, distance ≥ 998) sont exclues. Détail des règles en
-      commentaire dans le fichier. `prolivesport_event_name` retire l'année (elle reste dans year_epreuve) et le numéro
-      d'édition (« 38e ») du nom de l'événement pour relier les éditions d'une même course.
+    - disciplines.sql : fonctions `epreuve_discipline` et `epreuve_format`, qui déduisent du nom libre d'une
+      épreuve prolivesport, ou du nom de l'onglet Excel chronoweb, sa discipline (nom de l'épreuve, puis catégorie,
+      puis nom de l'événement, sinon triathlon ; « cross » ou XTERRA → cross) et son format (relais, jeunes, lettre
+      XS…XXL, mots connus comme Sprint, Short, Medium, Half, Full ou Altriman, puis distance en km). Sont exclues les
+      épreuves d'autres sports (course à pied, natation seule, SUPP, distance ≥ 998) et les onglets chronoweb qui ne
+      sont pas des classements (« Détails CàP / Vélo », manches et séries intermédiaires). Détail des règles en
+      commentaire dans le fichier. `prolivesport_event_name` retire l'année (elle reste dans year_epreuve) et le
+      numéro d'édition (« 38e ») du nom de l'événement pour relier les éditions d'une même course ;
+      `prolivesport_team_name` donne le nom des équipes prolivesport.
     - raw_data.sql : insertion dans la table raw_data des données en union all des différentes tables raw_ .
       Le sexe y est calculé une fois par ligne : colonne `sexe` de la source pour prolivesport (M ou F, vide pour
       les équipes mixtes X), première lettre de `cat` pour les autres sources. athletes_tmp et results le reprennent.
@@ -85,7 +88,7 @@ Dossier : `transform`
 3. génération des tables spécifiques :
     - races.sql : table pour décrire chaque épreuve. La discipline est ce qui précède la lettre de distance dans
       format_epreuve et le format est cette lettre (« cross triathlon m clm » → cross triathlon, M ; la variante
-      CLM, EQ ou OPEN reste dans format_initial). prolivesport : voir prolivesport.sql.
+      CLM, EQ ou OPEN reste dans format_initial). prolivesport et chronoweb : voir disciplines.sql.
     - nb_races.sql : table pour obtenir le nombre de courses différentes auquel un athlète a participé.
     - athletes_tmp.sql : table pour isoler les informations sur l'athlète
     - athletes.sql : table pour gérer les différentes entrées possible pour un même athlète en utilisant un unified_id.

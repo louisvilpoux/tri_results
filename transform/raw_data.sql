@@ -55,10 +55,10 @@ scraped_at, 'prolivesport' as source,
 -- des catégories (SE, MA, VE…) dont la première lettre n'est pas le sexe.
 CASE WHEN sexe IN ('M', 'F') THEN sexe END as sexe,
 d.discipline as type_epreuve,
-prolivesport_format(format_epreuve, d.discipline, distance) as format_normalise
+epreuve_format(format_epreuve, d.discipline, distance) as format_normalise
 from raw_prolivesport_0
 CROSS JOIN LATERAL (
-    SELECT prolivesport_discipline(format_epreuve, name_epreuve, categorieevent, distance) AS discipline
+    SELECT epreuve_discipline(format_epreuve, name_epreuve, categorieevent, distance) AS discipline
 ) d
 -- discipline NULL : épreuve d'un autre sport (course à pied, natation seule…), exclue
 WHERE d.discipline IS NOT NULL
@@ -79,9 +79,17 @@ run as run_time, null as rang_run, null as rang_course_run, null as indice_perfo
 name_epreuve, format_epreuve, year_epreuve,
 date_epreuve, lieu_epreuve,
 scraped_at, 'chronoweb' as source, SUBSTRING(cat FROM 1 FOR 1) as sexe,
-null as type_epreuve, null as format_normalise
+-- format_epreuve est le nom de l'onglet Excel (« Half Relais », « Benjamins », « Aquathlon
+-- 6-9 »…) : discipline et format en sont déduits comme pour prolivesport (voir disciplines.sql)
+d.discipline as type_epreuve,
+epreuve_format(format_epreuve, d.discipline, null) as format_normalise
 FROM raw_chronoweb_0
+CROSS JOIN LATERAL (
+    SELECT epreuve_discipline(format_epreuve, name_epreuve, null, null) AS discipline
+) d
 WHERE name_epreuve is not null
+-- discipline NULL : onglet qui n'est pas un classement (détails, manches) ou autre sport
+AND d.discipline IS NOT NULL
 -- épreuves contre-la-montre exclues, comme pour toutes les sources (voir prolivesport)
 AND format_epreuve !~* '\mclm\M'
 UNION ALL

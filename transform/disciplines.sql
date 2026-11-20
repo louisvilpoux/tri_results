@@ -1,13 +1,16 @@
--- Discipline et format des épreuves prolivesport.
+-- Discipline et format des épreuves dont la source ne les donne pas sous une forme normalisée.
 --
 -- Chez prolivesport, le nom d'une épreuve est libre (« Triathlon S », « XS Homme », « D3H »,
--- « 6-9 ans », « La bleue »…). Ces fonctions en déduisent une discipline et un format
--- comparables à ceux des autres sources. Elles sont appelées par raw_data.sql.
+-- « 6-9 ans », « La bleue »…) ; chez chronoweb, c'est le nom de l'onglet du fichier Excel
+-- (« Half Relais », « Benjamins », « Aquathlon 6-9 », « Détails CàP Half »…). Ces fonctions en
+-- déduisent une discipline et un format comparables à ceux de fftri_t2_area. Elles sont
+-- appelées par raw_data.sql. Les fonctions propres à prolivesport (nom d'événement, nom
+-- d'équipe) sont en fin de fichier.
 
 -- Disciplines citées dans un texte (nom d'épreuve ou d'événement).
 -- « FF TRI » / « FFTRI » (la fédération) est ignoré ; « du » ne compte pour « duathlon » que
 -- suivi d'un format (« Du M »), pour ne pas confondre avec l'article (« Tri du Roi »).
-CREATE OR REPLACE FUNCTION prolivesport_named_disciplines(texte text)
+CREATE OR REPLACE FUNCTION epreuve_named_disciplines(texte text)
 RETURNS text[] AS $$
 DECLARE
     t text := regexp_replace(lower(unaccent(coalesce(texte, ''))), 'ff ?tri\M', ' ', 'g');
@@ -23,28 +26,40 @@ END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
 
--- Discipline d'une épreuve, ou NULL si l'épreuve n'est pas un enchaînement (course à pied,
--- natation seule, randonnée, épreuves « SUPP » ou de distance 998 / 999) : elle est exclue.
+-- Discipline d'une épreuve, ou NULL si l'épreuve est exclue :
+--   - ce n'est pas un enchaînement (course à pied, natation seule, randonnée, épreuves « SUPP »
+--     ou de distance 998 / 999) ;
+--   - ce n'est pas un classement (chronoweb : onglets « Détails CàP / Vélo… », qui reprennent
+--     les athlètes d'un autre onglet ; manches et séries intermédiaires « Manche 1 »,
+--     « Speed Race Serie 2 », « Qualif Speed », dont le classement final est dans un autre
+--     onglet : « Manche 1+2 », « Finale »).
 -- La première règle qui répond l'emporte :
 --   1. une seule discipline citée dans le nom de l'épreuve ;
 --   2. la catégorie de l'événement quand elle est précise (Bike&Run, Aquathlon, Cross Duathlon) ;
 --   3. une seule discipline citée dans le nom de l'événement ;
 --   4. la catégorie par défaut (« Triathlon - Duathlon » → duathlon, sinon triathlon).
--- « cross » dans le nom de l'épreuve (ou la catégorie Cross Duathlon) donne « cross triathlon »
--- ou « cross duathlon ».
-CREATE OR REPLACE FUNCTION prolivesport_discipline(
+-- « cross » dans le nom de l'épreuve, un événement XTERRA ou la catégorie Cross Duathlon donnent
+-- « cross triathlon » ou « cross duathlon ». categorie et distance sont NULL pour chronoweb.
+CREATE OR REPLACE FUNCTION epreuve_discipline(
     race text, event_name text, categorie text, distance text
 )
 RETURNS text AS $$
 DECLARE
-    race_words text[] := prolivesport_named_disciplines(race);
-    event_words text[] := prolivesport_named_disciplines(event_name);
+    race_text text := lower(unaccent(coalesce(race, '')));
+    race_words text[] := epreuve_named_disciplines(race);
+    event_words text[] := epreuve_named_disciplines(event_name);
     km numeric := CASE WHEN pg_input_is_valid(distance, 'numeric') THEN distance::numeric END;
-    is_cross boolean := lower(race) ~ 'cross' OR categorie = 'Triathlon - Cross Duathlon';
+    is_cross boolean := race_text ~ 'cross'
+        OR lower(coalesce(event_name, '')) ~ 'xterra'
+        OR categorie = 'Triathlon - Cross Duathlon';
     result text;
 BEGIN
+    IF race_text ~ ('\mdetails?\M|\mma+nche \d\M(?! ?\+)|speed race serie|\mqualif') THEN
+        RETURN NULL;
+    END IF;
+
     IF cardinality(race_words) = 0
-       AND (lower(race) ~ 'marathon|semi|\m\d+([.,]\d+)? ?km?\M|run\M|rando|trail|marche|supp|swim\M'
+       AND (race_text ~ 'marathon|semi|\m\d+([.,]\d+)? ?km?\M|run\M|rando|trail|marche|supp|swim\M'
             OR km >= 998) THEN
         RETURN NULL;
     END IF;
@@ -74,41 +89,53 @@ $$ LANGUAGE plpgsql IMMUTABLE;
 
 
 -- Format d'une épreuve (XS, S, M, L, XL, XXL, JEUNES ou RELAIS), ou NULL si rien ne permet de
--- le savoir. La première règle qui répond l'emporte :
---   1. relais (« relais », « relay », « RM » pour relais mixte) ;
---   2. épreuves jeunes (« 6-9 ans », Pupille, Poussin, Benjamin, ADO, CAF / MIH, « J 12-15 »…) ;
---   3. une lettre de format dans le nom (les codes de paratriathlon PTS…, PTWC… sont ignorés) ;
---   4. un mot connu : Super Sprint → XS, Sprint → S, Olympic / Standard → M,
---      70.3 / Half / 111 / 113 / Long → L, 226 / Ironman → XXL ;
+-- le savoir (chronoweb : « CD » d'Altriman, « Poursuite », « Super Tri », « Cross »…).
+-- La première règle qui répond l'emporte :
+--   1. relais : « relais », « relay », « RM » (relais mixte), « team », « équipes » ; « duo »
+--      aussi (« Half Duo »), sauf en swimrun, qui se court toujours à deux ;
+--   2. épreuves jeunes (« 6-9 ans », « 10-13 », Pupille, Poussin, Benjamin, Junior, ADO,
+--      Altrikids, Tri Kid, Family, CAF / MIH, FBE / MCA, « J 12-15 »…) ;
+--   3. une lettre de format dans le nom (les codes de paratriathlon PTS…, PTWC… et « S&M »,
+--      seniors et masters, sont ignorés ; XXS et XXXS comptent pour XS) ;
+--   4. un mot connu : Super Sprint / Découverte → XS, Sprint / Short → S,
+--      Olympic / Standard / Medium → M, 70.3 / Half / 111 / 113 / Long → L,
+--      226 / Ironman / Full / Altriman → XXL ;
 --   5. pour le triathlon et le duathlon, la distance totale en km (seuils placés entre les
 --      distances FFTri : XS 12,9, S 25,75, M 51,5, L ≈ 113, XL ≈ 153, XXL 226).
 -- Quand la lettre du nom et la distance ne concordent pas (8 % des cas), la lettre l'emporte.
-CREATE OR REPLACE FUNCTION prolivesport_format(race text, discipline text, distance text)
+CREATE OR REPLACE FUNCTION epreuve_format(race text, discipline text, distance text)
 RETURNS text AS $$
 DECLARE
-    t text := regexp_replace(lower(unaccent(coalesce(race, ''))), '\mpts?\d[a-z0-9-]*|\mpt[a-z]*', ' ', 'g');
+    t text := regexp_replace(
+        lower(unaccent(coalesce(race, ''))), '\mpts?\d[a-z0-9-]*|\mpt[a-z]*|\ms ?& ?m\M', ' ', 'g'
+    );
     km numeric := CASE WHEN pg_input_is_valid(distance, 'numeric') THEN distance::numeric END;
     letter text;
 BEGIN
-    IF t ~ 'relais|relay|\mrm\M' THEN
+    IF t ~ 'relais|relay|\mrm\M|\mteam\M|\mequipes?\M'
+       OR (t ~ '\mduo\M' AND discipline IS DISTINCT FROM 'swimrun') THEN
         RETURN 'RELAIS';
     END IF;
 
-    IF t ~ ('\d+ ?-? ?\d* ?ans|pupille|poussin|benjamin|minime|cadet|\mado\M|jeune|kid|enfant'
-            || '|\m(pu|po|be|mi|ca|ju)[fh]?\M|be-mi|\mj ?\d|\mj\M') THEN
+    IF t ~ ('\d+ ?-? ?\d* ?ans|pupille|poussin|benjamin|minime|cadet|junior|\mado\M|jeune|kid'
+            || '|enfant|family|\m(pu|po|be|mi|ca|ju)[fh]?\M|\m[fm](pu|po|be|mi|ca|ju)\M|be-mi'
+            || '|\mj ?\d|\mj\M|^\D*\m([4-9]|1\d) ?[-_] ?([6-9]|1\d)\M\D*$') THEN
         RETURN 'JEUNES';
     END IF;
 
+    IF t ~ '\mx{2,}s\M' THEN
+        RETURN 'XS';
+    END IF;
     letter := substring(t from '\m(xxl|xl|xs|s|m|l)\M');
     IF letter IS NOT NULL THEN
         RETURN upper(letter);
     END IF;
 
-    IF t ~ 'super ?sprint|starter' THEN RETURN 'XS'; END IF;
-    IF t ~ 'sprint' THEN RETURN 'S'; END IF;
-    IF t ~ 'olymp|standard|court' THEN RETURN 'M'; END IF;
+    IF t ~ 'super ?sprint|starter|decouverte' THEN RETURN 'XS'; END IF;
+    IF t ~ 'sprint|\mshort\M' THEN RETURN 'S'; END IF;
+    IF t ~ 'olymp|standard|court|medium' THEN RETURN 'M'; END IF;
     IF t ~ '70[.,]3|half|\m11[13]\M|long' THEN RETURN 'L'; END IF;
-    IF t ~ '\m226\M|ironman' THEN RETURN 'XXL'; END IF;
+    IF t ~ '\m226\M|ironman|\mfull\M|altriman' THEN RETURN 'XXL'; END IF;
 
     IF discipline IN ('triathlon', 'duathlon') AND km IS NOT NULL THEN
         RETURN CASE

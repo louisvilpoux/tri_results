@@ -253,11 +253,17 @@ Points connus (données) :
   M/F (E, 4, J…, première lettre de sa catégorie), ignorées par l'API.
 - prolivesport code les non-classés avec `clt = 0` ou `99991` à `99999` (et un temps `00:00:00`) : affichés « NC », placés en fin de tri, exclus des statistiques.
 - prolivesport (corrigé le 19/11/2026) : l'ancien scraping copiait chaque événement sur 6 faux formats (OPEN, PTWC…)
-  avec toutes les distances mélangées. Le nouveau scraping a une épreuve par fichier, et `transform/prolivesport.sql`
+  avec toutes les distances mélangées. Le nouveau scraping a une épreuve par fichier, et `transform/disciplines.sql`
   en déduit discipline et format (dont JEUNES et RELAIS ; format vide si rien ne permet de le savoir, ~3 % des
   résultats). Les contournements de l'API et du front (« Toutes distances », dédoublonnage OPEN, formats
   prolivesport exclus) ont été retirés. Limite : quand la lettre du nom et la distance ne concordent pas (8 %), la
   lettre l'emporte ; 18 épreuves jeunes d'événements « Triathlon / Duathlon » prennent la discipline de la catégorie.
+- chronoweb (20/11/2026) : ses résultats arrivent dans la base depuis que la date est scrappée (68 491 résultats,
+  504 épreuves). Le format chronoweb est le nom de l'onglet Excel (« Half Relais », « Benjamins », « 8-9 ans ») :
+  `transform/disciplines.sql` en déduit discipline et format comme pour prolivesport, et le filtre Discipline
+  revient à 7 valeurs. Les onglets « Détails » et les manches intermédiaires sont exclus. Format vide pour les
+  onglets sans indication (« CD » d'Altriman, « Poursuite », « Super Tri », finales Speed…). Les doublons avec
+  fftri_t2_area (53 épreuves) ne sont pas encore retirés.
 - 589 épreuves n'ont aucun résultat (souvent sans date, anciennes sources) : elles sont ignorées dans les formats d'une course.
 - Les noms prolivesport contenaient l'année (« Triathlon Bray-Dunes 2022 ») et parfois le numéro d'édition
   (« 38e Triathlon… ») : les deux sont retirés dans `transform/` (`prolivesport_event_name`, l'année reste dans
