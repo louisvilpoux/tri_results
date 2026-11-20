@@ -121,8 +121,9 @@ Dossier : `transform`
     - nb_races.sql : table pour obtenir le nombre de courses différentes auquel un athlète a participé.
     - athletes_tmp.sql : table pour isoler les informations sur l'athlète
     - athletes.sql : table pour gérer les différentes entrées possible pour un même athlète en utilisant un unified_id.
-      Clé d'un athlète : les mots du nom en minuscules, sans accents, triés ; tirets et apostrophes comptent comme
-      des espaces (« BASSETTO Jean-Marc » = « BASSETTO Jean Marc »). Les autres signes (« * », « . ») restent :
+      Clé d'un athlète : les mots du nom en minuscules, sans accents, triés ; tirets, apostrophes et virgules
+      comptent comme des espaces (« BASSETTO Jean-Marc » = « BASSETTO Jean Marc », « MEUNIER, Paul » de chronoweb =
+      « MEUNIER Paul »). Les autres signes (« * », « . ») restent :
       certaines sources s'en servent pour distinguer deux homonymes d'une même épreuve.
     - athletes_tronques.sql : rattache un nom coupé par la source (« BASSETTO JEAN MA », Gérardmer 2002) à l'athlète
       complet, quand l'épreuve coupe ses noms à une longueur fixe, que la coupure tombe au milieu d'un mot et qu'un

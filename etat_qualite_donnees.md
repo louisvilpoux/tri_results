@@ -8,9 +8,9 @@ Audit initial du 20/11/2026 au commit `007557a`, mis à jour le 20/11/2026 (noms
 
 | Table | Lignes |
 |-------|--------|
-| results | 839 492 (fftri_t2_area 698 045, prolivesport 85 599, chronoweb 55 848) |
-| races (épreuves) | 3 575, sous 471 noms de course |
-| athlètes (`unified_id`) | 270 455 |
+| results | 839 180 (fftri_t2_area 698 045, prolivesport 85 599, chronoweb 55 536) |
+| races (épreuves) | 3 574, sous 471 noms de course |
+| athlètes (`unified_id`) | 268 187 |
 | lignes d'équipe | 9 615 |
 | lignes de sous-classement | 7 680 (38 épreuves) |
 
@@ -53,7 +53,7 @@ classement cohérent avec le temps dans 99 % des épreuves.
 | Q9 | `c4ec3f4` | `corrige_encodage` (raw_data.sql) : 218 noms et 29 clubs corrigés (« ThÃ©o » → « Théo ») ; les résultats rejoignent le bon athlète. |
 | Q11 | `8e1542c` puis « Saint / Sainte » | Normalisation des noms de course (504 → 471) : clé sans petits mots ni ponctuation, « St / Ste / Sainte » = « Saint », alias, noms fftri mis en forme. |
 | Q12 | `8e1542c` | `athletes_sexe.sql` : le filtre sexe de la liste suit le sexe le plus fréquent du profil. |
-| Q14 | noms d'athlètes | Clé d'athlète sans tirets ni apostrophes (« Jean-Marc » = « Jean Marc ») ; `athletes_tronques.sql` rattache 477 noms coupés par la source (« BASSETTO JEAN MA ») ; `homonymes.sql` garde les deux homonymes d'une même épreuve (temps différents) comme deux athlètes : 395 résultats retrouvés. |
+| Q14 | noms d'athlètes | Clé d'athlète sans tirets, apostrophes ni virgules (« Jean-Marc » = « Jean Marc », « MEUNIER, Paul » = « MEUNIER Paul ») ; `athletes_tronques.sql` rattache 477 noms coupés par la source (« BASSETTO JEAN MA ») ; `homonymes.sql` garde les deux homonymes d'une même épreuve (temps différents) comme deux athlètes : 395 résultats retrouvés. |
 
 ---
 

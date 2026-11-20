@@ -289,6 +289,11 @@ Points connus (données) :
   Vichy 2025) : 839 097 → 839 492 résultats, 392 nouveaux athlètes. Le mieux classé garde le profil commun ; l'autre
   a un profil avec cette seule épreuve (impossible de savoir à qui sont les autres courses). Les doublons de la
   source (même temps, ou ligne sans temps) restent fusionnés.
+- Virgule dans les noms (20/11/2026) : chronoweb écrit souvent « NOM, Prénom » (3 462 lignes) ; « MEUNIER, Paul »
+  et « MEUNIER Paul » formaient deux profils. La virgule compte maintenant comme un espace, dans la clé et dans la
+  recherche : 2 268 profils rejoignent l'athlète existant (270 455 → 268 187 athlètes). Effet de bord voulu : le
+  Triathlon de Dijon 2026 chronoweb, écrit en « NOM, Prénom », est reconnu comme doublon de la version fftri_t2_area
+  (297 athlètes en commun sur 312) et retiré (839 492 → 839 180 résultats).
 - Clubs (corrigé le 20/11/2026) : 5 694 clubs écrits avec « ` » au lieu d'une apostrophe (« TRIATHLON CLUB
   D`HAZEBROUCK ») sont corrigés ; 1 519 valeurs qui disaient seulement « pas de club » (« NON LICENCIE », « NL »,
   « NONE », « 0 », « - », « ??? »…) sont vidées, comme les licences individuelles (« INDIVIDUEL », « LICENCE

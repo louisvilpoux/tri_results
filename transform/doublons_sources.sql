@@ -9,7 +9,7 @@
 -- petite des deux épreuves en commun. Les paires se répartissent nettement :
 --   - prolivesport (19/11/2026) : 62 paires entre 80 et 100 % d'athlètes en commun, une à 30 %,
 --     toutes les autres sous 10 % ;
---   - chronoweb (20/11/2026) : 47 paires entre 87 et 100 %, toutes les autres sous 14 %.
+--   - chronoweb (20/11/2026) : 48 paires entre 87 et 100 %, toutes les autres sous 14 %.
 --
 -- On garde la version fftri_t2_area : sur ces doublons, 97 % de ses participants sont classés
 -- (60 % chez prolivesport, 84 % chez chronoweb) et les temps prolivesport anciens sont parfois

@@ -281,13 +281,13 @@ def test_clubs_are_cleaned() -> None:
     assert row.vides == 0
 
 
-def test_athlete_key_ignores_hyphens_and_apostrophes() -> None:
-    """« BASSETTO Jean-Marc » et « BASSETTO Jean Marc » ont la même clé, donc un seul profil
-    (transform/athletes.sql)."""
+def test_athlete_key_ignores_hyphens_apostrophes_and_commas() -> None:
+    """« BASSETTO Jean-Marc » et « BASSETTO Jean Marc » ont la même clé, donc un seul profil,
+    comme « MEUNIER, Paul » et « MEUNIER Paul » (transform/athletes.sql)."""
     try:
         with engine.connect() as connection:
             keys = connection.execute(
-                text("SELECT COUNT(*) FROM athletes WHERE athlete_key ~ '[-‐–—−''‘’]'")
+                text("SELECT COUNT(*) FROM athletes WHERE athlete_key ~ '[-‐–—−''‘’,]'")
             ).scalar()
     except OperationalError:
         pytest.skip("Base PostgreSQL indisponible")
@@ -297,6 +297,7 @@ def test_athlete_key_ignores_hyphens_and_apostrophes() -> None:
 def test_search_splits_hyphenated_words() -> None:
     """Chercher « jean-marc » revient à chercher « jean » et « marc », comme la clé."""
     assert search_words("Jean-Marc d'Almeida") == ["jean", "marc", "d", "almeida"]
+    assert search_words("MEUNIER, Paul") == ["meunier", "paul"]
 
 
 def test_homonyms_in_the_same_race_are_kept() -> None:
