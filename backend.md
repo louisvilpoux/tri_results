@@ -98,10 +98,10 @@ Dossier : `transform`
       écartés : c'était le cas de tout chronoweb avant que la date soit scrappée).
       La colonne `equipe` marque les lignes d'équipe prolivesport (bike&run, relais) repérées par
       `prolivesport_team_name`, qui donne aussi leur nom affiché ; nb_races.sql ne les compte pas.
-    - doublons_sources.sql : retire les épreuves prolivesport publiées aussi par fftri_t2_area (dates à un jour près,
-      au moins la moitié des athlètes en commun) ; la version fftri_t2_area est gardée et la table doublons_sources
-      garde la trace des paires retirées. Les autres épreuves prolivesport de ces courses prennent le nom
-      fftri_t2_area pour être regroupées avec elles. Exécuté avant nb_races.sql.
+    - doublons_sources.sql : retire les épreuves prolivesport ou chronoweb publiées aussi par fftri_t2_area (dates à
+      un jour près, au moins la moitié des athlètes en commun) ; la version fftri_t2_area est gardée et la table
+      doublons_sources garde la trace des paires retirées (colonne `source`). Les autres épreuves de la source dans
+      ces courses prennent le nom fftri_t2_area pour être regroupées avec elles. Exécuté avant nb_races.sql.
 4. génération des index :
     - pg_index.sql : création des index pour améliorer les performances des requêtes sur les tables.
 

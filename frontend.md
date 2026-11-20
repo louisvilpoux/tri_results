@@ -263,7 +263,7 @@ Points connus (données) :
   `transform/disciplines.sql` en déduit discipline et format comme pour prolivesport, et le filtre Discipline
   revient à 7 valeurs. Les onglets « Détails » et les manches intermédiaires sont exclus. Format vide pour les
   onglets sans indication (« CD » d'Altriman, « Poursuite », « Super Tri », finales Speed…). Les doublons avec
-  fftri_t2_area (53 épreuves) ne sont pas encore retirés.
+  fftri_t2_area sont retirés (voir ci-dessous) : restent 55 907 résultats chronoweb sur 457 épreuves.
 - 589 épreuves n'ont aucun résultat (souvent sans date, anciennes sources) : elles sont ignorées dans les formats d'une course.
 - Les noms prolivesport contenaient l'année (« Triathlon Bray-Dunes 2022 ») et parfois le numéro d'édition
   (« 38e Triathlon… ») : les deux sont retirés dans `transform/` (`prolivesport_event_name`, l'année reste dans
@@ -283,6 +283,11 @@ Points connus (données) :
   (ex. Étaples : 7 courses au lieu de 11). Le nom affiché est donc celui de fftri_t2_area (« triathlon d etaples
   sur mer »), et une course mixte peut prendre le nom de sa partie fftri (« Triathlon/Duathlon des Géants - Douai »
   → « duathlon de douai »).
+- Doublons chronoweb / fftri_t2_area (corrigé le 20/11/2026) : même règle et même choix (fftri_t2_area gardé, 84 %
+  de participants classés chez chronoweb sur ces doublons contre 97 %). 47 épreuves retirées (Half, M, Altriman…
+  d'Altriman, Extrememan, Dijon, Vouglans, Toulouse…) ; les autres épreuves chronoweb de 14 courses prennent le nom
+  fftri_t2_area (« Triathlon de Vouglans » → « triathlon jura vouglans »), ce qui relie aussi « Extrememan »,
+  « Extrememan Narbonne » et « Extreme-man de Narbonne ».
 - Des lieux d'épreuve contiennent "nan" (valeurs vides converties en texte au scraping, ex. « nan Cabourg nan nan ») :
   l'API les retire (`clean_lieu`).
 - Le serveur de dev Turbopack ne voit parfois pas une nouvelle fonction exportée par `lib/api.ts` (« … is not a function »
