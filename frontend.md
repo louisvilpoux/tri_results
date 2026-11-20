@@ -201,6 +201,10 @@ Réalisés
     - En-tête : nom, édition, période (« 17–19 juin 2022 »), lieu, nombre de formats, participants distincts.
     - Une carte par format : discipline, format, date, participants, vainqueur et première femme
       (liens vers leur profil, avec leur temps), bouton vers le classement.
+    - Ordre des cartes, identique d'une édition à l'autre (calculé par l'API, `race_format_sort_key`) : discipline
+      dans l'ordre des cartes de la page d'accueil (triathlon, cross triathlon, duathlon, cross duathlon, aquathlon,
+      swimrun, bike&run), puis format (XS, S, M, L, XL, XXL, JEUNES, RELAIS, format non précisé), puis date et nom
+      d'origine de l'épreuve. Avant, les cartes suivaient la date puis l'id, qui change à chaque reconstruction.
     - Autres éditions : liens vers les autres années de la même course.
     - Le lien « Retour » du classement d'un format ramène maintenant à la page course.
     - Code : `components/races/`, types `RaceEvent` / `RaceFormat` dans `types/race.ts`.

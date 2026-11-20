@@ -36,6 +36,8 @@ class Race(Base):
     __tablename__ = "races"
     id = Column(Integer,  primary_key=True, index=True)
     name_epreuve = Column(String(255))
+    # nom d'origine de l'épreuve dans la source (« Half Relais », « triathlon m clm »…)
+    format_initial = Column(String(255))
     type_epreuve = Column(String(25))
     format_epreuve = Column(String(25))
     year_epreuve = Column(String(25))
@@ -237,6 +239,18 @@ def valid_rank_or_null(column: ColumnElement) -> ColumnElement:
 # les autres suivent par ordre alphabétique.
 FORMAT_DISPLAY_ORDER = ["XS", "S", "M", "L", "XL", "XXL"]
 
+# Ordre d'affichage des disciplines : celui des cartes de la page d'accueil
+# (triathlon-results/app/page.tsx). Les autres suivent par ordre alphabétique.
+DISCIPLINE_DISPLAY_ORDER = [
+    "triathlon",
+    "cross triathlon",
+    "duathlon",
+    "cross duathlon",
+    "aquathlon",
+    "swimrun",
+    "bike&run",
+]
+
 
 def get_result_sort_expression(sort_by: RaceResultSortBy) -> ColumnElement:
     """Retourne l'expression SQL de tri ; les valeurs invalides deviennent NULL."""
@@ -374,7 +388,7 @@ def get_race_event(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any
         )
     }
 
-    formats = siblings
+    formats = sorted(siblings, key=race_format_sort_key)
     format_ids = [race_format.id for race_format in formats]
     winners = get_podium_leaders(db, format_ids)
     first_women = get_podium_leaders(db, format_ids, women_only=True)
@@ -731,11 +745,38 @@ def search_athletes_page(
     return {"items": items, "total": total}
 
 
-def format_sort_key(format_epreuve: str) -> tuple[int, str]:
-    """Clé de tri des formats : XS, S, M, L, XL, XXL, puis les autres par ordre alphabétique."""
+def format_sort_key(format_epreuve: str | None) -> tuple[int, str]:
+    """Clé de tri des formats : XS, S, M, L, XL, XXL, puis les autres par ordre alphabétique
+    (JEUNES, RELAIS), puis les formats inconnus."""
     if format_epreuve in FORMAT_DISPLAY_ORDER:
         return FORMAT_DISPLAY_ORDER.index(format_epreuve), ""
+    if format_epreuve is None:
+        return len(FORMAT_DISPLAY_ORDER) + 1, ""
     return len(FORMAT_DISPLAY_ORDER), format_epreuve
+
+
+def discipline_sort_key(type_epreuve: str | None) -> tuple[int, str]:
+    """Clé de tri des disciplines : ordre de la page d'accueil, puis les autres par ordre
+    alphabétique, puis les disciplines inconnues."""
+    if type_epreuve in DISCIPLINE_DISPLAY_ORDER:
+        return DISCIPLINE_DISPLAY_ORDER.index(type_epreuve), ""
+    if type_epreuve is None:
+        return len(DISCIPLINE_DISPLAY_ORDER) + 1, ""
+    return len(DISCIPLINE_DISPLAY_ORDER), type_epreuve
+
+
+def race_format_sort_key(race: "Race") -> tuple[Any, ...]:
+    """Ordre des formats sur la page d'une course, identique d'une édition à l'autre :
+    discipline (ordre de la page d'accueil), format (XS → XXL, JEUNES, RELAIS), puis date et
+    nom d'origine de l'épreuve pour départager deux épreuves de même discipline et format
+    (l'id change à chaque reconstruction de la base : il ne sert qu'en dernier recours)."""
+    return (
+        discipline_sort_key(race.type_epreuve),
+        format_sort_key(race.format_epreuve),
+        race.date_epreuve or "",
+        race.format_initial or "",
+        race.id,
+    )
 
 
 def search_races_page(

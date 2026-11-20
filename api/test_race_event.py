@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 
-from main import app, engine
+from main import app, discipline_sort_key, engine, format_sort_key
 from test_race_results import is_ranked
 
 client = TestClient(app)
@@ -278,3 +278,39 @@ def test_race_names_are_not_all_lowercase() -> None:
     except OperationalError:
         pytest.skip("Base PostgreSQL indisponible")
     assert lowercase == 0
+
+
+@pytest.fixture(scope="module")
+def multi_discipline_race_id() -> int:
+    """Épreuve d'une course qui propose plusieurs disciplines la même année."""
+    return find_race(
+        """
+        SELECT MIN(r.id) AS id
+        FROM races r
+        WHERE EXISTS (SELECT 1 FROM results x WHERE x.epreuve_id = r.id)
+        GROUP BY r.name_epreuve, r.year_epreuve
+        HAVING COUNT(DISTINCT r.type_epreuve) > 2
+        ORDER BY COUNT(*) DESC
+        LIMIT 1
+        """
+    )
+
+
+def test_formats_follow_home_page_discipline_order(multi_discipline_race_id: int) -> None:
+    """Les formats d'une course sont toujours rangés par discipline, dans l'ordre des cartes
+    de la page d'accueil, puis par format (XS → XXL, JEUNES, RELAIS) : l'ordre ne change pas
+    d'une édition à l'autre."""
+    event = get_event(multi_discipline_race_id)
+    keys = [
+        (discipline_sort_key(f["type_epreuve"]), format_sort_key(f["format_epreuve"]))
+        for f in event["formats"]
+    ]
+    assert len({key[0] for key in keys}) > 2
+    assert keys == sorted(keys)
+    for edition in event["editions"]:
+        formats = get_event(edition["race_id"])["formats"]
+        keys = [
+            (discipline_sort_key(f["type_epreuve"]), format_sort_key(f["format_epreuve"]))
+            for f in formats
+        ]
+        assert keys == sorted(keys)
