@@ -115,3 +115,28 @@ def test_pagination_is_stable(race_id: int) -> None:
     first = get_results(race_id, sort_by="total_time", limit=10, offset=0)["items"]
     second = get_results(race_id, sort_by="total_time", limit=10, offset=10)["items"]
     assert [item["id"] for item in first + second] == [item["id"] for item in full[:20]]
+
+
+def test_chronoweb_times_are_hh_mm_ss() -> None:
+    """Les temps chronoweb sont au format hh:mm:ss, comme ceux des autres sources : fractions
+    de seconde tronquées, « ? » et dates Excel vidés (transform/raw_data.sql)."""
+    try:
+        with engine.connect() as connection:
+            bad = connection.execute(
+                text(
+                    """
+                    SELECT COUNT(*)
+                    FROM results
+                    WHERE source = 'chronoweb'
+                      AND (total_time !~ '^\\d{2,3}:\\d{2}:\\d{2}$'
+                           OR swim_time !~ '^\\d{2,3}:\\d{2}:\\d{2}$'
+                           OR t1_time !~ '^\\d{2,3}:\\d{2}:\\d{2}$'
+                           OR bike_time !~ '^\\d{2,3}:\\d{2}:\\d{2}$'
+                           OR t2_time !~ '^\\d{2,3}:\\d{2}:\\d{2}$'
+                           OR run_time !~ '^\\d{2,3}:\\d{2}:\\d{2}$')
+                    """
+                )
+            ).scalar()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    assert bad == 0

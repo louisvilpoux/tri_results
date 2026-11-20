@@ -9,6 +9,18 @@ EXCEPTION WHEN others THEN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
+-- Temps chronoweb au format hh:mm:ss, comme les autres sources.
+-- chronoweb lit des cellules Excel : un temps y vaut « 01:29:09 », ou « 01:29:09.357000 » quand
+-- la cellule garde les fractions de seconde (17 % des temps totaux, le 20/11/2026). Les
+-- fractions sont tronquées : « 01:29:09.357000 » → « 01:29:09 », comme un chronomètre qui
+-- affiche les secondes écoulées. Sont vidés : « ? » (temps inconnu) et les cellules qui
+-- contiennent une date Excel (« 1899-12-30 23:51:32.910000 », 39 temps intermédiaires
+-- d'Aquathlon de Limoges 2017 et du Triathlon de Toulouse : écarts négatifs, pas des durées).
+CREATE OR REPLACE FUNCTION chronoweb_temps(temps text)
+RETURNS text AS $$
+    SELECT substring(btrim(temps) FROM '^(\d{2,3}:\d{2}:\d{2})(\.\d+)?$')
+$$ LANGUAGE sql IMMUTABLE;
+
 INSERT INTO raw_data (clt, clt_f, temps, nom, club, cat, clt_cat, 
 id_league, league, détails, rang_global, rang_sexe, 
 rang_categorie, categorie, indice_performance, indice_performance_reference, 
@@ -68,14 +80,14 @@ AND format_epreuve !~* '\mclm\M'
 UNION ALL
 SELECT 
 CASE WHEN pg_input_is_valid(clt, 'integer') THEN clt::integer ELSE NULL END AS clt, 
-null as clt_f, temps, nom, club, cat, null as clt_cat,
+null as clt_f, chronoweb_temps(temps) as temps, nom, club, cat, null as clt_cat,
 null as id_league, null as league, "détails", clt as rang_global, null as rang_sexe,
 null as rang_categorie, cat as categorie, null as indice_performance, null as indice_performance_reference,
-temps as total_time, swim as swim_time, null as rang_swim, null as rang_course_swim, null as indice_performance_swim,
-t1 as t1_time, null as rang_t1, null as rang_course_t1, null as indice_performance_t1,
-bike as bike_time, null as rang_bike, null as rang_course_bike, null as indice_performance_bike,
-t2 as t2_time, null as rang_t2, null as rang_course_t2, null as indice_performance_t2,
-run as run_time, null as rang_run, null as rang_course_run, null as indice_performance_run,
+chronoweb_temps(temps) as total_time, chronoweb_temps(swim) as swim_time, null as rang_swim, null as rang_course_swim, null as indice_performance_swim,
+chronoweb_temps(t1) as t1_time, null as rang_t1, null as rang_course_t1, null as indice_performance_t1,
+chronoweb_temps(bike) as bike_time, null as rang_bike, null as rang_course_bike, null as indice_performance_bike,
+chronoweb_temps(t2) as t2_time, null as rang_t2, null as rang_course_t2, null as indice_performance_t2,
+chronoweb_temps(run) as run_time, null as rang_run, null as rang_course_run, null as indice_performance_run,
 name_epreuve, format_epreuve, year_epreuve,
 date_epreuve, lieu_epreuve,
 scraped_at, 'chronoweb' as source, SUBSTRING(cat FROM 1 FOR 1) as sexe,

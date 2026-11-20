@@ -279,6 +279,9 @@ Points connus (données) :
   `transform/noms_epreuves.sql`, et leurs éditions à une seule course. Le nom gardé est le plus lisible : les
   courses fftri_t2_area qui ont aussi un nom écrit avec majuscules dans une autre source s'affichent maintenant
   ainsi (« Triathlon de Dijon », « Altriman », « Triathlon de Toulouse »).
+- Temps chronoweb (corrigé le 20/11/2026) : 17 % des temps gardaient les fractions de seconde de la cellule Excel
+  (« 01:29:09.357000 »), ce qui faussait l'affichage et le tri par temps. Ils sont tronqués à la seconde ; les « ? »
+  et 39 dates Excel prises pour des temps intermédiaires (Aquathlon de Limoges 2017) sont vidés.
 - Filtre sexe de la liste des athlètes (corrigé le 20/11/2026) : il utilisait le sexe d'une seule ligne de
   l'athlète, qui pouvait venir d'un résultat mal renseigné (« MARTIN Nicolas », 125 résultats M, listé parmi les
   femmes à cause d'une catégorie fftri « FH »). Il suit désormais le sexe du profil, le plus fréquent dans ses

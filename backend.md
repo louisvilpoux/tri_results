@@ -89,6 +89,8 @@ Dossier : `transform`
       les équipes mixtes X), première lettre de `cat` pour les autres sources. athletes_tmp et results le reprennent.
       Les épreuves contre-la-montre (`format_epreuve` contenant le mot « CLM ») sont exclues de toutes les
       sources : chez prolivesport, leurs colonnes de temps sont décalées.
+      Les temps chronoweb sont ramenés au format hh:mm:ss (`chronoweb_temps`) : fractions de seconde tronquées
+      (« 01:29:09.357000 » → « 01:29:09 »), « ? » et dates Excel (« 1899-12-30 23:51:32 ») vidés.
     - noms_epreuves.sql : un seul nom, lisible, par course, en trois étapes sur les noms de raw_data :
       1. alias écrits à la main (table `alias_courses` dans le fichier) pour les cas que la règle ne voit pas
          (« Triathlon de l'audomarois - Arques » → « Triathlon & Duathlon de l'Audomarois », duathlon de Noyon…) ;
