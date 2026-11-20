@@ -715,8 +715,11 @@ MAX_SEARCH_WORDS = 6
 
 
 def search_words(q: str) -> list[str]:
-    """Mots de la recherche, en minuscules (les accents sont retirés côté SQL)."""
-    return q.lower().split()[:MAX_SEARCH_WORDS]
+    """Mots de la recherche, en minuscules (les accents sont retirés côté SQL). Tirets et
+    apostrophes séparent les mots, comme dans la clé des athlètes (transform/athletes.sql) :
+    « jean-marc » cherche « jean » et « marc »."""
+    words = re.split(r"[-‐‑‒–—−'‘’_\s]+", q.lower())
+    return [word for word in words if word][:MAX_SEARCH_WORDS]
 
 
 def contains_word(column: ColumnElement, word: str) -> ColumnElement:

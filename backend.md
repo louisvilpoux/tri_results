@@ -121,6 +121,12 @@ Dossier : `transform`
     - nb_races.sql : table pour obtenir le nombre de courses différentes auquel un athlète a participé.
     - athletes_tmp.sql : table pour isoler les informations sur l'athlète
     - athletes.sql : table pour gérer les différentes entrées possible pour un même athlète en utilisant un unified_id.
+      Clé d'un athlète : les mots du nom en minuscules, sans accents, triés ; tirets et apostrophes comptent comme
+      des espaces (« BASSETTO Jean-Marc » = « BASSETTO Jean Marc »). Les autres signes (« * », « . ») restent :
+      certaines sources s'en servent pour distinguer deux homonymes d'une même épreuve.
+    - athletes_tronques.sql : rattache un nom coupé par la source (« BASSETTO JEAN MA », Gérardmer 2002) à l'athlète
+      complet, quand l'épreuve coupe ses noms à une longueur fixe, que la coupure tombe au milieu d'un mot et qu'un
+      seul athlète prolonge ce nom. Exécuté avant results.sql.
     - results.sql : table finale pour retrouver pour chaque athlète unified l'ensemble de ses résultats en compétition.
       Un temps à 00:00:00 (total ou segment) est vidé : prolivesport l'écrit pour les non-classés et les segments
       non chronométrés.
@@ -130,6 +136,11 @@ Dossier : `transform`
       La colonne `equipe` marque les lignes d'équipe (bike&run, relais) : prolivesport, repérées ligne par ligne par
       `prolivesport_team_name` ; chronoweb, toutes les lignes de ces épreuves (`chronoweb_team_name`). Ces fonctions
       donnent aussi le nom affiché ; nb_races.sql ne compte pas ces lignes.
+      Un athlète garde une ligne par temps total dans une épreuve : même temps = doublon de la source (Ironman de
+      Nice 2023 publié deux fois), une ligne sans temps à côté d'une ligne avec temps aussi.
+    - homonymes.sql : deux lignes du même athlète avec des temps différents dans une épreuve sont deux homonymes. Le
+      mieux classé garde l'athlète ; chacun des autres reçoit un nouvel athlète (club repris de raw_data) dont le
+      profil n'a que cette épreuve. Exécuté après results.sql et avant doublons_sources.sql.
     - doublons_sources.sql : retire les épreuves prolivesport ou chronoweb publiées aussi par fftri_t2_area (dates à
       un jour près, au moins la moitié des athlètes en commun) ; la version fftri_t2_area est gardée et la table
       doublons_sources garde la trace des paires retirées (colonne `source`). Les autres épreuves de la source dans

@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 
-from main import app, engine
+from main import app, engine, search_words
 from test_race_results import is_ranked, is_valid_time
 
 client = TestClient(app)
@@ -279,3 +279,48 @@ def test_clubs_are_cleaned() -> None:
     assert row.sans_club == 0
     assert row.individuelles == 0
     assert row.vides == 0
+
+
+def test_athlete_key_ignores_hyphens_and_apostrophes() -> None:
+    """« BASSETTO Jean-Marc » et « BASSETTO Jean Marc » ont la même clé, donc un seul profil
+    (transform/athletes.sql)."""
+    try:
+        with engine.connect() as connection:
+            keys = connection.execute(
+                text("SELECT COUNT(*) FROM athletes WHERE athlete_key ~ '[-‐–—−''‘’]'")
+            ).scalar()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    assert keys == 0
+
+
+def test_search_splits_hyphenated_words() -> None:
+    """Chercher « jean-marc » revient à chercher « jean » et « marc », comme la clé."""
+    assert search_words("Jean-Marc d'Almeida") == ["jean", "marc", "d", "almeida"]
+
+
+def test_homonyms_in_the_same_race_are_kept() -> None:
+    """Deux homonymes d'une même épreuve (temps différents) sont deux résultats et deux athlètes
+    (transform/homonymes.sql) ; un athlète n'a jamais deux résultats dans une épreuve."""
+    try:
+        with engine.connect() as connection:
+            row = connection.execute(
+                text(
+                    """
+                    SELECT
+                        (SELECT COUNT(*) FROM (
+                            SELECT 1 FROM results WHERE NOT equipe
+                            GROUP BY epreuve_id, athlete_id HAVING COUNT(*) > 1
+                        ) t) AS doubles,
+                        (SELECT COUNT(*) FROM (
+                            SELECT 1 FROM results x JOIN athletes a ON a.id = x.athlete_id
+                            WHERE NOT x.equipe AND x.total_time IS NOT NULL
+                            GROUP BY x.epreuve_id, a.athlete_key HAVING COUNT(*) > 1
+                        ) t) AS homonymes
+                    """
+                )
+            ).one()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    assert row.doubles == 0
+    assert row.homonymes > 0

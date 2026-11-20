@@ -279,6 +279,16 @@ Points connus (données) :
   `transform/noms_epreuves.sql`, et leurs éditions à une seule course. Le nom gardé est le plus lisible : les
   courses fftri_t2_area qui ont aussi un nom écrit avec majuscules dans une autre source s'affichent maintenant
   ainsi (« Triathlon de Dijon », « Altriman », « Triathlon de Toulouse »).
+- Noms d'athlètes (20/11/2026) : « BASSETTO Jean-Marc », « BASSETTO Jean Marc » et « BASSETTO JEAN MA » formaient
+  trois profils. Tirets et apostrophes ne séparent plus deux athlètes, et 477 noms coupés par la source à une
+  longueur fixe (Gérardmer 2001-2004, Embrunman 2005, Saint-Jean-de-Luz 2014-2015…) sont rattachés à l'athlète
+  complet quand il n'y a qu'un candidat : 273 319 → 270 063 athlètes. La recherche coupe aussi les mots aux tirets
+  (« jean-marc » cherche « jean » et « marc »).
+- Homonymes d'une même épreuve (20/11/2026) : deux personnes du même nom dans une épreuve n'y gardaient qu'un
+  résultat. Elles sont maintenant deux résultats et deux profils (« MEUNIER Paul », 801e et 1171e de l'Ironman de
+  Vichy 2025) : 839 097 → 839 492 résultats, 392 nouveaux athlètes. Le mieux classé garde le profil commun ; l'autre
+  a un profil avec cette seule épreuve (impossible de savoir à qui sont les autres courses). Les doublons de la
+  source (même temps, ou ligne sans temps) restent fusionnés.
 - Clubs (corrigé le 20/11/2026) : 5 694 clubs écrits avec « ` » au lieu d'une apostrophe (« TRIATHLON CLUB
   D`HAZEBROUCK ») sont corrigés ; 1 519 valeurs qui disaient seulement « pas de club » (« NON LICENCIE », « NL »,
   « NONE », « 0 », « - », « ??? »…) sont vidées, comme les licences individuelles (« INDIVIDUEL », « LICENCE

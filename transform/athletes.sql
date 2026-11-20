@@ -7,7 +7,15 @@ WITH tokens AS (
     club,
     cat_initial,
     sexe,
-    regexp_split_to_array(lower(nom), '\s+') AS parts
+    -- Tirets et apostrophes comptent comme des espaces : « BASSETTO Jean-Marc » et « BASSETTO
+    -- Jean Marc » ont la même clé (« bassetto jean marc »). Les autres signes (« * », « . »,
+    -- « • ») restent dans la clé : certaines sources les ajoutent pour distinguer deux
+    -- homonymes d'une même épreuve (« PERRIER Nicolas » et « PERRIER Nicolas* », Gorges de
+    -- l'Ardèche 2019, ne sont pas la même personne).
+    regexp_split_to_array(
+        btrim(regexp_replace(lower(nom), '[-‐‑‒–—−''‘’_[:space:]]+', ' ', 'g')), ' '
+    )
+        AS parts
   FROM athletes_tmp
 ),
 normalized AS (
@@ -18,7 +26,9 @@ normalized AS (
     cat_initial,
     sexe,
     array_to_string(
-      (SELECT array_agg(unaccent(p) ORDER BY p) FROM unnest(parts) AS p),
+      -- tri sur le mot sans accent : sinon « Émilie MARTIN » et « Emilie MARTIN » n'ont pas
+      -- leurs mots dans le même ordre
+      (SELECT array_agg(unaccent(p) ORDER BY unaccent(p)) FROM unnest(parts) AS p),
       ' '
     ) AS athlete_key
   FROM tokens

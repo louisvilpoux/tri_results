@@ -50,7 +50,17 @@ SELECT
     rfta.rang_course_run,
     rfta.indice_performance_run,
     rfta.source,
-    row_number() OVER (PARTITION BY r.id , a.unified_id) as rn
+    -- Plusieurs lignes d'un même athlète dans une épreuve (la jointure sur athletes multiplie
+    -- aussi chaque ligne) : une ligne par temps total. Deux lignes avec le même temps sont un
+    -- doublon de la source (Ironman de Nice 2023, publié deux fois : catégories FFTRI et
+    -- Ironman) ; deux temps différents sont deux homonymes, séparés ensuite par homonymes.sql.
+    row_number() OVER (
+        PARTITION BY r.id, a.unified_id, NULLIF(rfta.total_time, '00:00:00')
+        ORDER BY rfta.clt NULLS LAST, rfta.id
+    ) AS rn,
+    -- une ligne sans temps à côté d'une ligne avec temps est un doublon incomplet
+    bool_or(NULLIF(rfta.total_time, '00:00:00') IS NOT NULL)
+        OVER (PARTITION BY r.id, a.unified_id) AS athlete_a_un_temps
 FROM raw_data AS rfta
 JOIN races AS r ON r.name_epreuve = rfta.name_epreuve
                 AND r.format_initial = rfta.format_epreuve
@@ -93,4 +103,5 @@ indice_performance_t2, run_time, rang_run, rang_course_run,
 indice_performance_run, source
 FROM all_data
 WHERE rn = 1
+  AND (total_time IS NOT NULL OR NOT athlete_a_un_temps)
 ;
