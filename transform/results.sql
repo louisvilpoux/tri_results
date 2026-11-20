@@ -10,7 +10,8 @@ SELECT
     r.year_epreuve,
     a.unified_id AS athlete_id,
     -- Bike&run et relais : une ligne peut être celle d'une équipe (pas d'un athlète), voir
-    -- prolivesport_team_name. Les lignes d'une seule personne restent des résultats d'athlète.
+    -- prolivesport_team_name et chronoweb_team_name. Les lignes d'une seule personne
+    -- (prolivesport) restent des résultats d'athlète.
     t.team_name IS NOT NULL AS equipe,
     COALESCE(t.team_name, a.nom) AS nom_athlete,
     rfta.sexe,
@@ -62,6 +63,9 @@ CROSS JOIN LATERAL (
         WHEN rfta.source = 'prolivesport'
              AND (r.type_epreuve = 'bike&run' OR r.format_epreuve = 'RELAIS')
         THEN prolivesport_team_name(rfta.nom, r.type_epreuve = 'bike&run')
+        WHEN rfta.source = 'chronoweb'
+             AND (r.type_epreuve = 'bike&run' OR r.format_epreuve = 'RELAIS')
+        THEN chronoweb_team_name(rfta.nom, rfta.club)
     END AS team_name
 ) t
 )

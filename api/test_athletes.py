@@ -154,3 +154,29 @@ def test_team_results_are_flagged(team_only_athlete_id: int) -> None:
     assert teams
     # « prénom  nom » de prolivesport remis en forme (« A & B », nom d'équipe…).
     assert all("  " not in item["nom_athlete"] for item in teams)
+
+
+def test_chronoweb_relay_rows_are_teams() -> None:
+    """Chez chronoweb, chaque ligne d'un relais ou d'un bike&run est une équipe, affichée
+    « A & B (club) » ou sous son nom d'équipe (transform/disciplines.sql)."""
+    try:
+        with engine.connect() as connection:
+            row = connection.execute(
+                text(
+                    """
+                    SELECT
+                        COUNT(*) FILTER (WHERE NOT equipe) AS individuels,
+                        COUNT(*) FILTER (WHERE nom_athlete ~ '/|\\s{2}') AS mal_formes,
+                        COUNT(*) AS total
+                    FROM results
+                    WHERE source = 'chronoweb'
+                      AND (type_epreuve = 'bike&run' OR format_epreuve = 'RELAIS')
+                    """
+                )
+            ).one()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    if row.total == 0:
+        pytest.skip("Aucun relais chronoweb dans la base")
+    assert row.individuels == 0
+    assert row.mal_formes == 0

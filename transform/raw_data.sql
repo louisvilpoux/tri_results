@@ -90,6 +90,8 @@ CROSS JOIN LATERAL (
 WHERE name_epreuve is not null
 -- discipline NULL : onglet qui n'est pas un classement (détails, manches) ou autre sport
 AND d.discipline IS NOT NULL
+-- lignes sans nom (un espace) : ni athlète ni équipe, elles créaient un profil vide
+AND btrim(nom) <> ''
 -- épreuves contre-la-montre exclues, comme pour toutes les sources (voir prolivesport)
 AND format_epreuve !~* '\mclm\M'
 UNION ALL

@@ -281,6 +281,10 @@ Points connus (données) :
   elles n'ont ni profil ni place dans la liste des athlètes ou la recherche. Les équipiers ne retrouvent pas encore
   ces résultats dans leur profil (il faudrait garder prénom et nom séparés au scraping et relier un résultat à
   plusieurs athlètes).
+- Équipes chronoweb (20/11/2026) : chaque ligne d'un relais ou d'un bike&run chronoweb est une équipe (3 931
+  lignes). Elle est affichée sans lien, sous son nom d'équipe (« Les Galope Chenaux ») ou avec ses équipiers
+  (« FLINOIS ANTHONY & PICHONNIER GUILLAUME (COT SENIOR) ») ; environ 3 700 faux profils d'athlète disparaissent.
+  Les 4 lignes chronoweb sans nom sont exclues.
 - Doublons prolivesport / fftri_t2_area (corrigé le 19/11/2026) : une épreuve publiée par les deux sources est
   reconnue à ses participants (dates à un jour près, au moins la moitié des athlètes en commun) et seule la version
   fftri_t2_area est gardée (`transform/doublons_sources.sql`, 60 épreuves retirées, trace dans la table

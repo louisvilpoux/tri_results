@@ -226,3 +226,41 @@ BEGIN
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
+
+
+-- Nom affiché d'une équipe chronoweb (relais, bike&run).
+-- Chez chronoweb, chaque ligne d'un relais ou d'un bike&run est une équipe (vérifié le
+-- 20/11/2026 sur les 53 onglets concernés). Le fichier Excel donne, selon les épreuves :
+--   1. les équipiers dans le nom, séparés par « / », et souvent le nom d'équipe dans le club
+--      (« FLINOIS ANTHONY / PICHONNIER GUILLAUME », club « COT SENIOR ») →
+--      « FLINOIS ANTHONY & PICHONNIER GUILLAUME (COT SENIOR) » ;
+--   2. le nom d'équipe dans le nom et les équipiers dans le club (« Les Galope Chenaux »,
+--      club « RIVET Adrien / HERBAUT Emrick / DALMON Baptiste ») → « Les Galope Chenaux ».
+-- Les « / » en fin de liste (équipier absent : « BOURGEOIS Matthieu / BOURGEOIS Alexandre / »)
+-- et les espaces en trop sont retirés. La casse d'origine est gardée.
+CREATE OR REPLACE FUNCTION chronoweb_team_name(nom text, club text)
+RETURNS text AS $$
+DECLARE
+    team text := btrim(regexp_replace(nom, '\s+', ' ', 'g'));
+    label text := btrim(regexp_replace(club, '\s+', ' ', 'g'));
+BEGIN
+    IF team IS NULL OR team = '' THEN
+        RETURN NULL;
+    END IF;
+    IF team !~ '/' THEN
+        RETURN team;
+    END IF;
+    team := array_to_string(
+        ARRAY(
+            SELECT btrim(part)
+            FROM unnest(string_to_array(team, '/')) AS part
+            WHERE btrim(part) <> ''
+        ),
+        ' & '
+    );
+    IF label IS NOT NULL AND label <> '' AND label !~ '/' THEN
+        team := team || ' (' || label || ')';
+    END IF;
+    RETURN team;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;

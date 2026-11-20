@@ -79,7 +79,7 @@ Dossier : `transform`
       sont pas des classements (« Détails CàP / Vélo », manches et séries intermédiaires). Détail des règles en
       commentaire dans le fichier. `prolivesport_event_name` retire l'année (elle reste dans year_epreuve) et le
       numéro d'édition (« 38e ») du nom de l'événement pour relier les éditions d'une même course ;
-      `prolivesport_team_name` donne le nom des équipes prolivesport.
+      `prolivesport_team_name` et `chronoweb_team_name` donnent le nom des équipes (bike&run, relais).
     - raw_data.sql : insertion dans la table raw_data des données en union all des différentes tables raw_ .
       Le sexe y est calculé une fois par ligne : colonne `sexe` de la source pour prolivesport (M ou F, vide pour
       les équipes mixtes X), première lettre de `cat` pour les autres sources. athletes_tmp et results le reprennent.
@@ -100,8 +100,9 @@ Dossier : `transform`
       Un résultat est relié à son épreuve par le nom, le format et la date ; quand la date est
       absente des deux côtés, par l'année (NULL = NULL n'étant jamais vrai, ces résultats étaient
       écartés : c'était le cas de tout chronoweb avant que la date soit scrappée).
-      La colonne `equipe` marque les lignes d'équipe prolivesport (bike&run, relais) repérées par
-      `prolivesport_team_name`, qui donne aussi leur nom affiché ; nb_races.sql ne les compte pas.
+      La colonne `equipe` marque les lignes d'équipe (bike&run, relais) : prolivesport, repérées ligne par ligne par
+      `prolivesport_team_name` ; chronoweb, toutes les lignes de ces épreuves (`chronoweb_team_name`). Ces fonctions
+      donnent aussi le nom affiché ; nb_races.sql ne compte pas ces lignes.
     - doublons_sources.sql : retire les épreuves prolivesport ou chronoweb publiées aussi par fftri_t2_area (dates à
       un jour près, au moins la moitié des athlètes en commun) ; la version fftri_t2_area est gardée et la table
       doublons_sources garde la trace des paires retirées (colonne `source`). Les autres épreuves de la source dans
