@@ -61,6 +61,9 @@ CREATE TABLE results (
     sexe TEXT,
     -- résultat d'une équipe (bike&run, relais) : nom_athlete contient les équipiers
     equipe BOOLEAN NOT NULL DEFAULT false,
+    -- résultat d'un sous-classement déjà compté dans une autre épreuve du même jour
+    -- (voir sous_classements.sql) : visible sur la page de l'épreuve, pas compté dans le profil
+    sous_classement BOOLEAN NOT NULL DEFAULT false,
     cat TEXT,
     clt_cat TEXT,
     id_league TEXT,

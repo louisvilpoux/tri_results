@@ -52,6 +52,12 @@ export function RaceFormatCard({ raceFormat }: { raceFormat: RaceFormat }) {
         </span>
       </div>
 
+      {raceFormat.sous_classement && (
+        <p className="mt-3 text-xs text-gray-400">
+          Sous-classement d&apos;une autre épreuve du même jour : non compté dans les profils.
+        </p>
+      )}
+
       {raceFormat.sans_temps && (
         <p className="mt-5 border-t border-gray-100 pt-4 text-sm text-gray-500">
           Temps et classement non publiés par la source.

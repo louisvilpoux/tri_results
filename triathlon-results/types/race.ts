@@ -32,6 +32,11 @@ export interface RaceFormat {
   first_woman: PodiumLeader | null;
   /** Aucun temps total publié par la source : pas de podium ni de classement. */
   sans_temps: boolean;
+  /**
+   * Sous-classement (championnat, catégorie…) d'une autre épreuve du même jour : ses résultats
+   * n'y sont pas comptés une seconde fois dans les profils.
+   */
+  sous_classement: boolean;
 }
 
 export interface RaceEdition {

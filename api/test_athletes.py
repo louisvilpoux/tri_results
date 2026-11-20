@@ -180,3 +180,49 @@ def test_chronoweb_relay_rows_are_teams() -> None:
         pytest.skip("Aucun relais chronoweb dans la base")
     assert row.individuels == 0
     assert row.mal_formes == 0
+
+
+@pytest.fixture(scope="module")
+def sub_ranking() -> tuple[int, int, int]:
+    """(athlète, sous-classement, épreuve qui l'inclut) : ex. « Championnat de France Fftri »
+    publié à côté de sa course hôte (transform/sous_classements.sql)."""
+    try:
+        with engine.connect() as connection:
+            row = connection.execute(
+                text(
+                    """
+                    SELECT x.athlete_id, s.epreuve_id, s.incluse_dans_id
+                    FROM sous_classements s
+                    JOIN results x ON x.epreuve_id = s.epreuve_id AND x.sous_classement
+                    ORDER BY s.epreuve_id, x.athlete_id
+                    LIMIT 1
+                    """
+                )
+            ).first()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    if row is None:
+        pytest.skip("Aucun sous-classement dans la base")
+    return int(row.athlete_id), int(row.epreuve_id), int(row.incluse_dans_id)
+
+
+def test_sub_ranking_is_not_counted_twice(sub_ranking: tuple[int, int, int]) -> None:
+    """Un athlète classé dans une épreuve et dans son sous-classement du même jour n'a qu'un
+    résultat sur son profil : celui de la grande épreuve."""
+    athlete_id, sub_id, parent_id = sub_ranking
+    history = client.get(
+        f"/athletes/{athlete_id}/results", params={"limit": 100}
+    ).json()["items"]
+    race_ids = {item["epreuve_id"] for item in history}
+    assert parent_id in race_ids
+    assert sub_id not in race_ids
+
+
+def test_sub_ranking_stays_visible(sub_ranking: tuple[int, int, int]) -> None:
+    """Le sous-classement reste consultable sur sa page, signalé comme tel."""
+    _, sub_id, _ = sub_ranking
+    event = client.get(f"/races/{sub_id}/event").json()
+    race_format = next(f for f in event["formats"] if f["id"] == sub_id)
+    assert race_format["sous_classement"] is True
+    results = client.get(f"/races/{sub_id}/results").json()
+    assert results["pagination"]["total"] > 0

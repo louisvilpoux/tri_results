@@ -71,6 +71,10 @@ class Result(Base):
     # Résultat d'une équipe (bike&run, relais) : nom_athlete contient les équipiers et
     # athlete_id ne correspond pas à une personne (voir transform/results.sql).
     equipe = Column(Boolean)
+    # Résultat d'un sous-classement (championnat publié à côté de sa course hôte, classement
+    # « Open » dans le « Full »…) déjà compté dans une autre épreuve du même jour : visible sur
+    # la page de l'épreuve, pas compté dans le profil (voir transform/sous_classements.sql).
+    sous_classement = Column(Boolean)
     type_epreuve = Column(String(50))
     format_epreuve = Column(String(50))
     year_epreuve = Column(String(50))
@@ -420,6 +424,14 @@ def get_race_event(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any
     formats = sorted(siblings, key=race_format_sort_key)
     format_ids = [race_format.id for race_format in formats]
     without_time = races_without_time(db, format_ids)
+    # Sous-classements (championnat, catégorie…) : résultats déjà comptés dans une autre épreuve.
+    sub_rankings = set(
+        db.scalars(
+            select(Result.epreuve_id)
+            .where(Result.epreuve_id.in_(format_ids), Result.sous_classement.is_(True))
+            .distinct()
+        )
+    )
     winners = get_podium_leaders(db, format_ids)
     first_women = get_podium_leaders(db, format_ids, women_only=True)
 
@@ -462,6 +474,7 @@ def get_race_event(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any
                 "winner": winners.get(race_format.id),
                 "first_woman": first_women.get(race_format.id),
                 "sans_temps": race_format.id in without_time,
+                "sous_classement": race_format.id in sub_rankings,
             }
             for race_format in formats
         ],
@@ -491,8 +504,13 @@ def list_athletes(
 # ----------------------
 def athlete_results(athlete_id: int) -> Select:
     """Résultats individuels d'un athlète (athlete_id = unified_id) ; les résultats d'équipe
-    (bike&run, relais) ne sont rattachés à aucune personne."""
-    return select(Result).where(Result.athlete_id == athlete_id, Result.equipe.is_(False))
+    (bike&run, relais) ne sont rattachés à aucune personne, et ceux d'un sous-classement sont
+    déjà comptés dans une autre épreuve du même jour."""
+    return select(Result).where(
+        Result.athlete_id == athlete_id,
+        Result.equipe.is_(False),
+        Result.sous_classement.is_(False),
+    )
 
 
 def result_to_dict(result: Result) -> dict[str, Any]:
@@ -755,7 +773,11 @@ def search_athletes_page(
                 func.count(Result.id).label("nb_races"),
                 func.max(Result.year_epreuve).label("last_season"),
             )
-            .where(Result.athlete_id.in_(ids), Result.equipe.is_(False))
+            .where(
+                Result.athlete_id.in_(ids),
+                Result.equipe.is_(False),
+                Result.sous_classement.is_(False),
+            )
             .group_by(Result.athlete_id)
         )
     }

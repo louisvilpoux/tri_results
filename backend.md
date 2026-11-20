@@ -104,6 +104,11 @@ Dossier : `transform`
     - races.sql : table pour décrire chaque épreuve. La discipline est ce qui précède la lettre de distance dans
       format_epreuve et le format est cette lettre (« cross triathlon m clm » → cross triathlon, M ; la variante
       CLM, EQ ou OPEN reste dans format_initial). prolivesport et chronoweb : voir disciplines.sql.
+    - sous_classements.sql : épreuves du même jour dont au moins 95 % des athlètes sont aussi dans une épreuve plus
+      grande (« Championnat de France Fftri » publié à côté de sa course hôte, « Open » dans « Full », catégories
+      para dans « PT ») : la table sous_classements garde les paires, et les résultats des athlètes présents dans
+      la grande épreuve sont marqués `sous_classement` (non comptés dans le profil ni dans nb_races). Les doublons
+      strictement identiques d'une même course sont supprimés. Exécuté après doublons_sources.sql.
     - athletes_sexe.sql : le sexe d'un athlète est le plus fréquent (M ou F) dans ses résultats individuels, comme sur
       son profil ; il est écrit sur toutes ses lignes `athletes`, dont la ligne de référence utilisée par le filtre
       sexe de la liste des athlètes. Exécuté après doublons_sources.sql.

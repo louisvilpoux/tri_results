@@ -1,6 +1,7 @@
 DROP INDEX IF EXISTS idx_results_race;
 DROP INDEX IF EXISTS idx_results_athlete;
 DROP TABLE IF EXISTS doublons_sources;
+DROP TABLE IF EXISTS sous_classements;
 DROP TABLE IF EXISTS results;
 DROP TABLE IF EXISTS races;
 DROP TABLE IF EXISTS athletes_tmp;

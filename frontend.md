@@ -279,6 +279,14 @@ Points connus (données) :
   `transform/noms_epreuves.sql`, et leurs éditions à une seule course. Le nom gardé est le plus lisible : les
   courses fftri_t2_area qui ont aussi un nom écrit avec majuscules dans une autre source s'affichent maintenant
   ainsi (« Triathlon de Dijon », « Altriman », « Triathlon de Toulouse »).
+- Épreuves en double le même jour (20/11/2026) : 38 sous-classements repérés par `transform/sous_classements.sql`
+  (au moins 95 % de leurs athlètes dans une épreuve plus grande du même jour) : 26 « Championnat de France Fftri »
+  publiés à côté de leur course hôte (Dijon 2017, Vichy 2024…), les catégories para de Cabourg 2025, « Open » et
+  « Jeunes » dans le « Full » des Moines 2020, les finales de l'Aquathlon de Limoges 2017… Ils restent visibles sur
+  leur page, avec la mention « Sous-classement d'une autre épreuve du même jour : non compté dans les profils » ;
+  leurs 7 680 résultats déjà présents dans la grande épreuve ne comptent plus deux fois dans les profils (course,
+  historique, meilleurs temps). 2 doublons identiques sont supprimés (Altriman 2021 « Aquathlon 6-9 » / « 8-11 »,
+  Pilon 2022 « Poursuite » / « XS Poursuite »).
 - Épreuves sans temps (20/11/2026) : 270 épreuves prolivesport (17 584 résultats, ex. Cross-Duathlon du Haricot
   2016-2021, Chamouille 2017 et 2019) n'ont ni temps total ni classement dans la source. Les temps ne sont pas
   recalculés à partir des segments : chez prolivesport, même quand le total existe, la somme des segments ne lui
