@@ -279,6 +279,11 @@ Points connus (données) :
   `transform/noms_epreuves.sql`, et leurs éditions à une seule course. Le nom gardé est le plus lisible : les
   courses fftri_t2_area qui ont aussi un nom écrit avec majuscules dans une autre source s'affichent maintenant
   ainsi (« Triathlon de Dijon », « Altriman », « Triathlon de Toulouse »).
+- Clubs (corrigé le 20/11/2026) : 5 694 clubs écrits avec « ` » au lieu d'une apostrophe (« TRIATHLON CLUB
+  D`HAZEBROUCK ») sont corrigés ; 1 519 valeurs qui disaient seulement « pas de club » (« NON LICENCIE », « NL »,
+  « NONE », « 0 », « - », « ??? »…) sont vidées, comme les licences individuelles (« INDIVIDUEL », « LICENCE
+  INDIV. », « INDIV LIGUE PAYS DE LA LOIRE »…), qui ne sont pas des clubs. Restent environ 40 % de lignes sans club :
+  la source ne le donne pas.
 - Noms mal encodés (corrigé le 20/11/2026) : 218 noms et 29 clubs des trois sources étaient affichés « ThÃ©o
   HANQUIEZ », « FranÃ§ois », « STADE FRANÃ§AIS ». Ils sont corrigés dans `transform/raw_data.sql`, ce qui relie aussi
   ces résultats au bon athlète (« Théo HANQUIEZ » et « HANQUIEZ Theo » ne font plus qu'un). Limite : quand la source

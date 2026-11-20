@@ -159,3 +159,37 @@ UPDATE raw_data
 SET nom = corrige_encodage(nom),
     club = corrige_encodage(club)
 WHERE nom ~ '[ÃÂÅâ]' OR club ~ '[ÃÂÅâ]';
+
+
+-- Clubs : on ne garde que de vrais noms de club.
+--   - « ` » est remplacé par une apostrophe (« TRIATHLON CLUB D`HAZEBROUCK », 5 694 lignes) ;
+--     espaces insécables et espaces en trop retirés ;
+--   - les valeurs qui disent seulement « pas de club » sont vidées : « NON LICENCIE » et ses
+--     variantes, « NL », « NONE », « N/A », « AUCUN », « SANS CLUB », « 0 », « - », « ? », « XXX »…
+--     (1 519 lignes le 20/11/2026) ;
+--   - les licences individuelles FFTRI, écrites d'une trentaine de façons (« INDIVIDUEL »,
+--     « LICENCE INDIV. », « INDIV LIGUE PAYS DE LA LOIRE »…), sont vidées aussi : ce n'est
+--     pas un club (environ 700 lignes).
+CREATE OR REPLACE FUNCTION nettoie_club(club text)
+RETURNS text AS $$
+DECLARE
+    propre text := btrim(
+        regexp_replace(replace(replace(club, '`', ''''), chr(160), ' '), '\s+', ' ', 'g')
+    );
+    cle text := upper(unaccent(propre));
+BEGIN
+    IF propre IS NULL OR propre = '' THEN
+        RETURN NULL;
+    END IF;
+    IF cle ~ ('^(NON[ .-]?LICENCI(E|EE)?S?( FF ?\.?TRI)?|NL|NONE|NO|NAN|NULL|N/?A|NC|AUCUN'
+              || '|SANS CLUB|PAS DE CLUB|LICENCIE|0|[-./?X]+)$')
+       OR cle ~ '^(IND |FFTRI )?((LIC|LICENCE|LICENSE|LINCENCE)\.? )?(INDIVIDUE+L*E?|INDIV|INDIVIDUAL)\M' THEN
+        RETURN NULL;
+    END IF;
+    RETURN propre;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+UPDATE raw_data
+SET club = nettoie_club(club)
+WHERE club IS DISTINCT FROM nettoie_club(club);

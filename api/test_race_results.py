@@ -201,8 +201,17 @@ def test_race_without_time_lists_participants_alphabetically(race_without_time_i
         f"/races/{race_without_time_id}/results", params={"limit": 50}
     ).json()["items"]
     names = [item["nom_athlete"] for item in items]
-    # ordre de la collation PostgreSQL : sans tenir compte de la casse
-    assert names == sorted(names, key=str.casefold)
+    # Ordre alphabétique de la collation PostgreSQL (casse et accents ignorés au premier
+    # niveau) : on le compare à un tri fait par la base, pas par Python.
+    with engine.connect() as connection:
+        expected = connection.execute(
+            text(
+                "SELECT nom_athlete FROM results WHERE epreuve_id = :id "
+                "ORDER BY nom_athlete, id LIMIT 50"
+            ),
+            {"id": race_without_time_id},
+        ).scalars().all()
+    assert names == expected
 
 
 def test_race_with_times_is_not_flagged(race_id: int) -> None:

@@ -92,6 +92,9 @@ Dossier : `transform`
       Les noms et clubs mal encodés (« ThÃ©o » pour « Théo ») sont corrigés par `corrige_encodage` : texte réécrit
       en Windows-1252 (à défaut Latin-1) puis relu en UTF-8, seulement si le résultat est valide (« JOÃO »,
       « CHÂTEAU » restent intacts).
+      Les clubs sont nettoyés par `nettoie_club` : « ` » remplacé par une apostrophe, valeurs « pas de club »
+      (« NON LICENCIE », « NL », « NONE », « 0 », « - »…) et licences individuelles (« INDIVIDUEL », « LICENCE
+      INDIV. »…) vidées : ce ne sont pas des clubs.
       Les temps chronoweb sont ramenés au format hh:mm:ss (`chronoweb_temps`) : fractions de seconde tronquées
       (« 01:29:09.357000 » → « 01:29:09 »), « ? » et dates Excel (« 1899-12-30 23:51:32 ») vidés.
     - noms_epreuves.sql : un seul nom, lisible, par course, en trois étapes sur les noms de raw_data :

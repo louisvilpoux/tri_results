@@ -249,3 +249,33 @@ def test_names_and_clubs_are_not_double_encoded() -> None:
         pytest.skip("Base PostgreSQL indisponible")
     assert row.noms == 0
     assert row.athletes == 0
+
+
+def test_clubs_are_cleaned() -> None:
+    """Clubs nettoyés (nettoie_club dans transform/raw_data.sql) : pas de « ` », pas de valeur
+    qui dit seulement « pas de club », pas de licence individuelle (ce n'est pas un club)."""
+    try:
+        with engine.connect() as connection:
+            row = connection.execute(
+                text(
+                    """
+                    SELECT
+                        COUNT(*) FILTER (WHERE club LIKE '%`%') AS backticks,
+                        COUNT(*) FILTER (
+                            WHERE upper(unaccent(club)) IN ('NON LICENCIE', 'NL', 'NONE', 'N/A',
+                                                            'AUCUN', 'SANS CLUB', '0', '-', '.')
+                        ) AS sans_club,
+                        COUNT(*) FILTER (
+                            WHERE upper(club) ~ '^(LICENCE )?INDIVIDUEL'
+                        ) AS individuelles,
+                        COUNT(*) FILTER (WHERE club = '') AS vides
+                    FROM athletes
+                    """
+                )
+            ).one()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    assert row.backticks == 0
+    assert row.sans_club == 0
+    assert row.individuelles == 0
+    assert row.vides == 0
