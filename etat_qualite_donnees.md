@@ -34,7 +34,7 @@ classement cohérent avec le temps dans 99 % des épreuves.
 | Q7 | Lieu manquant | 2 219 épreuves sur 3 575 (62 %), toutes fftri_t2_area | Ouvert |
 | Q8 | Club manquant ou parasite | 0 \`, 0 parasite ; 344 172 lignes sans club (40 %, la source ne le donne pas) | **Corrigé** (D5) |
 | Q9 | Noms mal encodés | 0 | **Corrigé** |
-| Q10 | Segments incohérents avec le total (prolivesport) | 00:00:00 vidés ; segments décalés restants | Partiel |
+| Q10 | Segments incohérents avec le total (prolivesport) | 0 ligne incohérente à plus de 5 % | **Corrigé** : segments décalés vidés |
 | Q11 | Noms de course encore séparés | 0 cas connu ; accents fftri manquants | **Corrigé** (D3) |
 | Q12 | Athlètes avec résultats des deux sexes | 634 athlètes | Atténué : le sexe affiché est le plus fréquent |
 | Q13 | Épreuves sans format | 57 épreuves | Ouvert |
@@ -54,6 +54,7 @@ classement cohérent avec le temps dans 99 % des épreuves.
 | Q11 | `8e1542c` puis « Saint / Sainte » | Normalisation des noms de course (504 → 471) : clé sans petits mots ni ponctuation, « St / Ste / Sainte » = « Saint », alias, noms fftri mis en forme. |
 | Q12 | `8e1542c` | `athletes_sexe.sql` : le filtre sexe de la liste suit le sexe le plus fréquent du profil. |
 | Q1 | `temps_totaux.sql` | Total recalculé depuis les segments quand les totaux ne suivent pas le classement mais que la somme des segments le suit (Tribreizh 2022, Saint Remy sur Durolle 2005, Roybon 2021, Paris 2022). Meilleurs temps du profil limités aux résultats classés. Totaux classés de moins de la moitié de la médiane de l'épreuve marqués `temps_suspect` : alerte dans l'interface, exclus des meilleurs temps. |
+| Q10 | segments prolivesport | `segments_prolivesport.sql` : segments vidés quand leur somme s'écarte de plus de 5 % du total, sur toute l'épreuve quand la moitié de ses lignes le sont. |
 | Q14 | noms d'athlètes | Clé d'athlète sans tirets, apostrophes ni virgules (« Jean-Marc » = « Jean Marc », « MEUNIER, Paul » = « MEUNIER Paul ») ; `athletes_tronques.sql` rattache 477 noms coupés par la source (« BASSETTO JEAN MA ») ; `homonymes.sql` garde les deux homonymes d'une même épreuve (temps différents) comme deux athlètes : 395 résultats retrouvés. |
 
 ---
@@ -97,11 +98,14 @@ page de classement, exclus des meilleurs temps.
 Reste à faire : seuil minimal par discipline et format pour les meilleurs temps.
 
 ### Q10 — Segments prolivesport décalés
-Les segments à 00:00:00 sont maintenant vides. Restent des colonnes décalées : au
-Cross-Duathlon du Haricot 2018, « T2 » vaut 01:32:31 et la course à pied 00:01:38, comme pour
-les épreuves CLM exclues. Même quand le total existe, la somme des segments prolivesport ne lui
-correspond à 2 s près que dans 60 % des lignes (80 % à 5 % près). Piste : n'afficher les
-segments prolivesport que lorsque leur somme est cohérente avec le total.
+Corrigé le 20/11/2026. Les épreuves sans total (Cross-Duathlon du Haricot 2018, « T2 » à
+01:32:31) sont affichées « sans temps » (Q2). Pour les autres, la somme des segments
+prolivesport ne correspondait au total à 5 % près que dans 80 % des lignes : 9 630 lignes dans
+109 épreuves (Moines 2021 S, vainqueur : T1 00:31:45 pour un total de 00:58:36).
+`transform/segments_prolivesport.sql` vide les segments d'une ligne incohérente, et ceux de
+toute l'épreuve quand au moins la moitié de ses lignes vérifiables le sont (le décalage touche
+une épreuve entière : 169 épreuves sous 10 % d'incohérentes, 98 au-dessus de 90 %). La page de
+classement n'affiche alors que le temps total. Total et classement inchangés.
 
 ### Q5 — Catégories (D2, inchangé)
 - 3 141 valeurs distinctes. Chaque source a son système : fftri et chronoweb « MSE, MV1,
@@ -158,7 +162,6 @@ reconstruction de la base, ce qui casse les liens de profil et de course.
 
 ## Ordre de travail proposé
 
-1. **Q10** : masquer les segments prolivesport incohérents avec le total.
-2. **Q5** : table de correspondance des catégories.
-3. Identifiants d'athlète et d'épreuve stables.
-4. Reste de Q1 (seuil minimal sur les meilleurs temps), Q7, Q13.
+1. **Q5** : table de correspondance des catégories.
+2. Identifiants d'athlète et d'épreuve stables.
+3. Reste de Q1 (seuil minimal sur les meilleurs temps), Q7, Q13.

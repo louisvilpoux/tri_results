@@ -313,6 +313,11 @@ Points connus (données) :
   format. La page de classement affiche un bandeau quand l'épreuve en contient : « Certains temps de cette épreuve
   semblent erronés dans la source. Ils sont signalés dans le classement. » Le classement reste celui de la source ;
   ces temps ne comptent pas dans les meilleurs temps du profil.
+- Segments prolivesport décalés (20/11/2026) : dans une centaine d'épreuves prolivesport, les colonnes de temps
+  intermédiaires étaient décalées (Moines 2021 S, vainqueur : T1 00:31:45 pour un total de 00:58:36 ; Sartrouville
+  2026 Jeunes : vélo 00:00:32). Ces segments sont vidés (`transform/segments_prolivesport.sql`) : « — » pour une
+  ligne isolée, et seulement la colonne du total quand toute l'épreuve est touchée (`avec_segments`). Le total et le
+  classement ne changent pas.
 - Clubs (corrigé le 20/11/2026) : 5 694 clubs écrits avec « ` » au lieu d'une apostrophe (« TRIATHLON CLUB
   D`HAZEBROUCK ») sont corrigés ; 1 519 valeurs qui disaient seulement « pas de club » (« NON LICENCIE », « NL »,
   « NONE », « 0 », « - », « ??? »…) sont vidées, comme les licences individuelles (« INDIVIDUEL », « LICENCE

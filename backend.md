@@ -153,6 +153,11 @@ Dossier : `transform`
       (`temps_suspect` sur chaque résultat et chaque leader du podium, `temps_suspects` sur GET /races/{id} ; `avec_segments` y indique si l'épreuve a au moins
       un temps intermédiaire, sinon seule la colonne du total est affichée) et les
       exclut des meilleurs temps du profil. Exécuté après homonymes.sql.
+    - segments_prolivesport.sql : vide les 5 segments d'une ligne prolivesport dont la somme s'écarte de plus de 5 %
+      du total (colonnes décalées : T1 de 00:31:45 pour un total de 00:58:36, Moines 2021 S), et ceux de toutes les
+      lignes d'une épreuve dont au moins la moitié des lignes vérifiables sont incohérentes (le décalage touche
+      surtout une épreuve entière : 169 épreuves sous 10 % d'incohérentes, 98 au-dessus de 90 %). Total et
+      classement gardés. Exécuté après temps_totaux.sql.
     - doublons_sources.sql : retire les épreuves prolivesport ou chronoweb publiées aussi par fftri_t2_area (dates à
       un jour près, au moins la moitié des athlètes en commun) ; la version fftri_t2_area est gardée et la table
       doublons_sources garde la trace des paires retirées (colonne `source`). Les autres épreuves de la source dans

@@ -269,3 +269,33 @@ def test_race_without_splits_is_flagged() -> None:
         pytest.skip("Pas d'épreuve des deux sortes dans la base")
     assert client.get(f"/races/{row.sans_segments}").json()["avec_segments"] is False
     assert client.get(f"/races/{row.avec_segments}").json()["avec_segments"] is True
+
+
+def test_prolivesport_splits_match_the_total() -> None:
+    """Segments prolivesport décalés (T1 de 00:31:45 pour un total de 00:58:36, Moines 2021 S) :
+    vidés quand leur somme s'écarte de plus de 5 % du total
+    (transform/segments_prolivesport.sql)."""
+    try:
+        with engine.connect() as connection:
+            incoherents = connection.execute(
+                text(
+                    """
+                    SELECT COUNT(*)
+                    FROM results
+                    WHERE source = 'prolivesport'
+                      AND total_time ~ '^\\d{2}:\\d{2}:\\d{2}$'
+                      AND swim_time ~ '^\\d{2}:\\d{2}:\\d{2}$'
+                      AND t1_time ~ '^\\d{2}:\\d{2}:\\d{2}$'
+                      AND bike_time ~ '^\\d{2}:\\d{2}:\\d{2}$'
+                      AND t2_time ~ '^\\d{2}:\\d{2}:\\d{2}$'
+                      AND run_time ~ '^\\d{2}:\\d{2}:\\d{2}$'
+                      AND abs(extract(epoch FROM total_time::interval
+                          - (swim_time::interval + t1_time::interval + bike_time::interval
+                             + t2_time::interval + run_time::interval)))
+                          > 0.05 * extract(epoch FROM total_time::interval)
+                    """
+                )
+            ).scalar()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    assert incoherents == 0
