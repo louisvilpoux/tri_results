@@ -52,7 +52,13 @@ export function RaceFormatCard({ raceFormat }: { raceFormat: RaceFormat }) {
         </span>
       </div>
 
-      {(raceFormat.winner || raceFormat.first_woman) && (
+      {raceFormat.sans_temps && (
+        <p className="mt-5 border-t border-gray-100 pt-4 text-sm text-gray-500">
+          Temps et classement non publiés par la source.
+        </p>
+      )}
+
+      {!raceFormat.sans_temps && (raceFormat.winner || raceFormat.first_woman) && (
         <div className="mt-5 space-y-3 border-t border-gray-100 pt-4">
           <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-500">
             <Medal size={14} aria-hidden className="text-[#FC6B32]" />
@@ -77,7 +83,7 @@ export function RaceFormatCard({ raceFormat }: { raceFormat: RaceFormat }) {
         href={`/races/${raceFormat.id}/results`}
         className="mt-5 inline-flex items-center justify-center gap-2 rounded-lg bg-[#17202E] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#FC6B32]"
       >
-        Voir le classement
+        {raceFormat.sans_temps ? "Voir les participants" : "Voir le classement"}
         <ArrowRight size={16} aria-hidden />
       </Link>
     </li>

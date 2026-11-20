@@ -8,6 +8,8 @@ export interface Race {
   year_epreuve: string | null;
   date_epreuve: string | null;
   lieu_epreuve: string | null;
+  /** Aucun temps total publié par la source : pas de classement (participants seulement). */
+  sans_temps: boolean;
 }
 
 // Types alignés sur GET /races/{id}/event : la course (nom + année) et ses formats.
@@ -28,6 +30,8 @@ export interface RaceFormat {
   participants: number;
   winner: PodiumLeader | null;
   first_woman: PodiumLeader | null;
+  /** Aucun temps total publié par la source : pas de podium ni de classement. */
+  sans_temps: boolean;
 }
 
 export interface RaceEdition {

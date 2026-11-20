@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, MapPin, Trophy } from "lucide-react";
+import { ArrowLeft, CalendarDays, Info, MapPin, Trophy } from "lucide-react";
 
 import { ResultsFilters } from "@/components/results/results-filters";
 import { ResultsTable } from "@/components/results/results-table";
@@ -66,6 +66,8 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
   const { race, categories, results } = data;
   const { items, pagination } = results;
   const filtered = hasActiveFilters(query);
+  // Aucun temps total publié par la source : la page liste les participants, sans classement.
+  const sansTemps = race.sans_temps;
 
   return (
     <div className="space-y-8">
@@ -83,7 +85,7 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
         <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-[#FC6B32]">
-              Classement officiel
+              {sansTemps ? "Participants" : "Classement officiel"}
             </p>
 
             <h1 className="mt-3 text-3xl font-black capitalize sm:text-4xl">
@@ -125,7 +127,17 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
 
       {/* Classement */}
       <section className="space-y-4">
-        <h2 className="text-2xl font-extrabold tracking-tight">Classement général</h2>
+        <h2 className="text-2xl font-extrabold tracking-tight">
+          {sansTemps ? "Participants" : "Classement général"}
+        </h2>
+
+        {sansTemps && (
+          <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <Info size={18} aria-hidden className="mt-0.5 shrink-0" />
+            Temps et classement non publiés par la source : les participants sont listés par ordre
+            alphabétique.
+          </p>
+        )}
 
         <ResultsFilters raceId={id} query={query} categories={categories} />
 
@@ -135,6 +147,7 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
             query={query}
             results={items}
             showSplits={!DISCIPLINES_WITHOUT_SPLITS.includes(race.type_epreuve ?? "")}
+            sansTemps={sansTemps}
           />
           <PaginationBar
             pagination={pagination}

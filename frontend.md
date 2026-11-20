@@ -279,6 +279,15 @@ Points connus (données) :
   `transform/noms_epreuves.sql`, et leurs éditions à une seule course. Le nom gardé est le plus lisible : les
   courses fftri_t2_area qui ont aussi un nom écrit avec majuscules dans une autre source s'affichent maintenant
   ainsi (« Triathlon de Dijon », « Altriman », « Triathlon de Toulouse »).
+- Épreuves sans temps (20/11/2026) : 270 épreuves prolivesport (17 584 résultats, ex. Cross-Duathlon du Haricot
+  2016-2021, Chamouille 2017 et 2019) n'ont ni temps total ni classement dans la source. Les temps ne sont pas
+  recalculés à partir des segments : chez prolivesport, même quand le total existe, la somme des segments ne lui
+  correspond à 2 s près que dans 60 % des cas (colonnes parfois décalées). L'API marque ces épreuves `sans_temps`
+  (`races_without_time` : ni temps total ni classement valides ; une épreuve classée sans total, comme Bayman 2024,
+  garde son classement). La page de l'épreuve devient une liste de participants par ordre alphabétique, avec un
+  message, sans colonne de classement ni de temps total et sans tri par temps ; la carte du format affiche « Temps
+  et classement non publiés par la source » au lieu du podium. Partout ailleurs, un temps à 00:00:00 est vidé dans
+  `transform/results.sql` et s'affiche « — ».
 - Temps chronoweb (corrigé le 20/11/2026) : 17 % des temps gardaient les fractions de seconde de la cellule Excel
   (« 01:29:09.357000 »), ce qui faussait l'affichage et le tri par temps. Ils sont tronqués à la seconde ; les « ? »
   et 39 dates Excel prises pour des temps intermédiaires (Aquathlon de Limoges 2017) sont vidés.

@@ -140,3 +140,70 @@ def test_chronoweb_times_are_hh_mm_ss() -> None:
     except OperationalError:
         pytest.skip("Base PostgreSQL indisponible")
     assert bad == 0
+
+
+def test_no_zero_times() -> None:
+    """Un temps à 00:00:00 n'est pas un temps (non-classés, segments non chronométrés de
+    prolivesport) : il est vidé dans transform/results.sql et affiché « — »."""
+    try:
+        with engine.connect() as connection:
+            zero = connection.execute(
+                text(
+                    """
+                    SELECT COUNT(*)
+                    FROM results
+                    WHERE '00:00:00' IN (total_time, swim_time, t1_time, bike_time, t2_time,
+                                         run_time)
+                    """
+                )
+            ).scalar()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    assert zero == 0
+
+
+@pytest.fixture(scope="module")
+def race_without_time_id() -> int:
+    """Épreuve dont la source n'a publié ni temps total ni classement."""
+    try:
+        with engine.connect() as connection:
+            row = connection.execute(
+                text(
+                    """
+                    SELECT epreuve_id AS id
+                    FROM results
+                    GROUP BY epreuve_id
+                    HAVING COUNT(total_time) = 0
+                       AND COUNT(*) FILTER (WHERE clt > 0 AND clt < 99990) = 0
+                       AND COUNT(*) > 20
+                    ORDER BY epreuve_id
+                    LIMIT 1
+                    """
+                )
+            ).first()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    if row is None:
+        pytest.skip("Aucune épreuve sans temps dans la base")
+    return int(row.id)
+
+
+def test_race_without_time_lists_participants_alphabetically(race_without_time_id: int) -> None:
+    """Sans temps ni classement publiés, l'épreuve est marquée sans_temps, n'a pas de podium,
+    et ses participants sont listés par ordre alphabétique (pas de classement inventé)."""
+    assert client.get(f"/races/{race_without_time_id}").json()["sans_temps"] is True
+    event = client.get(f"/races/{race_without_time_id}/event").json()
+    race_format = next(f for f in event["formats"] if f["id"] == race_without_time_id)
+    assert race_format["sans_temps"] is True
+    assert race_format["winner"] is None
+
+    items = client.get(
+        f"/races/{race_without_time_id}/results", params={"limit": 50}
+    ).json()["items"]
+    names = [item["nom_athlete"] for item in items]
+    # ordre de la collation PostgreSQL : sans tenir compte de la casse
+    assert names == sorted(names, key=str.casefold)
+
+
+def test_race_with_times_is_not_flagged(race_id: int) -> None:
+    assert client.get(f"/races/{race_id}").json()["sans_temps"] is False

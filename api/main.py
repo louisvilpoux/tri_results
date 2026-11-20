@@ -15,6 +15,7 @@ from sqlalchemy import (
     create_engine,
     desc,
     func,
+    or_,
 )
 from sqlalchemy.sql import Select
 from sqlalchemy.sql.elements import ColumnElement
@@ -196,7 +197,10 @@ def get_race(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail="Race not found")
     return {
         column.name: getattr(race, column.name) for column in Race.__table__.columns
-    } | {"lieu_epreuve": clean_lieu(race.lieu_epreuve)}
+    } | {
+        "lieu_epreuve": clean_lieu(race.lieu_epreuve),
+        "sans_temps": race.id in races_without_time(db, [race.id]),
+    }
 
 RaceResultSortBy = Literal[
     "clt",
@@ -252,6 +256,28 @@ DISCIPLINE_DISPLAY_ORDER = [
 ]
 
 
+def races_without_time(db: Session, race_ids: list[int]) -> set[int]:
+    """Épreuves dont aucun résultat n'a ni temps total ni classement valides : la source n'a
+    publié ni temps ni classement (ex. Cross-Duathlon du Haricot 2018, chez prolivesport).
+    Leurs segments ne sont pas assez fiables pour recalculer un temps (voir frontend.md,
+    points connus) : l'épreuve est affichée « sans temps » plutôt qu'avec un classement
+    inventé. Une épreuve classée sans temps total (Bayman 2024) garde son classement."""
+    if not race_ids:
+        return set()
+    with_time_or_rank = db.scalars(
+        select(Result.epreuve_id)
+        .where(
+            Result.epreuve_id.in_(race_ids),
+            or_(
+                valid_time_or_null(Result.total_time).isnot(None),
+                valid_rank_or_null(Result.clt).isnot(None),
+            ),
+        )
+        .distinct()
+    )
+    return set(race_ids) - set(with_time_or_rank)
+
+
 def get_result_sort_expression(sort_by: RaceResultSortBy) -> ColumnElement:
     """Retourne l'expression SQL de tri ; les valeurs invalides deviennent NULL."""
     column = getattr(Result, sort_by)
@@ -287,6 +313,9 @@ def get_race_results(
     # Les valeurs vides (DNF, temps manquants) restent en fin de liste quel que soit
     # l'ordre ; l'id garantit une pagination stable en cas d'égalité.
     sort_expression = get_result_sort_expression(sort_by)
+    if sort_by == "clt" and race_id in races_without_time(db, [race_id]):
+        # Épreuve sans temps ni classement : participants par ordre alphabétique.
+        sort_expression = Result.nom_athlete
     direction = desc if order == "desc" else asc
     query = query.order_by(direction(sort_expression).nulls_last(), Result.id.asc())
 
@@ -390,6 +419,7 @@ def get_race_event(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any
 
     formats = sorted(siblings, key=race_format_sort_key)
     format_ids = [race_format.id for race_format in formats]
+    without_time = races_without_time(db, format_ids)
     winners = get_podium_leaders(db, format_ids)
     first_women = get_podium_leaders(db, format_ids, women_only=True)
 
@@ -431,6 +461,7 @@ def get_race_event(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any
                 "participants": stats[race_format.id].participants,
                 "winner": winners.get(race_format.id),
                 "first_woman": first_women.get(race_format.id),
+                "sans_temps": race_format.id in without_time,
             }
             for race_format in formats
         ],

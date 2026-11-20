@@ -111,6 +111,8 @@ Dossier : `transform`
     - athletes_tmp.sql : table pour isoler les informations sur l'athlète
     - athletes.sql : table pour gérer les différentes entrées possible pour un même athlète en utilisant un unified_id.
     - results.sql : table finale pour retrouver pour chaque athlète unified l'ensemble de ses résultats en compétition.
+      Un temps à 00:00:00 (total ou segment) est vidé : prolivesport l'écrit pour les non-classés et les segments
+      non chronométrés.
       Un résultat est relié à son épreuve par le nom, le format et la date ; quand la date est
       absente des deux côtés, par l'année (NULL = NULL n'étant jamais vrai, ces résultats étaient
       écartés : c'était le cas de tout chronoweb avant que la date soit scrappée).

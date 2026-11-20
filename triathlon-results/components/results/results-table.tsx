@@ -26,12 +26,23 @@ interface ResultsTableProps {
   results: RaceResult[];
   /** false : seul le temps total est affiché (aquathlon, bike&run, swimrun). */
   showSplits: boolean;
+  /**
+   * Épreuve sans temps total publié : ni classement ni temps total, segments non triables
+   * (participants par ordre alphabétique, voir races_without_time dans api/main.py).
+   */
+  sansTemps?: boolean;
 }
 
-export function ResultsTable({ raceId, query, results, showSplits }: ResultsTableProps) {
-  const timeColumns = showSplits
-    ? TIME_COLUMNS
-    : TIME_COLUMNS.filter((column) => column.value === "total_time");
+export function ResultsTable({
+  raceId,
+  query,
+  results,
+  showSplits,
+  sansTemps = false,
+}: ResultsTableProps) {
+  const timeColumns = (
+    showSplits ? TIME_COLUMNS : TIME_COLUMNS.filter((column) => column.value === "total_time")
+  ).filter((column) => !(sansTemps && column.value === "total_time"));
 
   function sortHeader(
     column: RaceResultSortBy,
@@ -67,16 +78,28 @@ export function ResultsTable({ raceId, query, results, showSplits }: ResultsTabl
       <table className={`w-full text-left text-sm ${showSplits ? "md:min-w-[1000px]" : ""}`}>
         <thead className="border-b border-gray-200 bg-gray-50 text-xs tracking-wide text-gray-500">
           <tr>
-            {sortHeader("clt", "Clt.")}
+            {!sansTemps && sortHeader("clt", "Clt.")}
             {sortHeader("nom_athlete", isTeamRace ? "Équipe" : "Athlète")}
             <th scope="col" className={`${CELL} uppercase ${DESKTOP_ONLY}`}>Catégorie</th>
             <th scope="col" className={`${CELL} uppercase ${DESKTOP_ONLY}`}>Sexe</th>
             {timeColumns.map((column) =>
-              sortHeader(
-                column.value,
-                column.label,
-                "right",
-                column.value === "total_time" ? undefined : DESKTOP_ONLY
+              sansTemps ? (
+                // Pas de tri par temps : sans temps total, un tri par segment ressemblerait à un
+                // classement que la source n'a pas publié.
+                <th
+                  key={column.value}
+                  scope="col"
+                  className={`${CELL} text-right uppercase ${DESKTOP_ONLY}`}
+                >
+                  {column.label}
+                </th>
+              ) : (
+                sortHeader(
+                  column.value,
+                  column.label,
+                  "right",
+                  column.value === "total_time" ? undefined : DESKTOP_ONLY
+                )
               )
             )}
           </tr>
@@ -85,9 +108,11 @@ export function ResultsTable({ raceId, query, results, showSplits }: ResultsTabl
         <tbody className="divide-y divide-gray-100">
           {results.map((result) => (
             <tr key={result.id} className="transition-colors hover:bg-orange-50/40">
-              <td className={`${CELL} whitespace-nowrap font-bold text-[#FC6B32]`}>
-                {formatRank(result.clt, result.rang_global)}
-              </td>
+              {!sansTemps && (
+                <td className={`${CELL} whitespace-nowrap font-bold text-[#FC6B32]`}>
+                  {formatRank(result.clt, result.rang_global)}
+                </td>
+              )}
 
               <td className={CELL}>
                 {result.equipe ? (
