@@ -13,7 +13,10 @@ CREATE TABLE raw_data (
     year_epreuve TEXT, date_epreuve TEXT, lieu_epreuve TEXT, scraped_at TEXT,
     source TEXT, sexe TEXT,
     -- discipline et format déjà calculés (prolivesport et chronoweb, voir disciplines.sql) ; NULL ailleurs
-    type_epreuve TEXT, format_normalise TEXT
+    type_epreuve TEXT, format_normalise TEXT,
+    -- nom de l'épreuve tel que publié, quand noms_epreuves.sql l'a changé (sert à la clé de
+    -- l'id stable, voir ids_epreuves.sql) ; NULL quand il n'a pas changé
+    nom_source TEXT
 );
 
 CREATE TABLE races (

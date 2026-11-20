@@ -318,6 +318,11 @@ Points connus (données) :
   2026 Jeunes : vélo 00:00:32). Ces segments sont vidés (`transform/segments_prolivesport.sql`) : « — » pour une
   ligne isolée, et seulement la colonne du total quand toute l'épreuve est touchée (`avec_segments`). Le total et le
   classement ne changent pas.
+- Liens stables (20/11/2026) : les id d'athlète et d'épreuve ne changent plus quand la base est reconstruite
+  (`transform/ids_stables.sql`), les liens partagés vers `/athletes/[id]` ou `/races/[id]` restent valables. Quand
+  un id a été remplacé (deux profils réunis, épreuve en double retirée), les pages `/races/[id]`,
+  `/races/[id]/results` et `/athletes/[id]` redirigent (308) vers le nouvel id au lieu d'afficher la page 404
+  (`lib/redirections.ts`, `GET /redirections/...`).
 - Clubs (corrigé le 20/11/2026) : 5 694 clubs écrits avec « ` » au lieu d'une apostrophe (« TRIATHLON CLUB
   D`HAZEBROUCK ») sont corrigés ; 1 519 valeurs qui disaient seulement « pas de club » (« NON LICENCIE », « NL »,
   « NONE », « 0 », « - », « ??? »…) sont vidées, comme les licences individuelles (« INDIVIDUEL », « LICENCE

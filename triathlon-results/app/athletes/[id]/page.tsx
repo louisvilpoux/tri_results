@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { AthleteBestTimes } from "@/components/athletes/athlete-best-times";
@@ -16,6 +15,7 @@ import {
   type AthleteResultsSearchParams,
 } from "@/lib/athlete-results-query";
 import { athleteMetadata } from "@/lib/seo";
+import { redirectOrNotFound } from "@/lib/redirections";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -27,7 +27,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   try {
     return athleteMetadata(await getAthlete(id));
   } catch (error) {
-    if (error instanceof ApiError && error.status === 404) notFound();
+    if (error instanceof ApiError && error.status === 404) {
+      await redirectOrNotFound("athletes", id);
+    }
     return {}; // erreur d'API : la page affiche elle-même le message
   }
 }
@@ -43,7 +45,7 @@ export default async function AthletePage({ params, searchParams }: PageProps) {
     data = { athlete, results };
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
-      notFound();
+      await redirectOrNotFound("athletes", id);
     }
 
     return (

@@ -359,3 +359,54 @@ def test_suspect_times_are_flagged_and_not_best_times() -> None:
 
     race = client.get(f"/races/{row.epreuve_id}").json()
     assert race["temps_suspects"] >= 1
+
+
+def test_ids_are_stable_ids() -> None:
+    """Chaque épreuve et chaque athlète d'un résultat a l'id gardé dans ids_stables, qui ne change
+    pas d'une reconstruction à l'autre (transform/ids_stables.sql)."""
+    try:
+        with engine.connect() as connection:
+            row = connection.execute(
+                text(
+                    """
+                    SELECT
+                        (SELECT COUNT(DISTINCT x.epreuve_id) FROM results x
+                         WHERE NOT EXISTS (
+                             SELECT 1 FROM ids_stables s
+                             WHERE s.type = 'epreuve' AND s.id = x.epreuve_id
+                         )) AS epreuves,
+                        (SELECT COUNT(DISTINCT x.athlete_id) FROM results x
+                         WHERE NOT EXISTS (
+                             SELECT 1 FROM ids_stables s
+                             WHERE s.type = 'athlete' AND s.id = x.athlete_id
+                         )) AS athletes
+                    """
+                )
+            ).one()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    assert row.epreuves == 0
+    assert row.athletes == 0
+
+
+def test_old_ids_redirect() -> None:
+    """Un id remplacé (athlètes réunis, épreuve en double retirée) mène au nouvel id."""
+    assert client.get("/redirections/athletes/0").status_code == 404
+    try:
+        with engine.connect() as connection:
+            row = connection.execute(
+                text(
+                    """
+                    SELECT type, ancien_id, nouvel_id FROM redirections
+                    ORDER BY type, ancien_id LIMIT 1
+                    """
+                )
+            ).first()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    if row is None:
+        pytest.skip("Aucune redirection dans la base")
+    kind = "races" if row.type == "epreuve" else "athletes"
+    response = client.get(f"/redirections/{kind}/{row.ancien_id}")
+    assert response.status_code == 200
+    assert response.json() == {"id": row.nouvel_id}

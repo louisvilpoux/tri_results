@@ -1005,3 +1005,35 @@ def list_events(
             "formats": sorted(formats, key=format_sort_key),
         },
     }
+
+
+# ----------------------
+# Redirections
+# ----------------------
+# Les id d'épreuve et d'athlète sont stables d'une reconstruction de la base à l'autre
+# (transform/ids_stables.sql). Un id disparaît seulement quand deux athlètes ou deux épreuves
+# sont réunis, ou qu'une épreuve en double est retirée : la table `redirections` donne alors
+# l'id qui le remplace, pour que le site redirige les anciens liens.
+class Redirection(Base):
+    __tablename__ = "redirections"
+    type = Column(String, primary_key=True)
+    ancien_id = Column(Integer, primary_key=True)
+    nouvel_id = Column(Integer)
+
+
+REDIRECTION_TYPES = {"races": "epreuve", "athletes": "athlete"}
+
+
+@app.get("/redirections/{kind}/{old_id}")
+def get_redirection(
+    kind: Literal["races", "athletes"], old_id: int, db: Session = Depends(get_db)
+) -> dict[str, int]:
+    """Id qui remplace un ancien id d'épreuve ou d'athlète ; 404 s'il n'y en a pas."""
+    new_id = db.scalar(
+        select(Redirection.nouvel_id).where(
+            Redirection.type == REDIRECTION_TYPES[kind], Redirection.ancien_id == old_id
+        )
+    )
+    if new_id is None:
+        raise HTTPException(status_code=404, detail="No redirection")
+    return {"id": new_id}

@@ -27,20 +27,29 @@ FROM (
 ) classes
 WHERE rang > 1;
 
--- Un nouvel athlète par homonyme. Le club n'est pas dans results : il est repris de la ligne
--- brute, retrouvée par son nom, son classement et son temps (différents d'un homonyme à l'autre).
--- (les id d'athletes sont ceux d'athletes_tmp : la séquence n'a pas avancé, on numérote après
--- le plus grand id)
+-- Un nouvel athlète par homonyme, avec un id stable (ids_stables.sql) : sa clé est celle de son
+-- nom, suivie de l'épreuve (id stable) et de son temps, ex. « homonyme|meunier paul|1234|05:57:07 ».
+CREATE TEMPORARY TABLE cles_entites AS
+SELECT
+    h.result_id AS entite,
+    'homonyme|' || a.athlete_key || '|' || h.epreuve_id || '|' || COALESCE(h.total_time, '')
+        AS cle,
+    1 AS poids
+FROM homonymes h
+JOIN athletes a ON a.id = h.athlete_id;
+
+SELECT attribue_ids_stables('athlete');
+
 ALTER TABLE homonymes ADD COLUMN nouvel_id INTEGER;
 UPDATE homonymes h
-SET nouvel_id = n.nouvel_id
-FROM (
-    SELECT result_id,
-           (SELECT MAX(id) FROM athletes) + row_number() OVER (ORDER BY result_id) AS nouvel_id
-    FROM homonymes
-) n
-WHERE h.result_id = n.result_id;
+SET nouvel_id = i.id
+FROM ids_entites i
+WHERE i.entite = h.result_id;
 
+DROP TABLE cles_entites, ids_entites;
+
+-- Le club n'est pas dans results : il est repris de la ligne brute, retrouvée par son nom, son
+-- classement et son temps (différents d'un homonyme à l'autre).
 CREATE TEMPORARY TABLE clubs_homonymes AS
 SELECT DISTINCT ON (h.result_id) h.result_id, b.club
 FROM homonymes h

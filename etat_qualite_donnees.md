@@ -157,11 +157,13 @@ alias dans `transform/noms_epreuves.sql`.
 | D5 Caractère \` dans les clubs | Corrigé (Q8) |
 | D6 Format qui change entre éditions | Non audité : plusieurs formats par course sont normaux, le contrôle demande une règle plus fine ; l'ordre des formats est désormais stable (`007557a`) |
 
-Autre constat : les identifiants d'athlète (`unified_id`) et d'épreuve changent à chaque
-reconstruction de la base, ce qui casse les liens de profil et de course.
+Autre constat (corrigé le 20/11/2026) : les identifiants d'athlète (`unified_id`) et
+d'épreuve changeaient à chaque reconstruction de la base, ce qui cassait les liens de profil et
+de course. Ils sont maintenant gardés dans `ids_stables` (clé naturelle → id), que la
+reconstruction ne supprime pas ; un id remplacé (athlètes réunis, épreuve en double retirée)
+redirige vers le nouveau (`redirections`, `GET /redirections/…`).
 
 ## Ordre de travail proposé
 
 1. **Q5** : table de correspondance des catégories.
-2. Identifiants d'athlète et d'épreuve stables.
-3. Reste de Q1 (seuil minimal sur les meilleurs temps), Q7, Q13.
+2. Reste de Q1 (seuil minimal sur les meilleurs temps), Q7, Q13.

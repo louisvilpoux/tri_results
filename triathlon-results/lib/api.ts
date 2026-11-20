@@ -45,6 +45,19 @@ async function apiGet<T>(path: string, params?: URLSearchParams): Promise<T> {
   return response.json();
 }
 
+/** Id qui remplace un ancien id d'épreuve ou d'athlète (GET /redirections), ou null. */
+export async function getRedirection(
+  kind: "races" | "athletes",
+  oldId: string
+): Promise<number | null> {
+  try {
+    return (await apiGet<{ id: number }>(`/redirections/${kind}/${oldId}`)).id;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
 export function getRace(raceId: string): Promise<Race> {
   return apiGet<Race>(`/races/${raceId}`);
 }

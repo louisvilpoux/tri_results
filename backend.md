@@ -71,9 +71,15 @@ Dossier : `load`
 # Application de transformations pour obtenir une donnée unifiée et utilisable
 Dossier : `transform`
 0. suppression de toutes les tables existantes :
-    - drop_tables.sql : on supprime les index, la table source et les tables spécifiques.
+    - drop_tables.sql : on supprime les index, la table source et les tables spécifiques. Les tables ids_stables
+      et redirections ne sont jamais supprimées (identifiants stables, voir ids_stables.sql).
 1. création des différentes tables :
     - create_tables.sql : on créé l'ensemble des tables source et spécifiques.
+    - ids_stables.sql : crée si besoin les tables persistantes ids_stables (clé naturelle → id) et redirections
+      (ancien id → nouvel id), et la fonction attribue_ids_stables. Les id d'épreuve et d'athlète sont ainsi les
+      mêmes d'une reconstruction à l'autre : les liens partagés ne cassent plus. Une entité dont une clé est connue
+      reprend son id ; deux entités réunies (nouvelle règle de nom, doublon de source) gardent le plus petit id et
+      l'autre redirige vers lui. Remise à zéro (tous les liens changent) : `transform/reset_ids_stables.sql`.
 2. génération table globale :
     - disciplines.sql : fonctions `epreuve_discipline` et `epreuve_format`, qui déduisent du nom libre d'une
       épreuve prolivesport, ou du nom de l'onglet Excel chronoweb, sa discipline (nom de l'épreuve, puis catégorie,
@@ -110,6 +116,13 @@ Dossier : `transform`
     - races.sql : table pour décrire chaque épreuve. La discipline est ce qui précède la lettre de distance dans
       format_epreuve et le format est cette lettre (« cross triathlon m clm » → cross triathlon, M ; la variante
       CLM, EQ ou OPEN reste dans format_initial). prolivesport et chronoweb : voir disciplines.sql.
+    - ids_epreuves.sql : donne à chaque épreuve son id stable. Clé : source | nom publié (raw_data.nom_source,
+      gardé par noms_epreuves.sql) | format publié | date ou année. Exécuté après races.sql et avant results.sql.
+    - ids_athletes.sql : donne à chaque athlète son id stable, à partir de ses clés de nom (athlete_key). La ligne
+      de référence (id = unified_id) prend l'id stable, les autres lignes un id négatif. Exécuté après
+      athletes_tronques.sql et avant results.sql. Les homonymes séparés (homonymes.sql) ont pour clé
+      « homonyme | clé du nom | id de l'épreuve | temps ». Une épreuve retirée par doublons_sources.sql redirige
+      vers la version fftri_t2_area gardée.
     - sous_classements.sql : épreuves du même jour dont au moins 95 % des athlètes sont aussi dans une épreuve plus
       grande (« Championnat de France Fftri » publié à côté de sa course hôte, « Open » dans « Full », catégories
       para dans « PT ») : la table sous_classements garde les paires, et les résultats des athlètes présents dans
@@ -167,3 +180,6 @@ Dossier : `transform`
 
 Le fichier Python `run_sql.py` permet de lancer le pipeline de suppression des tables jusqu'à la création des index dans la database.
 Il est lancé avec la commande `python ./transform/run_sql.py`.
+
+API : `GET /redirections/{races|athletes}/{ancien_id}` renvoie l'id qui remplace un ancien id (404 s'il n'y en
+a pas) ; le site s'en sert pour rediriger les anciens liens.

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, Info, MapPin, TriangleAlert, Trophy } from "lucide-react";
 
 import { ResultsFilters } from "@/components/results/results-filters";
@@ -9,6 +8,7 @@ import { PaginationBar } from "@/components/shared/pagination-bar";
 import { ApiError, getRace, getRaceCategories, getRaceResults } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { raceResultsMetadata } from "@/lib/seo";
+import { redirectOrNotFound } from "@/lib/redirections";
 import { DISCIPLINES_WITHOUT_SPLITS } from "@/types/result";
 import {
   buildRaceResultsUrl,
@@ -27,7 +27,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   try {
     return raceResultsMetadata(await getRace(id));
   } catch (error) {
-    if (error instanceof ApiError && error.status === 404) notFound();
+    if (error instanceof ApiError && error.status === 404) {
+      await redirectOrNotFound("races", id, "/results");
+    }
     return {}; // erreur d'API : la page affiche elle-même le message
   }
 }
@@ -47,7 +49,7 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
     data = { race, categories, results };
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
-      notFound();
+      await redirectOrNotFound("races", id, "/results");
     }
 
     return (

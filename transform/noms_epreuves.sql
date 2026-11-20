@@ -162,8 +162,10 @@ WHERE nom_course_cle(n.nom) = c.cle;
 DROP TABLE noms_canoniques;
 
 
+-- nom_source garde le nom publié : l'id stable d'une épreuve en dépend (ids_epreuves.sql), pas
+-- des règles de regroupement, qui peuvent changer.
 UPDATE raw_data r
-SET name_epreuve = n.nom
+SET name_epreuve = n.nom, nom_source = r.name_epreuve
 FROM noms n
 WHERE r.name_epreuve = n.nom_initial
   AND n.nom <> n.nom_initial;

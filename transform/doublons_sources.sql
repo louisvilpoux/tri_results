@@ -82,6 +82,14 @@ WHERE x.source = n.source AND x.name_epreuve = n.nom_source;
 
 DROP TABLE noms_regroupes;
 
--- Retrait des épreuves en double.
+-- Retrait des épreuves en double. Leur id stable (ids_epreuves.sql) redirige vers la version
+-- fftri_t2_area gardée (celle qui a le plus d'athlètes en commun) : un lien vers l'épreuve
+-- retirée mène à la bonne page.
+INSERT INTO redirections (type, ancien_id, nouvel_id)
+SELECT DISTINCT ON (source_id) 'epreuve', source_id, fftri_id
+FROM doublons_sources
+ORDER BY source_id, athletes_communs DESC, fftri_id
+ON CONFLICT (type, ancien_id) DO UPDATE SET nouvel_id = EXCLUDED.nouvel_id;
+
 DELETE FROM results WHERE epreuve_id IN (SELECT source_id FROM doublons_sources);
 DELETE FROM races WHERE id IN (SELECT source_id FROM doublons_sources);
