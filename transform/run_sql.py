@@ -7,7 +7,7 @@ conn = psycopg2.connect(
     host="localhost"
 )
 
-action_list = ["drop_tables", "create_tables", "disciplines", "raw_data", "noms_epreuves", "races", "athletes_tmp", "athletes", "results", "doublons_sources", "nb_races", "pg_index"]
+action_list = ["drop_tables", "create_tables", "disciplines", "raw_data", "noms_epreuves", "races", "athletes_tmp", "athletes", "results", "doublons_sources", "athletes_sexe", "nb_races", "pg_index"]
 #action_list = ["drop_tables"]
 
 try:

@@ -103,10 +103,12 @@ def test_athletes_name_filter_matches_search() -> None:
     assert listed["pagination"]["total"] == searched["total"]
 
 
-def test_athletes_sexe_filter() -> None:
-    women = get("/athletes", s="F", limit=5)["items"]
-    for item in women:
-        assert client.get(f"/athletes/{item['id']}").json()["sexe"] in ("F", None)
+@pytest.mark.parametrize("sexe", ["F", "M"])
+def test_athletes_sexe_filter(sexe: str) -> None:
+    """Le filtre sexe de la liste suit le sexe du profil (le plus fréquent dans les résultats,
+    transform/athletes_sexe.sql), même pour un athlète dont un résultat est mal renseigné."""
+    for item in get("/athletes", s=sexe, limit=20)["items"]:
+        assert client.get(f"/athletes/{item['id']}").json()["sexe"] == sexe
 
 
 def test_events_disciplines_have_no_format() -> None:

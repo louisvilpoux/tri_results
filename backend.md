@@ -89,14 +89,22 @@ Dossier : `transform`
       les équipes mixtes X), première lettre de `cat` pour les autres sources. athletes_tmp et results le reprennent.
       Les épreuves contre-la-montre (`format_epreuve` contenant le mot « CLM ») sont exclues de toutes les
       sources : chez prolivesport, leurs colonnes de temps sont décalées.
-    - noms_epreuves.sql : quand des noms de course ne diffèrent que par la casse, les accents ou la ponctuation
-      (« Triathlon de l'Omois » / « Triathlon de L'omois », « Bike & Run Halluin » / « Bike&Run Halluin »,
-      « triathlon de dijon » / « Triathlon de Dijon »), un seul est gardé dans raw_data : le plus lisible (avec
-      majuscules, puis avec accents, puis le plus fréquent). Exécuté avant races.sql.
+    - noms_epreuves.sql : un seul nom, lisible, par course, en trois étapes sur les noms de raw_data :
+      1. alias écrits à la main (table `alias_courses` dans le fichier) pour les cas que la règle ne voit pas
+         (« Triathlon de l'audomarois - Arques » → « Triathlon & Duathlon de l'Audomarois », duathlon de Noyon…) ;
+      2. les noms tout en minuscules (fftri_t2_area) sont mis en forme par `nom_course_lisible`
+         (« triathlon d angouleme » → « Triathlon d'Angouleme » ; les accents ne peuvent pas être retrouvés) ;
+      3. les noms qui ont la même clé `nom_course_cle` (mots sans accents ni ponctuation, sans petits mots, « open »
+         ni jour, triés) sont ramenés au plus lisible (majuscules, puis accents, puis le plus fréquent) :
+         « Triathlon Bray-Dunes » / « Triathlon de Bray-Dunes », « Touquet Bike & Run » / « Bike & Run Le Touquet ».
+      Exécuté avant races.sql.
 3. génération des tables spécifiques :
     - races.sql : table pour décrire chaque épreuve. La discipline est ce qui précède la lettre de distance dans
       format_epreuve et le format est cette lettre (« cross triathlon m clm » → cross triathlon, M ; la variante
       CLM, EQ ou OPEN reste dans format_initial). prolivesport et chronoweb : voir disciplines.sql.
+    - athletes_sexe.sql : le sexe d'un athlète est le plus fréquent (M ou F) dans ses résultats individuels, comme sur
+      son profil ; il est écrit sur toutes ses lignes `athletes`, dont la ligne de référence utilisée par le filtre
+      sexe de la liste des athlètes. Exécuté après doublons_sources.sql.
     - nb_races.sql : table pour obtenir le nombre de courses différentes auquel un athlète a participé.
     - athletes_tmp.sql : table pour isoler les informations sur l'athlète
     - athletes.sql : table pour gérer les différentes entrées possible pour un même athlète en utilisant un unified_id.

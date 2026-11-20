@@ -236,9 +236,10 @@ def test_chronoweb_detail_sheets_are_excluded() -> None:
     assert count == 0
 
 
-def test_race_names_differ_by_more_than_case_accents_or_punctuation() -> None:
-    """Deux noms de course qui ne diffèrent que par la casse, les accents ou la ponctuation
-    (« Triathlon de l'Omois » / « Triathlon de L'omois ») sont ramenés à un seul nom
+def test_one_name_per_race_key() -> None:
+    """Deux noms de course qui ne diffèrent que par la casse, les accents, la ponctuation, les
+    petits mots, « open », le jour ou l'ordre des mots (« Triathlon Bray-Dunes » / « Triathlon de
+    Bray-Dunes », « Touquet Bike & Run » / « Bike & Run Le Touquet ») sont ramenés à un seul nom
     (transform/noms_epreuves.sql) : leurs éditions forment une seule course."""
     try:
         with engine.connect() as connection:
@@ -249,9 +250,7 @@ def test_race_names_differ_by_more_than_case_accents_or_punctuation() -> None:
                     FROM (
                         SELECT 1
                         FROM races
-                        GROUP BY btrim(regexp_replace(
-                            lower(unaccent(name_epreuve)), '[^a-z0-9]+', ' ', 'g'
-                        ))
+                        GROUP BY nom_course_cle(name_epreuve)
                         HAVING COUNT(DISTINCT name_epreuve) > 1
                     ) variantes
                     """
@@ -260,3 +259,22 @@ def test_race_names_differ_by_more_than_case_accents_or_punctuation() -> None:
     except OperationalError:
         pytest.skip("Base PostgreSQL indisponible")
     assert groups == 0
+
+
+def test_race_names_are_not_all_lowercase() -> None:
+    """Les noms fftri_t2_area, écrits tout en minuscules, sont mis en forme
+    (« triathlon jura vouglans » → « Triathlon Jura Vouglans »)."""
+    try:
+        with engine.connect() as connection:
+            lowercase = connection.execute(
+                text(
+                    """
+                    SELECT COUNT(*)
+                    FROM races
+                    WHERE name_epreuve = lower(name_epreuve) AND name_epreuve ~ '[a-z]'
+                    """
+                )
+            ).scalar()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    assert lowercase == 0

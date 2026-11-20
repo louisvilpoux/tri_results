@@ -275,6 +275,16 @@ Points connus (données) :
   `transform/noms_epreuves.sql`, et leurs éditions à une seule course. Le nom gardé est le plus lisible : les
   courses fftri_t2_area qui ont aussi un nom écrit avec majuscules dans une autre source s'affichent maintenant
   ainsi (« Triathlon de Dijon », « Altriman », « Triathlon de Toulouse »).
+- Filtre sexe de la liste des athlètes (corrigé le 20/11/2026) : il utilisait le sexe d'une seule ligne de
+  l'athlète, qui pouvait venir d'un résultat mal renseigné (« MARTIN Nicolas », 125 résultats M, listé parmi les
+  femmes à cause d'une catégorie fftri « FH »). Il suit désormais le sexe du profil, le plus fréquent dans ses
+  résultats (`transform/athletes_sexe.sql`).
+- Éditions d'une même course sous des noms différents (corrigé le 20/11/2026) : `transform/noms_epreuves.sql`
+  regroupe aussi les noms qui ne diffèrent que par les petits mots, « open », le jour ou l'ordre des mots
+  (« Triathlon Bray-Dunes » / « Triathlon de Bray-Dunes », « Triathlon Open Quiberon - Samedi », « Touquet Bike &
+  Run » / « Bike & Run Le Touquet »), plus quelques alias écrits à la main (Audomarois, Noyon, Triath'Elles,
+  Chtriman, Le Touquet, Quiberon) : 504 → 472 noms de course. Les noms fftri_t2_area en minuscules sont mis en forme
+  (« Triathlon Jura Vouglans », « Triathlon d'Angouleme ») ; leurs accents manquent toujours.
 - Équipes (19/11/2026) : en bike&run et en relais, une ligne prolivesport peut être une équipe (5 683 lignes)
   ou une seule personne (770 lignes). Les équipes sont affichées sans lien (« MEEUS Theo & MOREAU TEOPHANE »,
   « LES PELUCHOS »), avec « Équipe gagnante » sur la page course et une colonne « Équipe » dans le classement ;
