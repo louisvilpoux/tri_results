@@ -123,3 +123,39 @@ scraped_at, 'protiming' as source, SUBSTRING(cat FROM 1 FOR 1) as sexe,
 null as type_epreuve, null as format_normalise
 from raw_protiming_0
 ;
+
+-- Noms et clubs mal encodés (« ThÃ©o HANQUIEZ » pour « Théo HANQUIEZ ») : le texte UTF-8 a été
+-- relu comme du Windows-1252 (ou du Latin-1) par la source ou le scraping. On refait
+-- l'opération inverse : le texte est réécrit en octets Windows-1252 (à défaut Latin-1), puis
+-- relu en UTF-8. Le texte n'est corrigé que si le résultat est de l'UTF-8 valide sans caractère
+-- de contrôle : les noms où ces lettres sont légitimes (« JOÃO », « CHÂTEAU », « ÅKERMAN »)
+-- ne forment pas de l'UTF-8 valide et restent intacts. Le 20/11/2026 : 218 noms et 29 clubs
+-- corrigés, dans les trois sources.
+CREATE OR REPLACE FUNCTION corrige_encodage(texte text)
+RETURNS text AS $$
+DECLARE
+    corrige text;
+BEGIN
+    IF texte IS NULL OR texte !~ '[ÃÂÅâ]' THEN
+        RETURN texte;
+    END IF;
+    BEGIN
+        corrige := convert_from(convert_to(texte, 'WIN1252'), 'UTF8');
+    EXCEPTION WHEN others THEN
+        BEGIN
+            corrige := convert_from(convert_to(texte, 'LATIN1'), 'UTF8');
+        EXCEPTION WHEN others THEN
+            RETURN texte;
+        END;
+    END;
+    IF corrige ~ '[\u0080-\u009F]' THEN
+        RETURN texte;
+    END IF;
+    RETURN corrige;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+UPDATE raw_data
+SET nom = corrige_encodage(nom),
+    club = corrige_encodage(club)
+WHERE nom ~ '[ÃÂÅâ]' OR club ~ '[ÃÂÅâ]';

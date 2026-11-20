@@ -226,3 +226,26 @@ def test_sub_ranking_stays_visible(sub_ranking: tuple[int, int, int]) -> None:
     assert race_format["sous_classement"] is True
     results = client.get(f"/races/{sub_id}/results").json()
     assert results["pagination"]["total"] > 0
+
+
+def test_names_and_clubs_are_not_double_encoded() -> None:
+    """Les noms et clubs relus en Windows-1252 (« ThÃ©o », « FranÃ§ois ») sont corrigés
+    (corrige_encodage dans transform/raw_data.sql)."""
+    try:
+        with engine.connect() as connection:
+            row = connection.execute(
+                text(
+                    """
+                    SELECT
+                        (SELECT COUNT(*) FROM results
+                         WHERE nom_athlete ~ 'Ã[\u0080-¿]|â€') AS noms,
+                        (SELECT COUNT(*) FROM athletes
+                         WHERE nom ~ 'Ã[\u0080-¿]|â€' OR club ~ 'Ã[\u0080-¿]|â€')
+                            AS athletes
+                    """
+                )
+            ).one()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    assert row.noms == 0
+    assert row.athletes == 0

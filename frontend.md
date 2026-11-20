@@ -279,6 +279,10 @@ Points connus (données) :
   `transform/noms_epreuves.sql`, et leurs éditions à une seule course. Le nom gardé est le plus lisible : les
   courses fftri_t2_area qui ont aussi un nom écrit avec majuscules dans une autre source s'affichent maintenant
   ainsi (« Triathlon de Dijon », « Altriman », « Triathlon de Toulouse »).
+- Noms mal encodés (corrigé le 20/11/2026) : 218 noms et 29 clubs des trois sources étaient affichés « ThÃ©o
+  HANQUIEZ », « FranÃ§ois », « STADE FRANÃ§AIS ». Ils sont corrigés dans `transform/raw_data.sql`, ce qui relie aussi
+  ces résultats au bon athlète (« Théo HANQUIEZ » et « HANQUIEZ Theo » ne font plus qu'un). Limite : quand la source
+  avait mis le nom mal encodé en majuscules, la lettre accentuée reste en minuscule (« CRéPIN »).
 - Épreuves en double le même jour (20/11/2026) : 38 sous-classements repérés par `transform/sous_classements.sql`
   (au moins 95 % de leurs athlètes dans une épreuve plus grande du même jour) : 26 « Championnat de France Fftri »
   publiés à côté de leur course hôte (Dijon 2017, Vichy 2024…), les catégories para de Cabourg 2025, « Open » et
