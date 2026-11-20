@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { SortableHeader, nextSortOrder } from "@/components/shared/sortable-header";
+import { TotalTime } from "@/components/shared/total-time";
 import { buildAthleteUrl } from "@/lib/athlete-results-query";
 import { capitalize, formatRank, formatShortDate } from "@/lib/format";
 import type { AthleteResult, AthleteResultSortBy, AthleteResultsQuery } from "@/types/athlete";
@@ -107,7 +108,7 @@ export function AthleteResultsTable({ athleteId, query, results }: AthleteResult
               </td>
 
               <td className={`${CELL} text-right font-mono font-bold text-[#17202E]`}>
-                {result.total_time ?? "—"}
+                <TotalTime time={result.total_time} suspect={result.temps_suspect} />
               </td>
             </tr>
           ))}

@@ -21,6 +21,8 @@ export interface RaceResult {
   t1_time: string | null;
   t2_time: string | null;
   total_time: string | null;
+  /** Temps total anormalement court : probable erreur de la source, signalée à l'utilisateur. */
+  temps_suspect: boolean;
 
   date_epreuve: string;
   year_epreuve: string;

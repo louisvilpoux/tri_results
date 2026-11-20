@@ -85,6 +85,7 @@ def test_best_times_are_the_minimum_per_format(active_athlete_id: int) -> None:
             and item["format_epreuve"] == best["format_epreuve"]
             and is_valid_time(item["total_time"])
             and is_ranked(item["clt"])
+            and not item["temps_suspect"]
         ]
         assert best["total_time"] == min(times)
 
@@ -326,3 +327,35 @@ def test_homonyms_in_the_same_race_are_kept() -> None:
         pytest.skip("Base PostgreSQL indisponible")
     assert row.doubles == 0
     assert row.homonymes > 0
+
+
+def test_suspect_times_are_flagged_and_not_best_times() -> None:
+    """Un total classé de moins de la moitié du temps médian de l'épreuve est marqué suspect
+    (Lacanau 2017 L : 609e en 00:00:07) et ne compte pas dans les meilleurs temps du profil
+    (transform/temps_totaux.sql)."""
+    try:
+        with engine.connect() as connection:
+            row = connection.execute(
+                text(
+                    """
+                    SELECT athlete_id, epreuve_id
+                    FROM results
+                    WHERE temps_suspect AND NOT equipe AND NOT sous_classement
+                    ORDER BY id
+                    LIMIT 1
+                    """
+                )
+            ).first()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    if row is None:
+        pytest.skip("Aucun temps suspect dans la base")
+
+    history = get_history(row.athlete_id)["items"]
+    suspect = next(item for item in history if item["epreuve_id"] == row.epreuve_id)
+    assert suspect["temps_suspect"] is True
+    best_races = {best["epreuve_id"] for best in get_profile(row.athlete_id)["best_times"]}
+    assert row.epreuve_id not in best_races
+
+    race = client.get(f"/races/{row.epreuve_id}").json()
+    assert race["temps_suspects"] >= 1

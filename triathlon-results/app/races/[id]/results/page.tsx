@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, Info, MapPin, Trophy } from "lucide-react";
+import { ArrowLeft, CalendarDays, Info, MapPin, TriangleAlert, Trophy } from "lucide-react";
 
 import { ResultsFilters } from "@/components/results/results-filters";
 import { ResultsTable } from "@/components/results/results-table";
@@ -136,6 +136,14 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
             <Info size={18} aria-hidden className="mt-0.5 shrink-0" />
             Temps et classement non publiés par la source : les participants sont listés par ordre
             alphabétique.
+          </p>
+        )}
+
+        {race.temps_suspects > 0 && (
+          <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <TriangleAlert size={18} aria-hidden className="mt-0.5 shrink-0" />
+            Certains temps de cette épreuve semblent erronés dans la source. Ils sont signalés dans
+            le classement.
           </p>
         )}
 

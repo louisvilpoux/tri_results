@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { SortableHeader, nextSortOrder } from "@/components/shared/sortable-header";
+import { TotalTime } from "@/components/shared/total-time";
 import { formatRank } from "@/lib/format";
 import { buildRaceResultsUrl } from "@/lib/results-query";
 import type { RaceResult, RaceResultSortBy, RaceResultsQuery } from "@/types/result";
@@ -145,7 +146,11 @@ export function ResultsTable({
                       : `${CELL} text-right font-mono text-gray-600 ${DESKTOP_ONLY}`
                   }
                 >
-                  {result[column.value] ?? "—"}
+                  {column.value === "total_time" ? (
+                    <TotalTime time={result.total_time} suspect={result.temps_suspect} />
+                  ) : (
+                    (result[column.value] ?? "—")
+                  )}
                 </td>
               ))}
             </tr>

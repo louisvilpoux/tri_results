@@ -10,6 +10,8 @@ export interface Race {
   lieu_epreuve: string | null;
   /** Aucun temps total publié par la source : pas de classement (participants seulement). */
   sans_temps: boolean;
+  /** Nombre de temps signalés comme probablement faux dans la source. */
+  temps_suspects: number;
 }
 
 // Types alignés sur GET /races/{id}/event : la course (nom + année) et ses formats.
@@ -20,6 +22,8 @@ export interface PodiumLeader {
   /** Équipe (bike&run, relais) : pas de profil d'athlète. */
   equipe: boolean;
   total_time: string | null;
+  /** Temps anormalement court : probable erreur de la source. */
+  temps_suspect: boolean;
 }
 
 export interface RaceFormat {

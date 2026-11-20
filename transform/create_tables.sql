@@ -64,6 +64,9 @@ CREATE TABLE results (
     -- résultat d'un sous-classement déjà compté dans une autre épreuve du même jour
     -- (voir sous_classements.sql) : visible sur la page de l'épreuve, pas compté dans le profil
     sous_classement BOOLEAN NOT NULL DEFAULT false,
+    -- temps total classé anormalement court (moins de la moitié du temps médian de l'épreuve) :
+    -- probable erreur de la source, signalée à l'utilisateur (voir temps_totaux.sql)
+    temps_suspect BOOLEAN NOT NULL DEFAULT false,
     cat TEXT,
     clt_cat TEXT,
     id_league TEXT,

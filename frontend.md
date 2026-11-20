@@ -192,7 +192,8 @@ Réalisés
     - En-tête : nom, club, sexe, saisons, disciplines avec leur nombre de courses.
     - Chiffres clés : courses, podiums, top 10, meilleur classement, nombre de saisons.
     - Meilleurs temps par discipline et format, avec lien vers le classement de la course. Seuls les résultats
-      classés comptent : le temps d'un non-classé est souvent celui de son abandon (00:32:50 sur un M).
+      classés comptent : le temps d'un non-classé est souvent celui de son abandon (00:32:50 sur un M) ; un temps
+      suspect (voir ci-dessous) non plus.
     - Historique : date, épreuve (lien vers son classement), format, catégorie, « clt / participants », temps.
       Tri par date (défaut, plus récente d'abord), classement ou temps ; filtres saison et discipline ; pagination.
     - URL : `/athletes/123?annee=2024&discipline=triathlon&sort_by=clt&order=asc&offset=20`.
@@ -301,6 +302,15 @@ Points connus (données) :
   (Tribreizh 2022, Saint Remy sur Durolle 2005, Roybon 2021, Paris 2022), le total est recalculé depuis les
   segments (`transform/temps_totaux.sql`). Les meilleurs temps du profil ne prennent plus que les résultats classés
   (603 temps de non-classés écartés, dont ceux de Douai 2017 S, où tous les temps sont inutilisables).
+- Temps suspects (20/11/2026) : 19 temps classés restent anormalement courts (moins de la moitié du temps médian de
+  l'épreuve) : Openlakes Champagne 2026 L (750e à 762e, temps d'abandon), Lacanau 2017 L (609e en 00:00:07), Ardres
+  2019 Jeunes (vainqueur en 00:02:22)… Le bon temps ne peut pas être retrouvé : ils sont signalés. Le composant
+  `components/shared/total-time.tsx` affiche le temps en gris précédé d'une alerte ⚠, expliquée au survol et aux
+  lecteurs d'écran (« Temps anormalement court pour cette épreuve (moins de la moitié du temps médian) : probablement
+  une erreur de la source. ») ; il sert dans le classement, l'historique du profil et le podium des cartes de
+  format. La page de classement affiche un bandeau quand l'épreuve en contient : « Certains temps de cette épreuve
+  semblent erronés dans la source. Ils sont signalés dans le classement. » Le classement reste celui de la source ;
+  ces temps ne comptent pas dans les meilleurs temps du profil.
 - Clubs (corrigé le 20/11/2026) : 5 694 clubs écrits avec « ` » au lieu d'une apostrophe (« TRIATHLON CLUB
   D`HAZEBROUCK ») sont corrigés ; 1 519 valeurs qui disaient seulement « pas de club » (« NON LICENCIE », « NL »,
   « NONE », « 0 », « - », « ??? »…) sont vidées, comme les licences individuelles (« INDIVIDUEL », « LICENCE

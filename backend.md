@@ -147,7 +147,11 @@ Dossier : `transform`
       ses totaux ne suivent pas le classement (< 90 % des classés consécutifs dans l'ordre) et que la somme des
       segments le suit (≥ 95 %, pour ≥ 90 % des classés) : le classement dit lequel des deux est juste (à l'Ironman
       de Nice 2019, ce sont les segments qui sont faux). Une ligne sans ses 5 segments y perd son total. 4 épreuves
-      le 20/11/2026. Exécuté après homonymes.sql.
+      le 20/11/2026. Marque ensuite `temps_suspect` (colonne de results) sur les totaux classés de moins de la moitié
+      du temps médian des classés de l'épreuve (au moins 10 classés) : 19 résultats dans 7 épreuves, souvent un temps
+      d'abandon publié avec un classement (Openlakes Champagne 2026 L : natation et T1 seulement). L'API les renvoie
+      (`temps_suspect` sur chaque résultat et chaque leader du podium, `temps_suspects` sur GET /races/{id}) et les
+      exclut des meilleurs temps du profil. Exécuté après homonymes.sql.
     - doublons_sources.sql : retire les épreuves prolivesport ou chronoweb publiées aussi par fftri_t2_area (dates à
       un jour près, au moins la moitié des athlètes en commun) ; la version fftri_t2_area est gardée et la table
       doublons_sources garde la trace des paires retirées (colonne `source`). Les autres épreuves de la source dans

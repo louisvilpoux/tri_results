@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Medal, Users } from "lucide-react";
 
+import { TotalTime } from "@/components/shared/total-time";
 import { capitalize, formatShortDate } from "@/lib/format";
 import type { PodiumLeader, RaceFormat } from "@/types/race";
 
@@ -23,7 +24,7 @@ function LeaderLine({ label, leader }: { label: string; leader: PodiumLeader }) 
       </div>
       {leader.total_time && (
         <span className="shrink-0 font-mono font-bold tabular-nums text-[#17202E]">
-          {leader.total_time}
+          <TotalTime time={leader.total_time} suspect={leader.temps_suspect} />
         </span>
       )}
     </div>

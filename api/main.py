@@ -75,6 +75,10 @@ class Result(Base):
     # « Open » dans le « Full »…) déjà compté dans une autre épreuve du même jour : visible sur
     # la page de l'épreuve, pas compté dans le profil (voir transform/sous_classements.sql).
     sous_classement = Column(Boolean)
+    # Temps total classé anormalement court (moins de la moitié du temps médian de l'épreuve) :
+    # probable erreur de la source, signalée et exclue des meilleurs temps (voir
+    # transform/temps_totaux.sql).
+    temps_suspect = Column(Boolean)
     type_epreuve = Column(String(50))
     format_epreuve = Column(String(50))
     year_epreuve = Column(String(50))
@@ -204,6 +208,13 @@ def get_race(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
     } | {
         "lieu_epreuve": clean_lieu(race.lieu_epreuve),
         "sans_temps": race.id in races_without_time(db, [race.id]),
+        # nombre de temps signalés comme probablement faux (bandeau sur la page de l'épreuve)
+        "temps_suspects": db.scalar(
+            select(func.count(Result.id)).where(
+                Result.epreuve_id == race.id, Result.temps_suspect.is_(True)
+            )
+        )
+        or 0,
     }
 
 RaceResultSortBy = Literal[
@@ -368,6 +379,7 @@ def get_podium_leaders(
             Result.nom_athlete,
             Result.equipe,
             Result.total_time,
+            Result.temps_suspect,
         )
         .where(Result.epreuve_id.in_(race_ids), rank.isnot(None))
         .distinct(Result.epreuve_id)
@@ -382,6 +394,7 @@ def get_podium_leaders(
             "nom_athlete": " ".join((row.nom_athlete or "").split()) or None,
             "equipe": row.equipe,
             "total_time": row.total_time if is_valid_time(row.total_time) else None,
+            "temps_suspect": row.temps_suspect,
         }
         for row in db.execute(query)
     }
@@ -534,10 +547,13 @@ def is_valid_time(value: str | None) -> bool:
 
 def get_best_times(results: list[Result]) -> list[dict[str, Any]]:
     """Meilleur temps total par discipline et format, parmi les résultats classés : le temps d'un
-    non-classé est souvent celui de son abandon (00:32:50 sur un M à Bordeaux 2018)."""
+    non-classé est souvent celui de son abandon (00:32:50 sur un M à Bordeaux 2018). Un temps
+    suspect (probable erreur de la source) n'est pas pris non plus."""
     best: dict[tuple[str, str], Result] = {}
     for result in results:
         if not is_valid_time(result.total_time) or not is_valid_rank(result.clt):
+            continue
+        if result.temps_suspect:
             continue
         key = (result.type_epreuve or "", result.format_epreuve or "")
         if key not in best or result.total_time < best[key].total_time:
