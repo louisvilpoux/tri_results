@@ -332,6 +332,9 @@ Points connus (données) :
   court que chez chronoweb était inconnu. Il est maintenant lu dans la catégorie (`sexe_categorie`,
   `transform/raw_data.sql`) : 47 462 résultats chronoweb sur 51 604 ont M ou F (Triathlon d'Oléron 2024 : 235
   hommes, 147 femmes, 88 sans catégorie ou en catégorie mixte).
+- Lieu des épreuves fftri (22/11/2026) : les 2 219 épreuves fftri_t2_area n'avaient pas de lieu ; il est lu dans
+  l'en-tête de leur page fftri (`sources/fftri_t2_area_lieux.py`) et affiché dans l'en-tête de la course
+  (« Sizun (29450) » pour Tribreizh 2022). 23 épreuves restent sans lieu.
 - Clubs (corrigé le 20/11/2026) : 5 694 clubs écrits avec « ` » au lieu d'une apostrophe (« TRIATHLON CLUB
   D`HAZEBROUCK ») sont corrigés ; 1 519 valeurs qui disaient seulement « pas de club » (« NON LICENCIE », « NL »,
   « NONE », « 0 », « - », « ??? »…) sont vidées, comme les licences individuelles (« INDIVIDUEL », « LICENCE

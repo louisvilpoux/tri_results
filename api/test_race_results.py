@@ -324,3 +324,28 @@ def test_sex_is_m_f_or_empty() -> None:
     assert row.autres == 0
     if row.chronoweb:
         assert row.chronoweb_m_f >= 0.9 * row.chronoweb
+
+
+def test_fftri_races_have_a_place() -> None:
+    """Le lieu des épreuves fftri_t2_area est lu dans l'en-tête de leur page (« Sizun
+    (29450) », sources/fftri_t2_area_lieux.py) : avant, aucune n'avait de lieu."""
+    try:
+        with engine.connect() as connection:
+            row = connection.execute(
+                text(
+                    """
+                    SELECT COUNT(*) FILTER (WHERE r.lieu_epreuve IS NOT NULL) AS avec_lieu,
+                           COUNT(*) AS total
+                    FROM races r
+                    WHERE EXISTS (
+                        SELECT 1 FROM results x
+                        WHERE x.epreuve_id = r.id AND x.source = 'fftri_t2_area'
+                    )
+                    """
+                )
+            ).one()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    if row.total == 0:
+        pytest.skip("Aucune épreuve fftri_t2_area dans la base")
+    assert row.avec_lieu >= 0.9 * row.total

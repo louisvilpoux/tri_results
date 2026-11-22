@@ -76,6 +76,17 @@ def is_valid_page(resp):
     else:
         return True
 
+def extract_lieu(soup):
+    """Lieu de l'épreuve, lu dans l'en-tête de sa page : « SIZUN (29450) ». None s'il manque."""
+    meta = soup.find("div", class_="t2-header__meta")
+    if meta is None:
+        return None
+    for span in meta.find_all("span"):
+        text = " ".join(span.get_text(" ", strip=True).split())
+        if re.search(r"\(\d{5}\)$", text):
+            return text
+    return None
+
 def extract_description_event(resp):
     soup = BeautifulSoup(resp.text, "html.parser")
     article = soup.find("article", class_="edition-description-content")
@@ -167,7 +178,7 @@ def fill_missing_sport_time(sport_time_dict):
 def create_empty_file(url):
     """Fichier sans résultat pour une épreuve sans classement : il évite de la retélécharger.
     Mêmes colonnes et même nom que le fichier d'une épreuve avec résultats (voir process_data)."""
-    df_empty = pd.DataFrame(columns=["clt","nom","club","cat","temps","swim","t1","bike","t2","run","détails","name_epreuve","format_epreuve","year_epreuve","date_epreuve"])
+    df_empty = pd.DataFrame(columns=["clt","nom","club","cat","temps","swim","t1","bike","t2","run","détails","name_epreuve","format_epreuve","year_epreuve","date_epreuve","lieu_epreuve"])
     df_empty.to_csv(f"./sources/fftri_t2_area/fftri_t2_area_0/{create_race_unicity(url)}.csv", index=False)
 
 def get_response(url):
@@ -280,6 +291,7 @@ def process_data(url):
         df["format_epreuve"] = format
         df["year_epreuve"] = coalesce(year, date_epreuve.year)#, descr_date_epreuve.year)
         df["date_epreuve"] = str(date_epreuve)#coalesce(str(date_epreuve), str(descr_date_epreuve))
+        df["lieu_epreuve"] = extract_lieu(soup)
         df.to_csv(f"./sources/fftri_t2_area/fftri_t2_area_0/{create_race_unicity(url)}.csv", index=False)
         print("done")
     except Exception as e:
@@ -290,14 +302,17 @@ def process_data(url):
 
 BASE = "https://fftri.t2area.com"
 
-df = pd.read_csv("./sources/fftri_t2_area/url/urls.csv")
+# Lancé seulement en script (python sources/fftri_t2_area.py) : fftri_t2_area_lieux.py importe
+# les fonctions ci-dessus sans relancer le scraping.
+if __name__ == "__main__":
+    df = pd.read_csv("./sources/fftri_t2_area/url/urls.csv")
 
-with ThreadPoolExecutor(max_workers=5) as executor:
-    futures = [executor.submit(process_data, url) for url in df["url"]]
-    with tqdm(total=len(df.index), desc="Collecting data from FFTRI") as pbar:
-        for future in as_completed(futures):
-            url = future.result()
-            pbar.update(1)
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = [executor.submit(process_data, url) for url in df["url"]]
+        with tqdm(total=len(df.index), desc="Collecting data from FFTRI") as pbar:
+            for future in as_completed(futures):
+                url = future.result()
+                pbar.update(1)
 
 # for url in df["url"]:
 #     if url in ["https://fftri.t2area.com/calendrier/natureman/triathlon-l/2013.html",

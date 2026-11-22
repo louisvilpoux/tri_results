@@ -49,6 +49,12 @@ nom_de_la_source :
 - fftri_t2_area :
     1. fftri_t2_area_links.py : scrapping du site pour récupérer l'ensemble des liens vers les pages de résultats des épreuves.
     2. fftri_t2_area.py : pour chaque url, on vient scrapper la page et récupérer les informations voulues. La donnée est également nettoyée et mise au format csv avec les bonnes colonnes.
+       Le lieu (colonne lieu_epreuve) est lu dans l'en-tête de la page de l'épreuve (`div.t2-header__meta`,
+       « SIZUN (29450) ») ; raw_data.sql le met en forme (« Sizun (29450) »).
+    3. fftri_t2_area_lieux.py : ajoute le lieu aux CSV déjà téléchargés (le scraper ne retélécharge pas une épreuve
+       dont le CSV existe). Lancé une fois le 22/11/2026 : 2 237 CSV sur 2 239 (deux fichiers sans année dans leur
+       nom n'ont pas d'URL connue). Relancé, il ne traite que les CSV sans la colonne ; puis recharger les CSV et
+       reconstruire la base.
 
 - prolivesport : 
     1. prolivesport_links.py : liste des événements et, pour chacun, de ses épreuves (`raceList/{eventId}`),

@@ -58,7 +58,9 @@ t1 as t1_time, null as rang_t1, null as rang_course_t1, null as indice_performan
 bike as bike_time, null as rang_bike, null as rang_course_bike, null as indice_performance_bike, 
 t2 as t2_time, null as rang_t2, null as rang_course_t2, null as indice_performance_t2, 
 run as run_time, null as rang_run, null as rang_course_run, null as indice_performance_run,
-name_epreuve, format_epreuve, year_epreuve, date_epreuve, null as lieu_epreuve,
+-- lieu lu dans l'en-tête de la page de l'épreuve (« SAINT PIERRE (97410) », voir
+-- sources/fftri_t2_area_lieux.py), mis en minuscules avec majuscules initiales
+name_epreuve, format_epreuve, year_epreuve, date_epreuve, initcap(lieu_epreuve) as lieu_epreuve,
 scraped_at, 'fftri_t2_area' as source, sexe_categorie(cat) as sexe,
 null as type_epreuve, null as format_normalise
 FROM raw_fftri_t2_area_0
