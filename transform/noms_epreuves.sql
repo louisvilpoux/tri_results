@@ -113,7 +113,11 @@ INSERT INTO alias_courses (alias, nom_garde) VALUES
     ('Championnats de France FF TRI Duathlon Jeunes - Noyon', 'Duathlon de Noyon'),
     -- Sainte Aldegonde (sainte patronne de Maubeuge) ; la source écrit « Pays de mormal »
     ('Duathlon de Sainte Aldegonde - Pays de mormal',
-     'Duathlon de Sainte Aldegonde - Pays de Mormal');
+     'Duathlon de Sainte Aldegonde - Pays de Mormal'),
+    -- La Réunion : nom tiré de l'adresse fftri (« calendrier/0-3000/ », « calendrier/t974/ »),
+    -- qui perd la ponctuation ; vrais noms lus sur fftri.t2area.com le 22/11/2026
+    ('0 3000', 'La 0-3000'),
+    ('T974', 'T97.4');
 
 -- Les étapes travaillent sur la liste des noms distincts (nom_initial → nom), appliquée à
 -- raw_data à la fin.

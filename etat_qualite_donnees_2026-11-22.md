@@ -40,17 +40,17 @@ segments prolivesport : 100 % cohérents avec le total à 5 % près (fftri 98,1 
 | Q4 | Temps chronoweb illisibles | 0 | 0 ; ailleurs, 6 totaux et 286 lignes avec un segment négatifs (« -00:00:01 ») | Corrigé |
 | Q5 | Catégories d'âge | 3 141 valeurs | 3 050 valeurs, dont 2 592 parasites | **Ouvert** (mis de côté) |
 | Q6 | Épreuves en double le même jour | 38 sous-classements | 38 | Corrigé |
-| Q7 | Lieu manquant | 2 219 épreuves | 2 219 (toutes fftri_t2_area) | **Ouvert** |
+| Q7 | Lieu manquant | 2 219 épreuves | 2 219 (toutes fftri_t2_area) ; la page fftri donne le lieu | **Ouvert** |
 | Q8 | Club manquant ou parasite | 40 % sans club | 39,7 % des résultats individuels sans club ; club affiché = le plus récent | Corrigé |
 | Q9 | Noms mal encodés | 0 | 0 | Corrigé |
 | Q10 | Segments prolivesport décalés | partiel | 0 ligne incohérente | **Corrigé** |
-| Q11 | Noms de course | 0 cas connu | 0 cas ; 2 noms illisibles (« 0 3000 », « T974 ») | Corrigé (Q17 ouvert) |
+| Q11 | Noms de course | 0 cas connu | 0 cas | Corrigé |
 | Q12 | Athlètes avec résultats des deux sexes | 634 | 636 | Atténué |
 | Q13 | Épreuves sans format | 57 | 57 | **Ouvert** |
 | Q14 | Noms d'athlètes (tirets, virgules, tronqués, homonymes) | — | 0 clé avec ponctuation ; 477 noms tronqués rattachés ; 392 homonymes séparés | **Corrigé** |
 | Q15 | Sexe chronoweb remplacé par un rang | — | 31 820 lignes chronoweb (62 %) | **Nouveau** |
 | Q16 | Identifiants instables | constat | 0 changement entre deux reconstructions | **Corrigé** |
-| Q17 | Noms de course illisibles (slug fftri) | — | 2 courses | **Nouveau** (mineur) |
+| Q17 | Noms de course sans ponctuation (tirés de l'adresse fftri) | — | 2 courses, corrigées par alias | **Corrigé** |
 
 ---
 
@@ -111,18 +111,24 @@ d'âge Ironman sans tiret), 15 avec parenthèses. 18 150 résultats sans catégo
 saisons d'athlète ont plusieurs catégories (15,3 % le 20/11).
 
 ### Q7 — Lieu manquant
-Inchangé : les 2 219 épreuves fftri_t2_area n'ont pas de lieu ; chronoweb et prolivesport sont
-complets. Piste : reprendre le lieu d'une autre édition ou d'une autre source de la même
-course.
+Les 2 219 épreuves fftri_t2_area n'ont pas de lieu ; chronoweb et prolivesport sont complets.
+Correction du constat du 20/11 : la source donne bien le lieu. L'en-tête de la page d'une
+épreuve sur fftri.t2area.com affiche la ville et le code postal (« SAINT PIERRE (97410) » pour
+La 0-3000 2023, « SAINT-LEU (97436) » pour T97.4 2026) ; c'est le scraper
+(`sources/fftri_t2_area*`) qui ne le récupère pas. Piste : lire cet en-tête au scraping (une page
+par épreuve, pas par athlète), puis recharger les CSV.
 
 ### Q13 — Épreuves sans format
 Inchangé : 57 épreuves (« CD » d'Altriman, « Poursuite », finales…) n'apparaissent dans aucun
 filtre de format.
 
-### Q17 — Noms de course illisibles (nouveau, mineur)
-2 courses ont pour nom le seul identifiant de l'URL fftri : « 0 3000 » (3 épreuves en 2023 :
-duathlon M et L, triathlon L, 197 résultats ; `calendrier/0-3000/`) et « T974 ». Piste : alias
-dans `transform/noms_epreuves.sql` une fois le vrai nom connu.
+### Q17 — Noms de course sans ponctuation (corrigé le 22/11/2026)
+Le nom des épreuves fftri_t2_area est tiré de l'adresse de la page (`calendrier/0-3000/`,
+`calendrier/t974/`), qui perd tirets et points. Deux courses de La Réunion s'affichaient « 0 3000 »
+et « T974 » ; leurs résultats étaient justes. Vrais noms lus sur fftri.t2area.com : « La 0-3000 »
+(Saint-Pierre, 3 épreuves en 2023) et « T97.4 » (Saint-Leu, 2 épreuves en 2026). Deux alias dans
+`transform/noms_epreuves.sql` les corrigent ; leurs id ne changent pas (la clé de l'id garde le
+nom publié). D'autres noms peuvent avoir perdu leur ponctuation sans être aussi visibles.
 
 ### Q12 — Athlètes avec résultats des deux sexes
 636 athlètes (634 le 20/11) : homonymes réunis ou sexe mal renseigné. Le profil et le filtre
@@ -147,5 +153,5 @@ affichent le sexe le plus fréquent. Q15 en explique une partie.
    épreuves prolivesport S/XS, et temps négatifs vidés. C'est ce qui fausse encore des meilleurs
    temps de profil.
 2. **Q15** : sexe chronoweb déduit de la catégorie.
-3. Q13, Q17 (alias), Q7.
+3. Q7 (lieu lu sur la page fftri au scraping), Q13.
 4. Q5 (catégories), mis de côté.
