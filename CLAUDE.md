@@ -36,4 +36,5 @@ cd triathlon-results && npm run dev # application web de développement
 - `roadmap.md` - définition d'une roadmap.
 - `retour_utilisateur.md` - retour d'un test utilisateur : problèmes de données, d'interface et
   fonctionnalités manquantes, avec une priorisation.
-- `etat_qualite_donnees.md` - récapitulatif de la situation actuelle sur la qualité des données.
+- `etat_qualite_donnees_<date>.md` - audits datés de la qualité des données ; le plus récent décrit la
+  situation actuelle.
