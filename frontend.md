@@ -190,6 +190,20 @@ Réalisés
     - Tout l'état est dans l'URL : `?sexe=F&categorie=MS3&q=dupont&sort_by=total_time&order=desc&limit=50&offset=50`.
     - Code : `lib/results-query.ts` (lecture et construction de l'URL), `lib/api.ts` (appels API),
       `components/results/` (tableau, filtres), `loading.tsx` (squelette).
+    - Repères (22/11/2026) : bloc entre l'en-tête et le classement (`components/results/race-benchmarks.tsx`,
+      `GET /races/{id}/stats`) pour situer le niveau de l'épreuve. Onglets Total, puis Natation, Vélo, Course à
+      pied (triathlon) ou Course 1, Vélo, Course 2 (duathlon) quand le classement affiche ces colonnes et que la
+      source a publié ces temps (fftri ne publie que le vélo de ses duathlons). Pour chaque onglet : temps du
+      vainqueur, du podium (3ᵉ), des top 10 % et 25 % (temps sous lequel se trouvent 10 % / 25 % des classés), de
+      la médiane et du dernier classé ; histogramme de répartition (barres de 1, 2, 5, 10… minutes, au plus 25,
+      nombre de classés au survol) ; temps du 3ᵉ de chaque catégorie (« — » sous 3 classés, rang chronoweb
+      « 12/FBE » retiré). Calcul sur les classés avec un temps valide, sans les temps suspects. Choix Tous /
+      Hommes / Femmes (proposé quand l'épreuve a des classés des deux sexes) : mélangés, le top 10 % et la
+      médiane reflètent surtout les hommes (Tribreizh 2022 : médiane 05:29:22 pour tous, 05:47:39 pour les 15
+      femmes). Un top 10 % ou 25 % qui tomberait dans le podium n'est pas donné (« — ») : top 10 % à partir de
+      31 classés, top 25 % de 13, pour que les tuiles restent dans l'ordre. Sous 20 classés : pas
+      d'histogramme ; épreuve sans temps : pas de bloc. Un échec de l'API des repères n'empêche pas d'afficher
+      le classement. Limite : catégories telles que publiées par la source (Q5).
 - page profil athlète : `/athletes/[id]` (id = `unified_id`, celui des liens du classement d'une course).
     - En-tête : nom, club, sexe, saisons, disciplines avec leur nombre de courses.
     - Chiffres clés : courses, podiums, top 10, meilleur classement, nombre de saisons.

@@ -371,3 +371,93 @@ def test_places_have_one_format() -> None:
         pytest.skip("Base PostgreSQL indisponible")
     assert row.nan == 0
     assert row.prolivesport == 0
+
+
+def race_with(sql: str) -> int:
+    try:
+        with engine.connect() as connection:
+            race_id = connection.execute(text(sql)).scalar()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    if race_id is None:
+        pytest.skip("Aucune épreuve adaptée dans la base")
+    return int(race_id)
+
+
+def test_race_stats_are_ordered_and_consistent() -> None:
+    """Repères d'une épreuve (GET /races/{id}/stats) : vainqueur ≤ podium ≤ top 10 % ≤ top 25 %
+    ≤ médiane ≤ dernier, pour le total et chaque segment, tous les classés et par sexe ; le
+    total compte les classés avec un temps valide et non suspect, hommes et femmes compris ;
+    l'histogramme répartit tous ces classés."""
+    race_id = race_with(
+        """
+        SELECT epreuve_id FROM results
+        WHERE swim_time ~ '^\\d{2}:' AND bike_time ~ '^\\d{2}:' AND run_time ~ '^\\d{2}:'
+          AND type_epreuve = 'triathlon'
+        GROUP BY epreuve_id HAVING COUNT(*) BETWEEN 100 AND 400
+        ORDER BY epreuve_id LIMIT 1
+        """
+    )
+    stats = client.get(f"/races/{race_id}/stats").json()
+    keys = [segment["key"] for segment in stats["segments"]]
+    assert keys == ["total", "swim", "bike", "run"]
+
+    variants = [stats["segments"], stats["par_sexe"]["M"], stats["par_sexe"]["F"]]
+    for segment in (segment for variant in variants for segment in variant):
+        # un top 10 % ou 25 % qui tomberait dans le podium n'est pas donné (None)
+        names = ("vainqueur", "podium", "top10", "top25", "mediane", "dernier")
+        ordered = [segment[name] for name in names if segment[name] is not None]
+        assert all(is_valid_time(value) for value in ordered)
+        assert ordered == sorted(ordered)
+        if segment["classes"] > 30:
+            assert segment["top10"] is not None
+        if segment["classes"] >= 20:
+            bars = segment["histogramme"]["barres"]
+            assert sum(bar["count"] for bar in bars) == segment["classes"]
+        else:
+            assert segment["histogramme"] is None
+        for category in segment["categories"]:
+            assert (category["troisieme"] is None) == (category["classes"] < 3)
+            assert not category["categorie"][0].isdigit()  # « 12/FBE » → « FBE »
+
+    with engine.connect() as connection:
+        expected = connection.execute(
+            text(
+                """
+                SELECT COUNT(*) FROM results
+                WHERE epreuve_id = :id AND clt > 0 AND clt < 99990 AND NOT temps_suspect
+                  AND total_time ~ '^\\d{2}:\\d{2}:\\d{2}$' AND total_time <> '00:00:00'
+                """
+            ),
+            {"id": race_id},
+        ).scalar()
+    assert stats["segments"][0]["classes"] == expected
+    by_sex = sum(stats["par_sexe"][sexe][0]["classes"] for sexe in "MF" if stats["par_sexe"][sexe])
+    assert by_sex <= expected
+
+
+def test_race_stats_small_and_timeless_races() -> None:
+    """Sous 13 classés : ni top 10 % ni top 25 % (ils tomberaient dans le podium) ; sous 20 :
+    pas d'histogramme ; épreuve sans temps (liste de participants) : aucun repère."""
+    small_id = race_with(
+        """
+        SELECT epreuve_id FROM results
+        WHERE clt > 0 AND clt < 99990 AND total_time ~ '^\\d{2}:' AND NOT temps_suspect
+        GROUP BY epreuve_id HAVING COUNT(*) BETWEEN 3 AND 9
+        ORDER BY epreuve_id LIMIT 1
+        """
+    )
+    total = client.get(f"/races/{small_id}/stats").json()["segments"][0]
+    assert total["top10"] is None and total["top25"] is None and total["histogramme"] is None
+    assert total["podium"] is not None
+
+    timeless_id = race_with(
+        """
+        SELECT epreuve_id FROM results GROUP BY epreuve_id
+        HAVING NOT coalesce(bool_or(total_time IS NOT NULL), false)
+           AND NOT coalesce(bool_or(clt > 0 AND clt < 99990), false)
+        ORDER BY epreuve_id LIMIT 1
+        """
+    )
+    assert client.get(f"/races/{timeless_id}/stats").json()["segments"] == []
+    assert client.get("/races/0/stats").status_code == 404

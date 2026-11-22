@@ -61,3 +61,45 @@ export interface RaceEvent {
   formats: RaceFormat[];
   editions: RaceEdition[];
 }
+
+// Repères de niveau d'une épreuve (GET /races/{id}/stats).
+
+export interface HistogramBar {
+  debut: string;
+  fin: string;
+  count: number;
+}
+
+export interface CategoryBenchmark {
+  categorie: string;
+  classes: number;
+  /** Temps du 3e de la catégorie ; null quand elle compte moins de 3 classés. */
+  troisieme: string | null;
+}
+
+/** Repères du temps total ou d'un segment (natation, vélo, course à pied…). */
+export interface SegmentBenchmarks {
+  key: string;
+  label: string;
+  classes: number;
+  vainqueur: string;
+  /** Temps du 3e (null sous 3 classés). */
+  podium: string | null;
+  /** Temps sous lequel se trouvent les 10 % / 25 % les plus rapides ; null quand ce rang tombe
+   * dans le podium (top 10 % sous 31 classés, top 25 % sous 13). */
+  top10: string | null;
+  top25: string | null;
+  mediane: string;
+  dernier: string;
+  /** null sous 20 classés. */
+  histogramme: { largeur_minutes: number; barres: HistogramBar[] } | null;
+  categories: CategoryBenchmark[];
+}
+
+export interface RaceStats {
+  id: number;
+  /** Tous les classés : total d'abord, puis les segments affichés par le classement ; vide sans temps. */
+  segments: SegmentBenchmarks[];
+  /** Mêmes repères pour les hommes (M) et les femmes (F). */
+  par_sexe: { M: SegmentBenchmarks[]; F: SegmentBenchmarks[] };
+}

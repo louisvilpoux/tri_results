@@ -3,7 +3,7 @@ import type {
   AthleteResultsQuery,
   AthleteResultsResponse,
 } from "@/types/athlete";
-import type { Race, RaceEvent } from "@/types/race";
+import type { Race, RaceEvent, RaceStats } from "@/types/race";
 import type {
   AthleteListResponse,
   EventListResponse,
@@ -78,6 +78,11 @@ export function getSitemapAthletesCount(): Promise<{ total: number; pages: numbe
 /** Id des athlètes avec un profil, tranche `page` (0, 1, 2…). */
 export function getSitemapAthletes(page: number): Promise<number[]> {
   return apiGet(`/sitemap/athletes/${page}`);
+}
+
+/** Repères de niveau d'une épreuve : vainqueur, podium, top 10/25/50 %, catégories… */
+export function getRaceStats(raceId: string): Promise<RaceStats> {
+  return apiGet<RaceStats>(`/races/${raceId}/stats`);
 }
 
 export function getRace(raceId: string): Promise<Race> {

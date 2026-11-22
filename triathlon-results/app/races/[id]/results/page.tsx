@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, Info, MapPin, TriangleAlert, Trophy } from "lucide-react";
 
+import { RaceBenchmarks } from "@/components/results/race-benchmarks";
 import { ResultsFilters } from "@/components/results/results-filters";
 import { ResultsTable } from "@/components/results/results-table";
 import { PaginationBar } from "@/components/shared/pagination-bar";
-import { ApiError, getRace, getRaceCategories, getRaceResults } from "@/lib/api";
+import { ApiError, getRace, getRaceCategories, getRaceResults, getRaceStats } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { raceResultsMetadata } from "@/lib/seo";
 import { redirectOrNotFound } from "@/lib/redirections";
@@ -41,12 +42,14 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
   let data;
 
   try {
-    const [race, categories, results] = await Promise.all([
+    const [race, categories, results, stats] = await Promise.all([
       getRace(id),
       getRaceCategories(id),
       getRaceResults(id, query),
+      // Les repères sont un plus : leur échec n'empêche pas d'afficher le classement.
+      getRaceStats(id).catch(() => null),
     ]);
-    data = { race, categories, results };
+    data = { race, categories, results, stats };
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       await redirectOrNotFound("races", id, "/results");
@@ -65,7 +68,7 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
     );
   }
 
-  const { race, categories, results } = data;
+  const { race, categories, results, stats } = data;
   const { items, pagination } = results;
   const filtered = hasActiveFilters(query);
   // Aucun temps total publié par la source : la page liste les participants, sans classement.
@@ -126,6 +129,8 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
           </div>
         </div>
       </section>
+
+      {stats && stats.segments.length > 0 && <RaceBenchmarks stats={stats} />}
 
       {/* Classement */}
       <section className="space-y-4">

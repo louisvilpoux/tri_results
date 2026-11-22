@@ -1,3 +1,4 @@
+import math
 import re
 from collections import Counter
 from typing import Any, Literal
@@ -374,6 +375,166 @@ def get_race_categories(race_id: int, db: Session = Depends(get_db)) -> list[str
         .all()
     )
     return [row.categorie for row in rows]
+
+
+# ----------------------
+# Repères de niveau d'une épreuve
+# ----------------------
+# Bloc « Repères » de la page classement : temps du vainqueur, du podium (3e), des top 10 %,
+# 25 % et 50 %, du dernier classé, du 3e de chaque catégorie, et histogramme des temps ; pour le
+# temps total et pour chaque segment. Calculé à la demande sur les classés avec un temps valide
+# (ni non-classé, souvent arrêté à l'abandon, ni temps suspect).
+
+# Disciplines dont le classement n'affiche que le temps total (même liste que le front,
+# DISCIPLINES_WITHOUT_SPLITS dans triathlon-results/types/result.ts).
+DISCIPLINES_WITHOUT_SPLITS = {"aquathlon", "bike&run", "swimrun"}
+
+# Segments repris par discipline : (clé, libellé, colonne). En duathlon, la colonne natation
+# contient la première course à pied (ex. 00:14:58 sur un duathlon S). Les transitions sont trop
+# courtes pour servir de repère.
+SEGMENTS_BY_DISCIPLINE = {
+    "triathlon": [("swim", "Natation", "swim_time"), ("bike", "Vélo", "bike_time"),
+                  ("run", "Course à pied", "run_time")],
+    "duathlon": [("run1", "Course 1", "swim_time"), ("bike", "Vélo", "bike_time"),
+                 ("run2", "Course 2", "run_time")],
+}
+
+MIN_FOR_HISTOGRAM = 20  # en dessous : pas d'histogramme
+HISTOGRAM_MAX_BARS = 25
+HISTOGRAM_WIDTHS_MINUTES = [1, 2, 5, 10, 15, 20, 30, 60]
+
+
+def time_to_seconds(value: str) -> int:
+    hours, minutes, seconds = (int(part) for part in value.split(":"))
+    return hours * 3600 + minutes * 60 + seconds
+
+
+def seconds_to_time(value: int) -> str:
+    return f"{value // 3600:02d}:{value % 3600 // 60:02d}:{value % 60:02d}"
+
+
+def percentile_beyond_podium(sorted_times: list[int], share: float) -> int | None:
+    """Temps sous lequel se trouvent `share` des classés (comme percentile_disc en SQL), ou None
+    quand ce rang tombe dans le podium : avec 15 classés, le « top 10 % » serait le 2e, plus
+    rapide que le podium affiché à côté. Top 10 % à partir de 31 classés, top 25 % de 13."""
+    rank = math.ceil(share * len(sorted_times))
+    return sorted_times[rank - 1] if rank > 3 else None
+
+
+def histogram(sorted_times: list[int]) -> dict[str, Any]:
+    """Barres de largeur ronde (1, 2, 5, 10… minutes), au plus HISTOGRAM_MAX_BARS."""
+    first, last = sorted_times[0], sorted_times[-1]
+    width_minutes = next(
+        (
+            width
+            for width in HISTOGRAM_WIDTHS_MINUTES
+            if (last - first) // (width * 60) + 1 <= HISTOGRAM_MAX_BARS
+        ),
+        HISTOGRAM_WIDTHS_MINUTES[-1],
+    )
+    width = width_minutes * 60
+    start = first // width * width
+    counts = Counter((time - start) // width for time in sorted_times)
+    bars = [
+        {
+            "debut": seconds_to_time(start + index * width),
+            "fin": seconds_to_time(start + (index + 1) * width),
+            "count": counts.get(index, 0),
+        }
+        for index in range((last - start) // width + 1)
+    ]
+    return {"largeur_minutes": width_minutes, "barres": bars}
+
+
+def segment_stats(
+    key: str, label: str, times_by_category: list[tuple[int, str | None]]
+) -> dict[str, Any] | None:
+    """Repères d'un segment (ou du total) à partir de (temps en secondes, catégorie)."""
+    times = sorted(time for time, _ in times_by_category)
+    count = len(times)
+    if count == 0:
+        return None
+
+    def as_time(value: int | None) -> str | None:
+        return seconds_to_time(value) if value is not None else None
+
+    by_category: dict[str, list[int]] = {}
+    for time, category in times_by_category:
+        if category:
+            by_category.setdefault(category, []).append(time)
+
+    return {
+        "key": key,
+        "label": label,
+        "classes": count,
+        "vainqueur": as_time(times[0]),
+        "podium": as_time(times[2] if count >= 3 else None),
+        "top10": as_time(percentile_beyond_podium(times, 0.10)),
+        "top25": as_time(percentile_beyond_podium(times, 0.25)),
+        "mediane": as_time(times[math.ceil(0.5 * count) - 1]),
+        "dernier": as_time(times[-1]),
+        "histogramme": histogram(times) if count >= MIN_FOR_HISTOGRAM else None,
+        "categories": [
+            {
+                "categorie": category,
+                "classes": len(category_times),
+                "troisieme": as_time(
+                    sorted(category_times)[2] if len(category_times) >= 3 else None
+                ),
+            }
+            for category, category_times in sorted(by_category.items())
+        ],
+    }
+
+
+@app.get("/races/{race_id}/stats")
+def get_race_stats(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Repères de niveau d'une épreuve : temps total, puis chaque segment quand la page du
+    classement l'affiche, pour tous les classés (`segments`) puis par sexe (`par_sexe`, M et F).
+    Listes vides pour une épreuve sans temps."""
+    race = db.get(Race, race_id)
+    if race is None:
+        raise HTTPException(status_code=404, detail="Race not found")
+
+    discipline = (race.type_epreuve or "").removeprefix("cross ")
+    columns: list[tuple[str, str, str]] = [("total", "Total", "total_time")]
+    if discipline not in DISCIPLINES_WITHOUT_SPLITS and race_has_splits(db, race_id):
+        columns += SEGMENTS_BY_DISCIPLINE.get(discipline, [])
+
+    # catégorie sans le rang que chronoweb colle devant (« 12/FBE » → « FBE »)
+    category = func.nullif(func.regexp_replace(Result.categorie, r"^\d+/", ""), "")
+    rows = db.execute(
+        select(
+            category.label("categorie"),
+            Result.sexe,
+            *(valid_time_or_null(getattr(Result, column)).label(key) for key, _, column in columns),
+        ).where(
+            Result.epreuve_id == race_id,
+            valid_rank_or_null(Result.clt).isnot(None),
+            Result.temps_suspect.is_(False),
+        )
+    ).all()
+
+    def segments_of(selected: list[Any]) -> list[dict[str, Any]]:
+        segments = []
+        for key, label, _ in columns:
+            values = [
+                (time_to_seconds(getattr(row, key)), row.categorie)
+                for row in selected
+                if getattr(row, key) is not None
+            ]
+            stats = segment_stats(key, label, values)
+            if stats is not None:
+                segments.append(stats)
+        return segments
+
+    # Tous, puis hommes et femmes séparément : mélangés, le top 10 % et la médiane reflètent
+    # surtout les hommes, souvent largement majoritaires.
+    return {
+        "id": race_id,
+        "segments": segments_of(rows),
+        "par_sexe": {sexe: segments_of([row for row in rows if row.sexe == sexe]) for sexe in "MF"},
+    }
 
 
 # ----------------------

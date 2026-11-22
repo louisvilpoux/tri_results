@@ -211,3 +211,10 @@ a pas) ; le site s'en sert pour rediriger les anciens liens.
 `redirect: true`) ou n'existe pas (404) : `triathlon-results/proxy.ts` répond ainsi par un vrai 308 ou une vraie
 404. `GET /sitemap/races`, `GET /sitemap/athletes/count` et `GET /sitemap/athletes/{page}` (50 000 id par page)
 alimentent les sitemaps du site.
+`GET /races/{id}/stats` : repères de niveau d'une épreuve, calculés à la demande en Python sur les classés avec
+un temps valide et non suspect. Pour le total et chaque segment affiché par le classement (natation, vélo,
+course à pied ; course 1, vélo, course 2 en duathlon, dont la colonne natation contient la première course) :
+vainqueur, podium (3ᵉ), top 10 % et 25 % (comme `percentile_disc`), médiane, dernier, histogramme et 3ᵉ de
+chaque catégorie, pour tous les classés (`segments`) puis par sexe (`par_sexe`, M et F). Un top 10 % ou 25 %
+dont le rang tombe dans le podium vaut null (top 10 % à partir de 31 classés, top 25 % de 13) ; histogramme
+à partir de 20 classés.
