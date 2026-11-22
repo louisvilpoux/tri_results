@@ -58,6 +58,28 @@ export async function getRedirection(
   }
 }
 
+// Sitemaps (app/sitemap.ts, app/athletes/sitemap.ts, app/robots.ts).
+
+export interface SitemapPage {
+  id: number;
+  date: string | null;
+}
+
+/** Pages course (une par nom + année) et pages classement (une par épreuve). */
+export function getSitemapRaces(): Promise<{ events: SitemapPage[]; rankings: SitemapPage[] }> {
+  return apiGet("/sitemap/races");
+}
+
+/** Nombre d'athlètes avec un profil et nombre de fichiers sitemap (50 000 URL chacun). */
+export function getSitemapAthletesCount(): Promise<{ total: number; pages: number }> {
+  return apiGet("/sitemap/athletes/count");
+}
+
+/** Id des athlètes avec un profil, tranche `page` (0, 1, 2…). */
+export function getSitemapAthletes(page: number): Promise<number[]> {
+  return apiGet(`/sitemap/athletes/${page}`);
+}
+
 export function getRace(raceId: string): Promise<Race> {
   return apiGet<Race>(`/races/${raceId}`);
 }

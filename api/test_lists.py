@@ -167,3 +167,29 @@ def test_events_disciplines_are_known() -> None:
         "aquathlon", "bike&run", "swimrun",
     }
     assert set(filters["types"]) <= known
+
+
+def test_resolve_page() -> None:
+    """GET /resolve : le site répond 308 pour un id remplacé, 404 pour un id inconnu
+    (triathlon-results/proxy.ts)."""
+    race_id = get("/events", limit=1)["items"][0]["id"]
+    assert client.get(f"/resolve/races/{race_id}").json() == {"id": race_id, "redirect": False}
+    assert client.get("/resolve/races/0").status_code == 404
+    assert client.get("/resolve/athletes/0").status_code == 404
+    assert client.get("/resolve/teams/1").status_code == 422
+
+
+def test_sitemaps_list_existing_pages() -> None:
+    """Sitemaps : une page course par nom + année (même id que la liste des courses), une page
+    classement par épreuve, et les athlètes avec un profil, par tranches de 50 000."""
+    races = get("/sitemap/races")
+    event_ids = {event["id"] for event in races["events"]}
+    assert len(races["rankings"]) >= len(races["events"]) > 0
+    assert get("/events", limit=1)["items"][0]["id"] in event_ids
+
+    count = get("/sitemap/athletes/count")
+    assert count["pages"] == -(-count["total"] // 50_000)
+    first = get("/sitemap/athletes/0")
+    assert first == sorted(first) and len(first) == min(50_000, count["total"])
+    assert client.get(f"/athletes/{first[0]}").status_code == 200
+    assert get(f"/sitemap/athletes/{count['pages']}") == []

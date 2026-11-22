@@ -254,9 +254,29 @@ Réalisés
     - URL canoniques : `/races/[id]` pointe vers l'épreuve de référence de la course (la même que dans les
       listes), quel que soit le format par lequel on y arrive ; les paramètres de tri et filtre sont exclus.
     - Descriptions des listes `/races` et `/athletes` ; `/search` en `noindex, follow`.
-    - `app/robots.ts` : tout est explorable sauf `/search`. Pas de sitemap pour l'instant (choix : les id
-      d'athlètes ne sont pas stables).
     - `app/not-found.tsx` : page 404 en français (`noindex`), avec liens vers les courses et la recherche.
+    - Passe SEO du 22/11/2026 :
+        - Codes HTTP : `proxy.ts` (le middleware de Next 16) vérifie l'id de `/races/[id]`,
+          `/races/[id]/results` et `/athletes/[id]` avant le rendu, via `GET /resolve/{races|athletes}/{id}` :
+          vraie redirection 308 pour un id remplacé (suffixe et paramètres gardés), vraie 404 pour un id
+          inconnu (réécriture vers un chemin inexistant, qui affiche `app/not-found.tsx`). Avant, ces pages
+          répondaient 200 même pour Googlebot : leur `loading.tsx` fait envoyer la page avant que `notFound()`
+          ou la redirection ne soient décidés (redirection en JavaScript seulement, « soft 404 »). En cas
+          d'erreur de l'API, le proxy laisse passer et la page gère l'erreur. Coût : un appel d'API par page
+          course, classement ou athlète.
+        - Sitemaps (les id sont stables depuis `transform/ids_stables.sql`) : `app/sitemap.ts` → `/sitemap.xml`
+          (accueil, listes, 2 097 pages course à leur URL canonique, 3 574 classements, avec date) ;
+          `app/athletes/sitemap.ts` → `/athletes/sitemap/{0-9}.xml`, 50 000 profils par fichier (258 342
+          athlètes, 6 fichiers remplis). Le nombre de fichiers est fixe (10) parce que `generateSitemaps`
+          s'exécute au build, sans API ; `app/robots.ts` ne liste que les fichiers remplis
+          (`GET /sitemap/athletes/count`). API : `GET /sitemap/races`, `GET /sitemap/athletes/{page}`.
+        - Description du classement selon la page : « Participants … » pour une épreuve sans temps
+          (`sans_temps`), temps de natation, vélo et course à pied (triathlon) ou de course à pied et de vélo
+          (duathlon) seulement quand la page les affiche, sinon temps total.
+        - URL canoniques : `/races` et `/athletes` pour leurs variantes filtrées (`?q=…`, `?annee=…`), `/` pour
+          l'accueil (avec `og:url`). `pageMetadata` (`lib/seo.ts`) est partagé par ces pages.
+        - Au déploiement : renseigner `SITE_URL` (sinon URL canoniques, Open Graph et sitemaps pointent vers
+          `http://localhost:3000`).
 
 En cours :
 - rien.

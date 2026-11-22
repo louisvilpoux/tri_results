@@ -1057,3 +1057,76 @@ def get_redirection(
     if new_id is None:
         raise HTTPException(status_code=404, detail="No redirection")
     return {"id": new_id}
+
+
+@app.get("/resolve/{kind}/{page_id}")
+def resolve_page(
+    kind: Literal["races", "athletes"], page_id: int, db: Session = Depends(get_db)
+) -> dict[str, Any]:
+    """Ce que doit faire le site pour /races/{id} ou /athletes/{id}, avant d'afficher la page
+    (triathlon-results/proxy.ts) : {"id": id, "redirect": false} si la page existe,
+    {"id": nouvel_id, "redirect": true} si l'id a été remplacé, 404 sinon. Le site répond
+    ainsi par un vrai 308 ou une vraie 404 (sans cette étape, Next.js commence à envoyer la
+    page en 200 avant de savoir qu'elle n'existe pas)."""
+    if kind == "races":
+        exists = db.get(Race, page_id) is not None
+    else:
+        # même condition que le profil (GET /athletes/{id}) : au moins un résultat individuel
+        exists = bool(db.scalar(select(athlete_results(page_id).exists())))
+    if exists:
+        return {"id": page_id, "redirect": False}
+    return {"id": get_redirection(kind, page_id, db)["id"], "redirect": True}
+
+
+# ----------------------
+# Sitemaps
+# ----------------------
+# Listes d'id pour les sitemaps du site (triathlon-results/app/sitemap.ts). Les id sont stables
+# d'une reconstruction à l'autre (transform/ids_stables.sql) : les URL restent valables.
+SITEMAP_SIZE = 50_000  # limite de Google par fichier sitemap
+
+
+@app.get("/sitemap/races")
+def sitemap_races(db: Session = Depends(get_db)) -> dict[str, list[dict[str, Any]]]:
+    """Pages course (une par nom + année : l'épreuve au plus petit id, comme les listes et l'URL
+    canonique) et pages classement (une par épreuve), avec leur date."""
+    has_results = select(Result.id).where(Result.epreuve_id == Race.id).exists()
+    events = db.execute(
+        select(func.min(Race.id).label("id"), func.max(Race.date_epreuve).label("date"))
+        .where(has_results)
+        .group_by(Race.name_epreuve, Race.year_epreuve)
+        .order_by(func.min(Race.id))
+    ).all()
+    rankings = db.execute(
+        select(Race.id, Race.date_epreuve.label("date")).where(has_results).order_by(Race.id)
+    ).all()
+    return {
+        "events": [{"id": row.id, "date": row.date} for row in events],
+        "rankings": [{"id": row.id, "date": row.date} for row in rankings],
+    }
+
+
+def athletes_with_profile() -> Select:
+    """Id des athlètes qui ont un profil (au moins un résultat individuel), par id croissant."""
+    return (
+        select(Result.athlete_id)
+        .where(Result.equipe.is_(False), Result.sous_classement.is_(False))
+        .distinct()
+        .order_by(Result.athlete_id)
+    )
+
+
+@app.get("/sitemap/athletes/count")
+def sitemap_athletes_count(db: Session = Depends(get_db)) -> dict[str, int]:
+    """Nombre d'athlètes avec un profil et nombre de fichiers sitemap nécessaires."""
+    total = db.scalar(select(func.count()).select_from(athletes_with_profile().subquery())) or 0
+    return {"total": total, "pages": -(-total // SITEMAP_SIZE), "page_size": SITEMAP_SIZE}
+
+
+@app.get("/sitemap/athletes/{page}")
+def sitemap_athletes(page: int, db: Session = Depends(get_db)) -> list[int]:
+    """Id des athlètes avec un profil, par tranche de SITEMAP_SIZE (page 0, 1, 2…)."""
+    if page < 0:
+        raise HTTPException(status_code=404, detail="Page not found")
+    query = athletes_with_profile().offset(page * SITEMAP_SIZE).limit(SITEMAP_SIZE)
+    return list(db.scalars(query))

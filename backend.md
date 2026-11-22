@@ -207,3 +207,7 @@ Il est lancé avec la commande `python ./transform/run_sql.py`.
 
 API : `GET /redirections/{races|athletes}/{ancien_id}` renvoie l'id qui remplace un ancien id (404 s'il n'y en
 a pas) ; le site s'en sert pour rediriger les anciens liens.
+`GET /resolve/{races|athletes}/{id}` dit si la page existe (`redirect: false`), a été remplacée (nouvel id,
+`redirect: true`) ou n'existe pas (404) : `triathlon-results/proxy.ts` répond ainsi par un vrai 308 ou une vraie
+404. `GET /sitemap/races`, `GET /sitemap/athletes/count` et `GET /sitemap/athletes/{page}` (50 000 id par page)
+alimentent les sitemaps du site.

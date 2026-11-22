@@ -4,13 +4,15 @@ import { AthleteHitList } from "@/components/search/athlete-hit-list";
 import { FILTER_FIELD_CLASS, FilterField, FilterForm } from "@/components/shared/filter-form";
 import { PaginationBar } from "@/components/shared/pagination-bar";
 import { listAthletes } from "@/lib/api";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Athlètes",
-  description:
-    "Les athlètes de triathlon et duathlon : nombre de courses, club et dernière saison, " +
+// URL canonique /athletes : les variantes filtrées (?q=…, ?sexe=…) ne sont pas des doublons.
+export const metadata: Metadata = pageMetadata(
+  "Athlètes",
+  "Les athlètes de triathlon et duathlon : nombre de courses, club et dernière saison, " +
     "avec recherche par nom.",
-};
+  "/athletes"
+);
 
 const PAGE_SIZE = 20;
 

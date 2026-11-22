@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -17,6 +18,19 @@ import { LatestRaces, LatestRacesLoading } from "@/components/home/latest-races"
 import { PersonWithBike } from "@/components/home/person-with-bike-icon";
 import { TrailIntoWater } from "@/components/home/trail-into-water-icon";
 import { SearchForm } from "@/components/search/search-form";
+import { OPEN_GRAPH_DEFAULTS } from "@/lib/seo";
+
+// Titre et description : ceux du layout. URL canonique et og:url, absentes jusqu'ici.
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+  openGraph: {
+    ...OPEN_GRAPH_DEFAULTS,
+    title: "PACE — Triathlon & Duathlon",
+    description:
+      "Retrouve les résultats, classements et performances des athlètes de triathlon et duathlon.",
+    url: "/",
+  },
+};
 
 interface Discipline {
   name: string;

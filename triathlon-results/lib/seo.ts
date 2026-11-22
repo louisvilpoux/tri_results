@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { formatDate } from "@/lib/format";
 import type { AthleteProfile } from "@/types/athlete";
 import type { Race, RaceEvent } from "@/types/race";
+import { DISCIPLINES_WITHOUT_SPLITS } from "@/types/result";
 
 /** Adresse publique du site, utilisée pour les URL canoniques et Open Graph. */
 export const SITE_URL = process.env.SITE_URL ?? "http://localhost:3000";
@@ -15,8 +16,12 @@ export const OPEN_GRAPH_DEFAULTS = {
   locale: "fr_FR",
 } as const;
 
-/** Titre et description communs aux balises classiques et Open Graph. */
-function pageMetadata(title: string, description: string, path: string): Metadata {
+/**
+ * Titre, description et URL canonique, communs aux balises classiques et Open Graph. `path`
+ * est l'URL canonique : pour une liste filtrée (/races?q=ardres), la liste sans filtre, pour
+ * que ses variantes ne soient pas indexées comme des doublons.
+ */
+export function pageMetadata(title: string, description: string, path: string): Metadata {
   return {
     title,
     description,
@@ -56,15 +61,40 @@ export function raceEventMetadata(event: RaceEvent): Metadata {
   return pageMetadata(title, description, `/races/${canonicalRaceId(event)}`);
 }
 
+/**
+ * Temps détaillés affichés par le classement, d'après la discipline : aucun quand la page
+ * n'affiche que le total (aquathlon, bike&run, swimrun, ou source sans temps intermédiaire).
+ */
+function splitsLabel(race: Race): string | null {
+  const discipline = race.type_epreuve ?? "";
+  if (!race.avec_segments || DISCIPLINES_WITHOUT_SPLITS.includes(discipline)) return null;
+  if (discipline.includes("duathlon")) return "temps de course à pied et de vélo";
+  if (discipline.includes("triathlon")) return "temps de natation, vélo et course à pied";
+  return null;
+}
+
 export function raceResultsMetadata(race: Race): Metadata {
   const name = race.name_epreuve ?? "Course";
-  const title = `Classement ${name}${race.format_epreuve ? ` (${race.format_epreuve})` : ""}`;
-  const description =
-    `Classement complet de ${name}` +
-    (race.date_epreuve ? ` du ${formatDate(race.date_epreuve)}` : "") +
-    " : rangs, catégories et temps de natation, vélo et course à pied.";
+  const format = race.format_epreuve ? ` (${race.format_epreuve})` : "";
+  const date = race.date_epreuve ? ` du ${formatDate(race.date_epreuve)}` : "";
+  const path = `/races/${race.id}/results`;
 
-  return pageMetadata(title, description, `/races/${race.id}/results`);
+  // Épreuve sans temps ni classement publiés : la page liste les participants (voir sans_temps).
+  if (race.sans_temps) {
+    return pageMetadata(
+      `Participants ${name}${format}`,
+      `Participants de ${name}${date} : liste par ordre alphabétique (temps et classement ` +
+        "non publiés par la source).",
+      path
+    );
+  }
+
+  const splits = splitsLabel(race);
+  // « rangs, catégories, temps total et temps de natation, vélo et course à pied. »
+  const description =
+    `Classement complet de ${name}${date} : rangs, catégories, temps total` +
+    (splits ? ` et ${splits}.` : ".");
+  return pageMetadata(`Classement ${name}${format}`, description, path);
 }
 
 export function athleteMetadata(athlete: AthleteProfile): Metadata {
