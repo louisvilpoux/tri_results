@@ -68,6 +68,19 @@ export default async function RacePage({ params }: PageProps) {
 
       <RaceEventHeader event={event} />
 
+      {trends && trends.series.length > 0 && (
+        <RaceTrendsBlock
+          trends={trends}
+          currentYear={event.year_epreuve}
+          // format affiché d'abord : le premier format de cette édition qui a des tendances
+          initialKey={event.formats
+            .map((raceFormat) => `${raceFormat.type_epreuve}|${raceFormat.format_epreuve}`)
+            .find((key) =>
+              trends.series.some((item) => `${item.type_epreuve}|${item.format_epreuve}` === key)
+            )}
+        />
+      )}
+
       <section className="space-y-4">
         <h2 className="text-2xl font-extrabold tracking-tight">Formats</h2>
 
@@ -83,19 +96,6 @@ export default async function RacePage({ params }: PageProps) {
           </p>
         )}
       </section>
-
-      {trends && trends.series.length > 0 && (
-        <RaceTrendsBlock
-          trends={trends}
-          currentYear={event.year_epreuve}
-          // format affiché d'abord : le premier format de cette édition qui a des tendances
-          initialKey={event.formats
-            .map((raceFormat) => `${raceFormat.type_epreuve}|${raceFormat.format_epreuve}`)
-            .find((key) =>
-              trends.series.some((item) => `${item.type_epreuve}|${item.format_epreuve}` === key)
-            )}
-        />
-      )}
 
       <RaceEditions editions={event.editions} currentYear={event.year_epreuve} />
     </div>

@@ -179,7 +179,7 @@ Réalisés
     - Dernières compétitions : les 6 courses les plus récentes ayant des résultats (`GET /events`, même ordre
       que `/races`), chargées en streaming avec un squelette, et lien « Toutes les courses ».
       Code : `components/home/latest-races.tsx`.
-- Tendances (22/11/2026) : bloc de la page course (`/races/[id]`), sous les cartes de format
+- Tendances (22/11/2026) : bloc de la page course (`/races/[id]`), entre l'en-tête et les cartes de format
   (`components/races/race-trends.tsx`, `GET /races/{id}/trends`). Pour une discipline et un format de la course
   (choix « Triathlon L »…, le premier format de l'édition affichée d'abord) et Tous / Hommes / Femmes :
     - temps total par édition : courbes de la médiane et du top 10 % (mêmes calculs que les repères) ;
