@@ -179,6 +179,22 @@ Réalisés
     - Dernières compétitions : les 6 courses les plus récentes ayant des résultats (`GET /events`, même ordre
       que `/races`), chargées en streaming avec un squelette, et lien « Toutes les courses ».
       Code : `components/home/latest-races.tsx`.
+- Tendances (22/11/2026) : bloc de la page course (`/races/[id]`), sous les cartes de format
+  (`components/races/race-trends.tsx`, `GET /races/{id}/trends`). Pour une discipline et un format de la course
+  (choix « Triathlon L »…, le premier format de l'édition affichée d'abord) et Tous / Hommes / Femmes :
+    - temps total par édition : courbes de la médiane et du top 10 % (mêmes calculs que les repères) ;
+    - petits graphiques des médianes de natation, vélo, course à pied (course 1, vélo, course 2 en duathlon) par
+      édition ;
+    - tableau : classés (et part de classés), médiane et top 10 % avec l'écart à l'édition précédente, lien vers
+      chaque classement ;
+    - l'édition affichée est mise en valeur ; une phrase rappelle qu'une évolution peut venir du parcours, de la
+      météo ou d'une source différente.
+  Règles : séries d'au moins 2 éditions avec des temps ; une épreuve par année (la plus grande, hors
+  sous-classement) ; formats Jeunes et Relais exclus (plusieurs courses d'âges ou d'équipes chaque année).
+  Graphiques en SVG sans bibliothèque, dessinés à la largeur mesurée du conteneur (`ResizeObserver`) pour garder
+  un texte de 11 px sur téléphone comme sur grand écran ; années espacées d'au moins 34 px. Un échec de l'API des
+  tendances n'empêche pas d'afficher la course. `components/shared/choice-group.tsx` (boutons à choix unique)
+  est partagé avec les repères.
 - page de résultats d'une course : `/races/[id]/results` (et non `/formats/[id]/results` comme prévu plus haut).
     - En-tête alimenté par `GET /races/{id}` (nom, date, format, lieu) ; 404 si l'épreuve n'existe pas.
     - Tri en cliquant sur les en-têtes : classement, athlète, natation, T1, vélo, T2, course, total.

@@ -495,7 +495,12 @@ def get_race_stats(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any
     race = db.get(Race, race_id)
     if race is None:
         raise HTTPException(status_code=404, detail="Race not found")
+    return race_benchmarks(db, race)
 
+
+def race_benchmarks(db: Session, race: Race) -> dict[str, Any]:
+    """Calcul de GET /races/{id}/stats, réutilisé par les tendances (GET /races/{id}/trends)."""
+    race_id = race.id
     discipline = (race.type_epreuve or "").removeprefix("cross ")
     columns: list[tuple[str, str, str]] = [("total", "Total", "total_time")]
     if discipline not in DISCIPLINES_WITHOUT_SPLITS and race_has_splits(db, race_id):
@@ -535,6 +540,123 @@ def get_race_stats(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any
         "segments": segments_of(rows),
         "par_sexe": {sexe: segments_of([row for row in rows if row.sexe == sexe]) for sexe in "MF"},
     }
+
+
+# ----------------------
+# Tendances d'une course entre éditions
+# ----------------------
+# Bloc « Tendances » de la page course : pour chaque discipline et format, médiane et top 10 %
+# du temps total, médiane de chaque segment et part de classés, édition par édition. Mêmes
+# calculs que les repères (race_benchmarks), sur une épreuve par année.
+
+# Formats sans tendance : plusieurs courses d'âges ou d'équipes différents chaque année,
+# dont les médianes ne sont pas comparables d'une édition à l'autre.
+FORMATS_WITHOUT_TRENDS = {"JEUNES", "RELAIS"}
+
+
+def edition_summary(segments: list[dict[str, Any]], participants: int) -> dict[str, Any]:
+    """Résumé d'une édition pour un sexe (ou tous) : classés, part de classés, médiane et top
+    10 % du temps total, médiane de chaque segment."""
+    total = next((segment for segment in segments if segment["key"] == "total"), None)
+    classes = total["classes"] if total else 0
+    return {
+        "participants": participants,
+        "classes": classes,
+        "taux_classes": round(classes / participants, 3) if participants else None,
+        "mediane": total["mediane"] if total else None,
+        "top10": total["top10"] if total else None,
+        "segments": {
+            segment["key"]: segment["mediane"] for segment in segments if segment["key"] != "total"
+        },
+    }
+
+
+@app.get("/races/{race_id}/trends")
+def get_race_trends(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Tendances de la course de l'épreuve `race_id` (même nom), par discipline et format, avec au
+    moins deux éditions. Une épreuve par année : celle qui a le plus de résultats, hors
+    sous-classement (282 cas avec plusieurs épreuves d'un même format la même année)."""
+    race = db.get(Race, race_id)
+    if race is None:
+        raise HTTPException(status_code=404, detail="Race not found")
+
+    candidates = db.execute(
+        select(Race, func.count(Result.id).label("participants"))
+        .join(Result, Result.epreuve_id == Race.id)
+        .where(
+            Race.name_epreuve == race.name_epreuve,
+            Race.year_epreuve.isnot(None),
+            Race.type_epreuve.isnot(None),
+            Race.format_epreuve.isnot(None),
+            Race.format_epreuve != "",
+            Race.format_epreuve.notin_(FORMATS_WITHOUT_TRENDS),
+        )
+        .group_by(Race.id)
+        .having(func.bool_and(Result.sous_classement.is_(False)))
+    ).all()
+
+    # une épreuve par (discipline, format, année) : la plus grande
+    chosen: dict[tuple[str, str, str], tuple[Race, int]] = {}
+    for candidate, participants in candidates:
+        key = (candidate.type_epreuve, candidate.format_epreuve, candidate.year_epreuve)
+        if key not in chosen or participants > chosen[key][1]:
+            chosen[key] = (candidate, participants)
+
+    series_editions: dict[tuple[str, str], list[tuple[Race, int]]] = {}
+    for (discipline, race_format, _), edition in chosen.items():
+        series_editions.setdefault((discipline, race_format), []).append(edition)
+
+    series = []
+    for (discipline, race_format), editions in series_editions.items():
+        if len(editions) < 2:
+            continue
+        editions.sort(key=lambda edition: edition[0].year_epreuve)
+        segment_labels: dict[str, str] = {}
+        rows = []
+        for edition, participants in editions:
+            benchmarks = race_benchmarks(db, edition)
+            participants_by_sex = dict(
+                db.execute(
+                    select(Result.sexe, func.count(Result.id))
+                    .where(Result.epreuve_id == edition.id, Result.sexe.in_(["M", "F"]))
+                    .group_by(Result.sexe)
+                ).all()
+            )
+            for segment in benchmarks["segments"]:
+                if segment["key"] != "total":
+                    segment_labels.setdefault(segment["key"], segment["label"])
+            rows.append(
+                {
+                    "year": edition.year_epreuve,
+                    "race_id": edition.id,
+                    "date": edition.date_epreuve,
+                    "tous": edition_summary(benchmarks["segments"], participants),
+                    **{
+                        sexe: edition_summary(
+                            benchmarks["par_sexe"][sexe], participants_by_sex.get(sexe, 0)
+                        )
+                        for sexe in "MF"
+                    },
+                }
+            )
+        # éditions sans aucun temps (liste de participants) : rien à comparer
+        rows = [row for row in rows if row["tous"]["mediane"] is not None]
+        if len(rows) < 2:
+            continue
+        series.append(
+            {
+                "type_epreuve": discipline,
+                "format_epreuve": race_format,
+                "sort_key": race_format_sort_key(editions[0][0]),
+                "segments": [
+                    {"key": key, "label": label} for key, label in segment_labels.items()
+                ],
+                "editions": rows,
+            }
+        )
+
+    series.sort(key=lambda item: item.pop("sort_key"))
+    return {"id": race_id, "name_epreuve": race.name_epreuve, "series": series}
 
 
 # ----------------------

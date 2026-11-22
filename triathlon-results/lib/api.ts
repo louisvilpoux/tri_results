@@ -3,7 +3,7 @@ import type {
   AthleteResultsQuery,
   AthleteResultsResponse,
 } from "@/types/athlete";
-import type { Race, RaceEvent, RaceStats } from "@/types/race";
+import type { Race, RaceEvent, RaceStats, RaceTrends } from "@/types/race";
 import type {
   AthleteListResponse,
   EventListResponse,
@@ -83,6 +83,11 @@ export function getSitemapAthletes(page: number): Promise<number[]> {
 /** Repères de niveau d'une épreuve : vainqueur, podium, top 10/25/50 %, catégories… */
 export function getRaceStats(raceId: string): Promise<RaceStats> {
   return apiGet<RaceStats>(`/races/${raceId}/stats`);
+}
+
+/** Tendances de la course entre éditions, par discipline et format. */
+export function getRaceTrends(raceId: string): Promise<RaceTrends> {
+  return apiGet<RaceTrends>(`/races/${raceId}/trends`);
 }
 
 export function getRace(raceId: string): Promise<Race> {

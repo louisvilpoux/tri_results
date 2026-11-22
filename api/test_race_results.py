@@ -461,3 +461,33 @@ def test_race_stats_small_and_timeless_races() -> None:
     )
     assert client.get(f"/races/{timeless_id}/stats").json()["segments"] == []
     assert client.get("/races/0/stats").status_code == 404
+
+
+def test_race_trends() -> None:
+    """Tendances d'une course (GET /races/{id}/trends) : une série par discipline et format avec
+    au moins deux éditions, une épreuve par année (années croissantes), ni Jeunes ni Relais ;
+    médiane et top 10 % égaux aux repères de l'épreuve retenue."""
+    race_id = race_with(
+        """
+        SELECT MIN(id) FROM races
+        WHERE name_epreuve = (
+            SELECT name_epreuve FROM races
+            WHERE format_epreuve = 'L' AND type_epreuve = 'triathlon'
+            GROUP BY name_epreuve HAVING COUNT(DISTINCT year_epreuve) >= 5
+            ORDER BY name_epreuve LIMIT 1
+        )
+        """
+    )
+    trends = client.get(f"/races/{race_id}/trends").json()
+    assert trends["series"]
+    for series in trends["series"]:
+        assert series["format_epreuve"] not in ("JEUNES", "RELAIS")
+        years = [edition["year"] for edition in series["editions"]]
+        assert len(years) >= 2 and years == sorted(set(years))
+        edition = series["editions"][-1]
+        total = client.get(f"/races/{edition['race_id']}/stats").json()["segments"][0]
+        assert edition["tous"]["mediane"] == total["mediane"]
+        assert edition["tous"]["top10"] == total["top10"]
+        assert edition["tous"]["classes"] <= edition["tous"]["participants"]
+        assert set(edition["tous"]["segments"]) <= {s["key"] for s in series["segments"]}
+    assert client.get("/races/0/trends").status_code == 404

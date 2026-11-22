@@ -218,3 +218,7 @@ vainqueur, podium (3ᵉ), top 10 % et 25 % (comme `percentile_disc`), médiane, 
 chaque catégorie, pour tous les classés (`segments`) puis par sexe (`par_sexe`, M et F). Un top 10 % ou 25 %
 dont le rang tombe dans le podium vaut null (top 10 % à partir de 31 classés, top 25 % de 13) ; histogramme
 à partir de 20 classés.
+`GET /races/{id}/trends` : tendances de la course (même nom) entre éditions, par discipline et format (séries
+d'au moins 2 éditions, Jeunes et Relais exclus). Une épreuve par année : la plus grande, hors sous-classement.
+Pour chaque édition, tous puis par sexe : participants, classés, part de classés, médiane et top 10 % du temps
+total, médiane de chaque segment (calculs de `race_benchmarks`, partagés avec `/stats`).

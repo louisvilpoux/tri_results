@@ -5,7 +5,8 @@ import { ArrowLeft } from "lucide-react";
 import { RaceEditions } from "@/components/races/race-editions";
 import { RaceEventHeader } from "@/components/races/race-event-header";
 import { RaceFormatCard } from "@/components/races/race-format-card";
-import { ApiError, getRaceEvent } from "@/lib/api";
+import { RaceTrendsBlock } from "@/components/races/race-trends";
+import { ApiError, getRaceEvent, getRaceTrends } from "@/lib/api";
 import { raceEventMetadata } from "@/lib/seo";
 import { redirectOrNotFound } from "@/lib/redirections";
 
@@ -29,9 +30,14 @@ export default async function RacePage({ params }: PageProps) {
   const { id } = await params;
 
   let event;
+  let trends;
 
   try {
-    event = await getRaceEvent(id);
+    [event, trends] = await Promise.all([
+      getRaceEvent(id),
+      // Les tendances sont un plus : leur échec n'empêche pas d'afficher la course.
+      getRaceTrends(id).catch(() => null),
+    ]);
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       await redirectOrNotFound("races", id);
@@ -77,6 +83,19 @@ export default async function RacePage({ params }: PageProps) {
           </p>
         )}
       </section>
+
+      {trends && trends.series.length > 0 && (
+        <RaceTrendsBlock
+          trends={trends}
+          currentYear={event.year_epreuve}
+          // format affiché d'abord : le premier format de cette édition qui a des tendances
+          initialKey={event.formats
+            .map((raceFormat) => `${raceFormat.type_epreuve}|${raceFormat.format_epreuve}`)
+            .find((key) =>
+              trends.series.some((item) => `${item.type_epreuve}|${item.format_epreuve}` === key)
+            )}
+        />
+      )}
 
       <RaceEditions editions={event.editions} currentYear={event.year_epreuve} />
     </div>

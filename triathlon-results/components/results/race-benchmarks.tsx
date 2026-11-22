@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Gauge } from "lucide-react";
 
+import { ChoiceGroup } from "@/components/shared/choice-group";
 import type { HistogramBar, RaceStats, SegmentBenchmarks } from "@/types/race";
 
 type SexeFilter = "tous" | "M" | "F";
@@ -71,40 +72,6 @@ export function RaceBenchmarks({ stats }: { stats: RaceStats }) {
         <CategoryThirds segment={segment} />
       </div>
     </section>
-  );
-}
-
-/** Groupe de boutons à choix unique (sexe, temps). */
-function ChoiceGroup<T extends string>({
-  label,
-  options,
-  selected,
-  onSelect,
-}: {
-  label: string;
-  options: { value: T; label: string }[];
-  selected: T;
-  onSelect: (value: T) => void;
-}) {
-  return (
-    <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-1 rounded-lg bg-gray-100 p-1">
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          role="radio"
-          aria-checked={option.value === selected}
-          onClick={() => onSelect(option.value)}
-          className={
-            option.value === selected
-              ? "rounded-md bg-white px-3 py-1.5 text-sm font-bold text-[#17202E] shadow-sm"
-              : "rounded-md px-3 py-1.5 text-sm font-semibold text-gray-500 hover:text-[#17202E]"
-          }
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
   );
 }
 

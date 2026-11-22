@@ -103,3 +103,41 @@ export interface RaceStats {
   /** Mêmes repères pour les hommes (M) et les femmes (F). */
   par_sexe: { M: SegmentBenchmarks[]; F: SegmentBenchmarks[] };
 }
+
+// Tendances d'une course entre éditions (GET /races/{id}/trends).
+
+/** Une édition pour tous les classés, ou pour un sexe. */
+export interface EditionSummary {
+  participants: number;
+  classes: number;
+  /** Part de classés (0 à 1). */
+  taux_classes: number | null;
+  mediane: string | null;
+  /** null sous 31 classés (il tomberait dans le podium). */
+  top10: string | null;
+  /** Médiane de chaque segment, par clé (swim, bike, run ; run1, bike, run2 en duathlon). */
+  segments: Record<string, string>;
+}
+
+export interface TrendEdition {
+  year: string;
+  race_id: number;
+  date: string | null;
+  tous: EditionSummary;
+  M: EditionSummary;
+  F: EditionSummary;
+}
+
+/** Une discipline et un format d'une course, avec au moins deux éditions. */
+export interface TrendSeries {
+  type_epreuve: string;
+  format_epreuve: string;
+  segments: { key: string; label: string }[];
+  editions: TrendEdition[];
+}
+
+export interface RaceTrends {
+  id: number;
+  name_epreuve: string;
+  series: TrendSeries[];
+}
