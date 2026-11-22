@@ -45,10 +45,10 @@ segments prolivesport : 100 % cohérents avec le total à 5 % près (fftri 98,1 
 | Q9 | Noms mal encodés | 0 | 0 | Corrigé |
 | Q10 | Segments prolivesport décalés | partiel | 0 ligne incohérente | **Corrigé** |
 | Q11 | Noms de course | 0 cas connu | 0 cas | Corrigé |
-| Q12 | Athlètes avec résultats des deux sexes | 634 | 636 | Atténué |
+| Q12 | Athlètes avec résultats des deux sexes | 634 | 668 (636 avant Q15) | Atténué |
 | Q13 | Épreuves sans format | 57 | 57 | **Ouvert** |
 | Q14 | Noms d'athlètes (tirets, virgules, tronqués, homonymes) | — | 0 clé avec ponctuation ; 477 noms tronqués rattachés ; 392 homonymes séparés | **Corrigé** |
-| Q15 | Sexe chronoweb remplacé par un rang | — | 31 820 lignes chronoweb (62 %) | **Nouveau** |
+| Q15 | Sexe chronoweb : premier caractère de la catégorie | — | 31 820 lignes chronoweb (62 %) ; 0 après correction | **Corrigé** le 22/11 |
 | Q16 | Identifiants instables | constat | 0 changement entre deux reconstructions | **Corrigé** |
 | Q17 | Noms de course sans ponctuation (tirés de l'adresse fftri) | — | 2 courses, corrigées par alias | **Corrigé** |
 
@@ -66,6 +66,8 @@ segments prolivesport : 100 % cohérents avec le total à 5 % près (fftri 98,1 
 | Q10 | `edfdfb3` | Segments prolivesport vidés quand leur somme s'écarte de plus de 5 % du total, et sur toute l'épreuve quand la moitié de ses lignes le sont. |
 | Q16 | `126f29f` | Id d'épreuve et d'athlète stables (`ids_stables`), anciens id redirigés. |
 | Q8 | `d38c0de` | Club affiché : celui de la course la plus récente, le même dans la liste et le profil. |
+| Q17 | `5f93b9d` | Alias « La 0-3000 » et « T97.4 » (noms fftri sans ponctuation). |
+| Q15 | sexe chronoweb | Sexe lu dans la catégorie après le rang (`sexe_categorie`) : 0 valeur autre que M, F ou vide ; chronoweb passe de 15 912 à 47 462 résultats avec M ou F. |
 
 ---
 
@@ -95,14 +97,19 @@ Piste : seuil minimal par discipline et format, appliqué à l'épreuve entière
 classés) plutôt qu'à la ligne : une épreuve S dont la médiane est sous 20 minutes est marquée
 `temps_suspect` en bloc.
 
-### Q15 — Sexe chronoweb remplacé par un rang (nouveau)
-31 820 lignes chronoweb (62 %) ont un nombre dans la colonne sexe (« 1 », « 5 », « 9 ») : c'est
-leur rang dans leur sexe ou leur catégorie, la catégorie elle-même étant « 5/FS3 », « 9/FSE »,
-« 1/MASC ». 3 872 autres lignes n'ont pas de sexe. Conséquences : le filtre sexe du classement
-ignore ces lignes, et le sexe d'un athlète qui ne court que chez chronoweb est inconnu. fftri a
-aussi 7 491 valeurs autres que M/F (première lettre d'une catégorie : E, J…).
-Piste : déduire le sexe de la lettre F/M de la catégorie (« 5/FS3 » → F) dans raw_data.sql, et
-séparer le rang du préfixe « n/ » (lié à Q5).
+### Q15 — Sexe chronoweb (corrigé le 22/11/2026)
+31 820 lignes chronoweb (62 %) avaient un chiffre dans la colonne sexe. Ce n'était pas un rang :
+raw_data.sql prenait le premier caractère de la catégorie, et chronoweb écrit souvent la
+catégorie précédée du rang (« 14/MV3 » → « 1 », « 34/MVE » → « 3 »). fftri avait de même 7 491
+valeurs autres que M/F (« ELM » → « E », « 40-44 » → « 4 »). Conséquences : le filtre sexe du
+classement ignorait ces lignes, et le sexe d'un athlète qui ne court que chez chronoweb était
+inconnu.
+
+Correction : `sexe_categorie` lit la lettre M ou F qui ouvre la catégorie, après le rang éventuel ;
+les catégories mixtes (« MIXT »), « MASTERS », « MA » et minimes (« MI », « MINC ») ne donnent pas
+de sexe. Résultat : plus aucune valeur autre que M, F ou vide ; chronoweb a 47 462 résultats sur
+51 604 avec M ou F (15 912 avant) ; restent vides les lignes sans catégorie (4 142 chronoweb,
+21 838 fftri, dont « ELM », « JU », « 40-44 »). Le rang « n/ » reste dans la catégorie (Q5).
 
 ### Q5 — Catégories d'âge (mis de côté)
 3 050 valeurs distinctes (chronoweb 2 223, fftri 794, prolivesport 101), dont 2 592 parasites :
@@ -131,8 +138,9 @@ et « T974 » ; leurs résultats étaient justes. Vrais noms lus sur fftri.t2are
 nom publié). D'autres noms peuvent avoir perdu leur ponctuation sans être aussi visibles.
 
 ### Q12 — Athlètes avec résultats des deux sexes
-636 athlètes (634 le 20/11) : homonymes réunis ou sexe mal renseigné. Le profil et le filtre
-affichent le sexe le plus fréquent. Q15 en explique une partie.
+668 athlètes (634 le 20/11, 636 avant la correction de Q15) : homonymes réunis ou sexe mal
+renseigné. La hausse vient du sexe chronoweb désormais connu, qui révèle des conflits jusque-là
+invisibles. Le profil et le filtre affichent le sexe le plus fréquent.
 
 ### Autres constats
 - 95 résultats ont un nom vide ou anonyme (« XXX XXX » 23, « .  . » 13, « ??? »…) : chacun de ces
@@ -152,6 +160,5 @@ affichent le sexe le plus fréquent. Q15 en explique une partie.
 1. **Q1** : seuil par épreuve (médiane des classés trop basse pour le format), pour les 7
    épreuves prolivesport S/XS, et temps négatifs vidés. C'est ce qui fausse encore des meilleurs
    temps de profil.
-2. **Q15** : sexe chronoweb déduit de la catégorie.
-3. Q7 (lieu lu sur la page fftri au scraping), Q13.
-4. Q5 (catégories), mis de côté.
+2. Q7 (lieu lu sur la page fftri au scraping), Q13.
+3. Q5 (catégories), mis de côté.

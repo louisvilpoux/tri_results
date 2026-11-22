@@ -9,6 +9,22 @@ EXCEPTION WHEN others THEN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
+-- Sexe lu dans la catégorie (fftri_t2_area, chronoweb, protiming) : la lettre M ou F qui
+-- l'ouvre, après le rang que chronoweb colle parfois devant (« 14/MV3 » → M, « 1/FSE » → F).
+-- Avant, le sexe était le premier caractère de la catégorie : « 14/MV3 » donnait « 1 », et
+-- 31 789 lignes chronoweb (62 %) n'avaient pas de sexe utilisable (Q15, audit du 22/11/2026).
+-- Les catégories qui commencent par M sans désigner les hommes n'en donnent pas : mixte
+-- (« MIXT », « MIX »), « MASTERS », « MA », minimes (« MI », « MINC »). Sans M ni F
+-- (« ELM », « JU », « 40-44 »…), le sexe est vide.
+CREATE OR REPLACE FUNCTION sexe_categorie(cat text)
+RETURNS text AS $$
+    SELECT CASE
+        WHEN c ~ '^(MIX|MASTER|MA$|MI$|MIN)' THEN NULL
+        ELSE substring(c FROM '^([MF])')
+    END
+    FROM (SELECT regexp_replace(upper(btrim(cat)), '^\d+/', '') AS c) categorie
+$$ LANGUAGE sql IMMUTABLE;
+
 -- Temps chronoweb au format hh:mm:ss, comme les autres sources.
 -- chronoweb lit des cellules Excel : un temps y vaut « 01:29:09 », ou « 01:29:09.357000 » quand
 -- la cellule garde les fractions de seconde (17 % des temps totaux, le 20/11/2026). Les
@@ -43,7 +59,7 @@ bike as bike_time, null as rang_bike, null as rang_course_bike, null as indice_p
 t2 as t2_time, null as rang_t2, null as rang_course_t2, null as indice_performance_t2, 
 run as run_time, null as rang_run, null as rang_course_run, null as indice_performance_run,
 name_epreuve, format_epreuve, year_epreuve, date_epreuve, null as lieu_epreuve,
-scraped_at, 'fftri_t2_area' as source, SUBSTRING(cat FROM 1 FOR 1) as sexe,
+scraped_at, 'fftri_t2_area' as source, sexe_categorie(cat) as sexe,
 null as type_epreuve, null as format_normalise
 FROM raw_fftri_t2_area_0
 -- épreuves contre-la-montre exclues, comme pour toutes les sources (voir prolivesport)
@@ -90,7 +106,7 @@ chronoweb_temps(t2) as t2_time, null as rang_t2, null as rang_course_t2, null as
 chronoweb_temps(run) as run_time, null as rang_run, null as rang_course_run, null as indice_performance_run,
 name_epreuve, format_epreuve, year_epreuve,
 date_epreuve, lieu_epreuve,
-scraped_at, 'chronoweb' as source, SUBSTRING(cat FROM 1 FOR 1) as sexe,
+scraped_at, 'chronoweb' as source, sexe_categorie(cat) as sexe,
 -- format_epreuve est le nom de l'onglet Excel (« Half Relais », « Benjamins », « Aquathlon
 -- 6-9 »…) : discipline et format en sont déduits comme pour prolivesport (voir disciplines.sql)
 d.discipline as type_epreuve,
@@ -119,7 +135,7 @@ t2 as t2_time, null as rang_t2, null as rang_course_t2, null as indice_performan
 run as run_time, null as rang_run, null as rang_course_run, null as indice_performance_run,
 name_epreuve, format_epreuve, EXTRACT(YEAR FROM to_date(date_epreuve, 'DD/MM/YYYY'))::text as year_epreuve, 
 date_epreuve, lieu_epreuve,
-scraped_at, 'protiming' as source, SUBSTRING(cat FROM 1 FOR 1) as sexe,
+scraped_at, 'protiming' as source, sexe_categorie(cat) as sexe,
 null as type_epreuve, null as format_normalise
 from raw_protiming_0
 ;

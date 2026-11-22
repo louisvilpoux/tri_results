@@ -299,3 +299,28 @@ def test_prolivesport_splits_match_the_total() -> None:
     except OperationalError:
         pytest.skip("Base PostgreSQL indisponible")
     assert incoherents == 0
+
+
+def test_sex_is_m_f_or_empty() -> None:
+    """Le sexe est lu dans la catégorie, après le rang que chronoweb colle devant (« 14/MV3 » →
+    M) : jamais un chiffre ni une autre lettre (sexe_categorie, transform/raw_data.sql)."""
+    try:
+        with engine.connect() as connection:
+            row = connection.execute(
+                text(
+                    """
+                    SELECT
+                        COUNT(*) FILTER (WHERE sexe NOT IN ('M', 'F')) AS autres,
+                        COUNT(*) FILTER (WHERE source = 'chronoweb' AND sexe IN ('M', 'F'))
+                            AS chronoweb_m_f,
+                        COUNT(*) FILTER (WHERE source = 'chronoweb') AS chronoweb
+                    FROM results
+                    WHERE NOT equipe
+                    """
+                )
+            ).one()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    assert row.autres == 0
+    if row.chronoweb:
+        assert row.chronoweb_m_f >= 0.9 * row.chronoweb

@@ -92,7 +92,10 @@ Dossier : `transform`
       `prolivesport_team_name` et `chronoweb_team_name` donnent le nom des équipes (bike&run, relais).
     - raw_data.sql : insertion dans la table raw_data des données en union all des différentes tables raw_ .
       Le sexe y est calculé une fois par ligne : colonne `sexe` de la source pour prolivesport (M ou F, vide pour
-      les équipes mixtes X), première lettre de `cat` pour les autres sources. athletes_tmp et results le reprennent.
+      les équipes mixtes X), lettre M ou F qui ouvre `cat` pour les autres sources, après le rang que chronoweb
+      colle parfois devant (`sexe_categorie` : « 14/MV3 » → M ; « MIXT », « MASTERS », « MI »… → vide). Avant le
+      22/11/2026, c'était le premier caractère de `cat` : « 14/MV3 » donnait « 1 » (62 % des lignes chronoweb).
+      athletes_tmp et results le reprennent.
       Les épreuves contre-la-montre (`format_epreuve` contenant le mot « CLM ») sont exclues de toutes les
       sources : chez prolivesport, leurs colonnes de temps sont décalées.
       Les noms et clubs mal encodés (« ThÃ©o » pour « Théo ») sont corrigés par `corrige_encodage` : texte réécrit

@@ -327,6 +327,11 @@ Points connus (données) :
   athlète qui a changé de club (VILPOUX Louis : Courbevoie dans la liste, Wasquehal sur le profil). Le club affiché
   est maintenant partout celui de sa course la plus récente (`transform/athletes_club.sql`) ; pour les rares
   athlètes sans résultat qui donne un club, la liste et le profil lisent leurs lignes dans le même ordre.
+- Sexe chronoweb (22/11/2026) : 62 % des résultats chronoweb avaient un chiffre au lieu de M ou F (le premier
+  caractère de leur catégorie « 14/MV3 ») et échappaient au filtre sexe du classement ; le sexe d'un athlète qui ne
+  court que chez chronoweb était inconnu. Il est maintenant lu dans la catégorie (`sexe_categorie`,
+  `transform/raw_data.sql`) : 47 462 résultats chronoweb sur 51 604 ont M ou F (Triathlon d'Oléron 2024 : 235
+  hommes, 147 femmes, 88 sans catégorie ou en catégorie mixte).
 - Clubs (corrigé le 20/11/2026) : 5 694 clubs écrits avec « ` » au lieu d'une apostrophe (« TRIATHLON CLUB
   D`HAZEBROUCK ») sont corrigés ; 1 519 valeurs qui disaient seulement « pas de club » (« NON LICENCIE », « NL »,
   « NONE », « 0 », « - », « ??? »…) sont vidées, comme les licences individuelles (« INDIVIDUEL », « LICENCE
