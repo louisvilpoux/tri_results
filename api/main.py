@@ -916,6 +916,154 @@ def get_athlete(athlete_id: int, db: Session = Depends(get_db)) -> dict[str, Any
 AthleteResultSortBy = Literal["date_epreuve", "clt", "total_time"]
 
 
+# ----------------------
+# Progression d'un athlète
+# ----------------------
+# Bloc « Progression » du profil : pour chaque discipline et format couru au moins deux fois,
+# une ligne par course classée (temps total et segments, place, classement en %, médiane de
+# l'épreuve et écart à cette médiane), dans l'ordre chronologique. Le front en tire les
+# graphiques par segment et la comparaison des éditions d'une même course.
+
+
+@app.get("/athletes/{athlete_id}/progression")
+def get_athlete_progression(athlete_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Courses classées de l'athlète par discipline et format (au moins deux), sans résultats
+    d'équipe, sous-classements, temps suspects, ni formats Jeunes et Relais."""
+    if not db.scalar(select(athlete_results(athlete_id).exists())):
+        raise HTTPException(status_code=404, detail="Athlete not found")
+
+    rows = db.execute(
+        select(
+            Result.epreuve_id,
+            Result.name_epreuve,
+            Result.date_epreuve,
+            Result.year_epreuve,
+            Result.type_epreuve,
+            Result.format_epreuve,
+            Result.clt,
+            valid_time_or_null(Result.total_time).label("total"),
+            *(
+                valid_time_or_null(getattr(Result, column)).label(column)
+                for column in ("swim_time", "bike_time", "run_time")
+            ),
+        ).where(
+            Result.athlete_id == athlete_id,
+            Result.equipe.is_(False),
+            Result.sous_classement.is_(False),
+            Result.temps_suspect.is_(False),
+            valid_rank_or_null(Result.clt).isnot(None),
+            Result.type_epreuve.isnot(None),
+            Result.format_epreuve.isnot(None),
+            Result.format_epreuve != "",
+            Result.format_epreuve.notin_(FORMATS_WITHOUT_TRENDS),
+        )
+    ).all()
+    race_ids = {row.epreuve_id for row in rows}
+
+    # Par épreuve : nombre de classés et médiane du temps total (mêmes règles que les
+    # repères : classés avec un temps valide, sans temps suspect).
+    benchmark_time = case(
+        (
+            and_(
+                valid_rank_or_null(Result.clt).isnot(None),
+                Result.temps_suspect.is_(False),
+            ),
+            valid_time_or_null(Result.total_time),
+        )
+    )
+    race_stats = {
+        row.epreuve_id: row
+        for row in db.execute(
+            select(
+                Result.epreuve_id,
+                func.count(valid_rank_or_null(Result.clt)).label("classes"),
+                func.percentile_disc(0.5).within_group(benchmark_time).label("mediane"),
+            )
+            .where(Result.epreuve_id.in_(race_ids))
+            .group_by(Result.epreuve_id)
+        )
+    }
+    # épreuves dont le classement affiche les segments (comme race_has_splits)
+    any_split = or_(
+        *(valid_time_or_null(getattr(Result, column)).isnot(None) for column in SPLIT_TIME_COLUMNS)
+    )
+    races_with_splits = set(
+        db.scalars(
+            select(Result.epreuve_id).where(Result.epreuve_id.in_(race_ids), any_split).distinct()
+        )
+    )
+
+    series: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in rows:
+        discipline = row.type_epreuve.removeprefix("cross ")
+        shows_splits = (
+            row.epreuve_id in races_with_splits and discipline not in DISCIPLINES_WITHOUT_SPLITS
+        )
+        segment_columns = SEGMENTS_BY_DISCIPLINE.get(discipline, []) if shows_splits else []
+        stats = race_stats[row.epreuve_id]
+        gap = (
+            time_to_seconds(row.total) - time_to_seconds(stats.mediane)
+            if row.total and stats.mediane
+            else None
+        )
+        item = series.setdefault(
+            (row.type_epreuve, row.format_epreuve),
+            {
+                "type_epreuve": row.type_epreuve,
+                "format_epreuve": row.format_epreuve,
+                "segments": {},
+                "courses": [],
+            },
+        )
+        for key, label, _ in segment_columns:
+            item["segments"].setdefault(key, label)
+        item["courses"].append(
+            {
+                "race_id": row.epreuve_id,
+                "name_epreuve": row.name_epreuve,
+                "date": row.date_epreuve,
+                "year": row.year_epreuve,
+                "total": row.total,
+                "segments": {
+                    key: getattr(row, column)
+                    for key, _, column in segment_columns
+                    if getattr(row, column) is not None
+                },
+                "clt": row.clt,
+                "classes": stats.classes,
+                "pourcentage": round(row.clt / stats.classes, 4) if stats.classes else None,
+                "mediane": stats.mediane,
+                "ecart_mediane": gap,
+            }
+        )
+
+    result = []
+    for item in series.values():
+        if len(item["courses"]) < 2:
+            continue
+        item["courses"].sort(key=lambda course: (course["date"] or course["year"] or ""))
+        # courses faites au moins deux fois (années différentes) : comparaison « même course »
+        years_by_name: dict[str, set[str]] = {}
+        for course in item["courses"]:
+            years_by_name.setdefault(course["name_epreuve"], set()).add(course["year"])
+        item["memes_courses"] = sorted(
+            (
+                {"name_epreuve": name, "editions": len(years)}
+                for name, years in years_by_name.items()
+                if len(years) >= 2
+            ),
+            key=lambda repeated: (-repeated["editions"], repeated["name_epreuve"]),
+        )
+        item["segments"] = [{"key": key, "label": label} for key, label in item["segments"].items()]
+        result.append(item)
+
+    # format le plus couru d'abord (affiché par défaut)
+    result.sort(
+        key=lambda item: (-len(item["courses"]), item["type_epreuve"], item["format_epreuve"])
+    )
+    return {"id": athlete_id, "series": result}
+
+
 @app.get("/athletes/{athlete_id}/results")
 def get_athlete_results(
     athlete_id: int,

@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { TrendingUp } from "lucide-react";
 
 import { ChoiceGroup } from "@/components/shared/choice-group";
+import { LineChart } from "@/components/shared/line-chart";
 import { capitalize } from "@/lib/format";
+import { shortDuration, signedGap, toSeconds } from "@/lib/time";
 import type { EditionSummary, RaceTrends, TrendSeries } from "@/types/race";
 
 type SexeFilter = "tous" | "M" | "F";
@@ -23,33 +25,10 @@ function seriesLabel(series: TrendSeries): string {
   return `${capitalize(series.type_epreuve)} ${series.format_epreuve}`;
 }
 
-function toSeconds(value: string | null | undefined): number | null {
-  if (!value) return null;
-  const [hours, minutes, seconds] = value.split(":").map(Number);
-  return hours * 3600 + minutes * 60 + seconds;
-}
-
-/** Durée lisible pour les axes : « 5h29 », « 34 min ». */
-function shortDuration(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.round((seconds % 3600) / 60);
-  return hours > 0 ? `${hours}h${String(minutes).padStart(2, "0")}` : `${minutes} min`;
-}
-
-/** Écart avec l'édition précédente : « +2:13 », « −0:58 », « +1:02:05 ». */
-function signedGap(current: string | null, previous: string | null): string | null {
-  const a = toSeconds(current);
-  const b = toSeconds(previous);
-  if (a === null || b === null) return null;
-  const gap = Math.abs(a - b);
-  const hours = Math.floor(gap / 3600);
-  const minutes = Math.floor((gap % 3600) / 60);
-  const seconds = String(gap % 60).padStart(2, "0");
-  const value =
-    hours > 0
-      ? `${hours}:${String(minutes).padStart(2, "0")}:${seconds}`
-      : `${minutes}:${seconds}`;
-  return a === b ? "=" : `${a > b ? "+" : "−"}${value}`;
+/** Index de l'édition affichée dans la liste des années (undefined si absente). */
+function highlightIndex(years: string[], currentYear: string | null): number | undefined {
+  const index = currentYear ? years.indexOf(currentYear) : -1;
+  return index >= 0 ? index : undefined;
 }
 
 function percent(value: number | null): string {
@@ -138,8 +117,8 @@ export function RaceTrendsBlock({
             />
           </div>
           <LineChart
-            years={years}
-            currentYear={currentYear}
+            labels={years}
+            highlight={highlightIndex(years, currentYear)}
             height={220}
             lines={[
               {
@@ -199,206 +178,6 @@ function Legend({ items }: { items: { label: string; color: string }[] }) {
   );
 }
 
-interface ChartLine {
-  label: string;
-  color: string;
-  values: (number | null)[];
-}
-
-/**
- * Courbes en SVG, sans bibliothèque : une colonne par édition (espacement régulier, même si des
- * années manquent), axe vertical ajusté aux valeurs. Une édition sans valeur coupe la courbe.
- * L'édition affichée sur la page est soulignée.
- */
-function LineChart({
-  years,
-  currentYear,
-  lines,
-  height,
-  format,
-  compact = false,
-}: {
-  years: string[];
-  currentYear: string | null;
-  lines: ChartLine[];
-  height: number;
-  format: (value: number) => string;
-  compact?: boolean;
-}) {
-  // Le SVG est dessiné à la largeur réelle du conteneur (mesurée), pour que le texte garde
-  // la même taille sur téléphone et sur grand écran.
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(compact ? 240 : 600);
-  useEffect(() => {
-    const element = containerRef.current;
-    if (!element) return;
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry.contentRect.width > 0) setWidth(Math.round(entry.contentRect.width));
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-  const padding = compact
-    ? { top: 10, right: 10, bottom: 20, left: 44 }
-    : { top: 12, right: 16, bottom: 24, left: 52 };
-  const values = lines
-    .flatMap((line) => line.values)
-    .filter((value): value is number => value !== null);
-  if (values.length === 0) {
-    return (
-      <div ref={containerRef} className="w-full">
-        <p className="text-xs text-gray-400">Pas de donnée.</p>
-      </div>
-    );
-  }
-
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const margin = (max - min) * 0.1 || Math.max(max * 0.05, 1);
-  const low = min - margin;
-  const high = max + margin;
-  const innerWidth = width - padding.left - padding.right;
-  const innerHeight = height - padding.top - padding.bottom;
-  // marge de 12 px de part et d'autre, pour que les points ne touchent ni l'axe ni le bord
-  const inset = 12;
-  const x = (index: number) =>
-    padding.left +
-    inset +
-    (years.length > 1
-      ? (index / (years.length - 1)) * (innerWidth - 2 * inset)
-      : (innerWidth - 2 * inset) / 2);
-  const y = (value: number) => padding.top + (1 - (value - low) / (high - low)) * innerHeight;
-
-  // graduations : du plus petit au plus grand temps (2 en petit format, 4 sinon)
-  const ticks = compact
-    ? [min, max]
-    : [0, 1, 2, 3].map((step) => min + (step / 3) * (max - min));
-  // Années écrites sous l'axe : l'édition affichée d'abord, puis la première, la dernière et
-  // les autres, en sautant celles qui toucheraient une année déjà écrite (34 px d'écart).
-  const yearCandidates = [
-    years.indexOf(currentYear ?? ""),
-    0,
-    years.length - 1,
-    ...(compact ? [] : years.map((_, index) => index)),
-  ].filter((index, position, list) => index >= 0 && list.indexOf(index) === position);
-  // centre du texte : la première année part de son point vers la droite, la dernière
-  // vers la gauche
-  const labelCenter = (index: number) =>
-    x(index) + (index === 0 ? 14 : index === years.length - 1 ? -14 : 0);
-  const shownYears = new Set<number>();
-  for (const index of yearCandidates) {
-    const farEnough = [...shownYears].every(
-      (shown) => Math.abs(labelCenter(shown) - labelCenter(index)) >= 34
-    );
-    if (farEnough) shownYears.add(index);
-  }
-  const showYear = (_year: string, index: number) => shownYears.has(index);
-
-  return (
-    <div ref={containerRef} className="w-full">
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        width={width}
-        height={height}
-        className="block max-w-full"
-        role="img"
-        aria-label={lines
-          .map(
-            (line) =>
-              `${line.label} : ` +
-              years
-                .map((year, index) =>
-                  line.values[index] === null
-                    ? null
-                    : `${year} ${format(line.values[index] as number)}`
-                )
-                .filter(Boolean)
-                .join(", ")
-          )
-          .join(". ")}
-      >
-        {ticks.map((tick) => (
-          <g key={tick}>
-            <line
-              x1={padding.left}
-              x2={width - padding.right}
-              y1={y(tick)}
-              y2={y(tick)}
-              stroke="#E5E7EB"
-            />
-            <text
-              x={padding.left - 6}
-              y={y(tick)}
-              textAnchor="end"
-              dominantBaseline="middle"
-              className="fill-gray-400 text-[11px]"
-            >
-              {format(tick)}
-            </text>
-          </g>
-        ))}
-
-        {years.map((year, index) =>
-          showYear(year, index) ? (
-            <text
-              key={year}
-              x={x(index)}
-              y={height - 6}
-              // première et dernière années alignées sur les bords, pour ne pas être coupées
-              textAnchor={index === 0 ? "start" : index === years.length - 1 ? "end" : "middle"}
-              className={
-                year === currentYear
-                  ? "fill-[#17202E] text-[11px] font-bold"
-                  : "fill-gray-400 text-[11px]"
-              }
-            >
-              {year}
-            </text>
-          ) : null
-        )}
-
-        {lines.map((line) => {
-          // une édition sans valeur coupe la courbe en plusieurs morceaux
-          const pieces: string[] = [];
-          let current = "";
-          line.values.forEach((value, index) => {
-            if (value === null) {
-              if (current) pieces.push(current);
-              current = "";
-            } else {
-              current += `${current ? "L" : "M"}${x(index)},${y(value)}`;
-            }
-          });
-          if (current) pieces.push(current);
-
-          return (
-            <g key={line.label}>
-              {pieces.map((piece) => (
-                <path key={piece} d={piece} fill="none" stroke={line.color} strokeWidth={2} />
-              ))}
-              {line.values.map((value, index) =>
-                value === null ? null : (
-                  <circle
-                    key={years[index]}
-                    cx={x(index)}
-                    cy={y(value)}
-                    r={years[index] === currentYear ? 5 : 3.5}
-                    fill={years[index] === currentYear ? line.color : "white"}
-                    stroke={line.color}
-                    strokeWidth={2}
-                  >
-                    <title>{`${line.label} ${years[index]} : ${format(value)}`}</title>
-                  </circle>
-                )
-              )}
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
-}
-
 function SmallChart({
   title,
   years,
@@ -416,8 +195,8 @@ function SmallChart({
     <div className="rounded-lg bg-[#F5F6F8] p-3">
       <p className="text-xs font-semibold text-[#17202E]">{title}</p>
       <LineChart
-        years={years}
-        currentYear={currentYear}
+        labels={years}
+        highlight={highlightIndex(years, currentYear)}
         lines={[{ label: title, color: MEDIAN_COLOR, values }]}
         height={140}
         format={format}

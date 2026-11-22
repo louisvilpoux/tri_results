@@ -51,3 +51,41 @@ export interface AthleteResultsQuery {
   year: string | null;
   discipline: string | null;
 }
+
+// Progression d'un athlète (GET /athletes/{id}/progression).
+
+export interface ProgressionRace {
+  race_id: number;
+  name_epreuve: string;
+  date: string | null;
+  year: string;
+  total: string | null;
+  /** Temps de chaque segment, par clé (swim, bike, run ; run1, bike, run2 en duathlon). */
+  segments: Record<string, string>;
+  clt: number;
+  /** Nombre de classés de l'épreuve. */
+  classes: number;
+  /** Place / classés (0 à 1) : 12e sur 200 → 0,06. */
+  pourcentage: number | null;
+  /** Médiane du temps total de l'épreuve. */
+  mediane: string | null;
+  /** Temps de l'athlète moins la médiane, en secondes (négatif : plus rapide). */
+  ecart_mediane: number | null;
+}
+
+/** Une discipline et un format couru au moins deux fois. */
+export interface ProgressionSeries {
+  type_epreuve: string;
+  format_epreuve: string;
+  segments: { key: string; label: string }[];
+  /** Dans l'ordre chronologique. */
+  courses: ProgressionRace[];
+  /** Courses faites au moins deux fois (années différentes), la plus répétée d'abord. */
+  memes_courses: { name_epreuve: string; editions: number }[];
+}
+
+export interface AthleteProgression {
+  id: number;
+  /** Format le plus couru d'abord. */
+  series: ProgressionSeries[];
+}

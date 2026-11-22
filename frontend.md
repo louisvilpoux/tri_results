@@ -226,6 +226,20 @@ Réalisés
     - Meilleurs temps par discipline et format, avec lien vers le classement de la course. Seuls les résultats
       classés comptent : le temps d'un non-classé est souvent celui de son abandon (00:32:50 sur un M) ; un temps
       suspect (voir ci-dessous) non plus.
+    - Progression (22/11/2026), entre les meilleurs temps et l'historique (`components/athletes/athlete-progression.tsx`,
+      `GET /athletes/{id}/progression`) : pour une discipline et un format couru au moins deux fois (le plus couru
+      d'abord), un point par course classée, de la plus ancienne à la plus récente (saisons sous l'axe, nom et date
+      de la course au survol, dernière course mise en valeur) : petits graphiques des temps de natation, vélo et
+      course à pied (course 1, vélo, course 2 en duathlon) et du classement en pourcentage (place / classés, axe
+      inversé : le meilleur en haut, « Top 6 % »). Une phrase rappelle que les temps d'une course à l'autre ne sont
+      pas directement comparables. « Même course » : pour une course faite au moins deux années (choix dans une
+      liste, la plus répétée d'abord), tableau par édition (total et segments avec l'écart à la participation
+      précédente, place et top %, écart à la médiane de l'édition, qui corrige l'effet d'un parcours ou d'une météo
+      différents) et graphiques du classement en % et de l'écart à la médiane. Courses retenues : classées, sans
+      équipe, sous-classement, temps suspect, ni formats Jeunes et Relais. Un échec de l'API n'empêche pas
+      d'afficher le profil. Graphiques : `components/shared/line-chart.tsx`, partagé avec les tendances d'une course
+      (un même libellé de saison écrit une seule fois, option `invert`, graduations `tickFormat`) ; durées :
+      `lib/time.ts`.
     - Historique : date, épreuve (lien vers son classement), format, catégorie, « clt / participants », temps.
       Tri par date (défaut, plus récente d'abord), classement ou temps ; filtres saison et discipline ; pagination.
     - URL : `/athletes/123?annee=2024&discipline=triathlon&sort_by=clt&order=asc&offset=20`.

@@ -3,12 +3,13 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { AthleteBestTimes } from "@/components/athletes/athlete-best-times";
+import { AthleteProgressionBlock } from "@/components/athletes/athlete-progression";
 import { AthleteHeader } from "@/components/athletes/athlete-header";
 import { AthleteResultsFilters } from "@/components/athletes/athlete-results-filters";
 import { AthleteResultsTable } from "@/components/athletes/athlete-results-table";
 import { AthleteStats } from "@/components/athletes/athlete-stats";
 import { PaginationBar } from "@/components/shared/pagination-bar";
-import { ApiError, getAthlete, getAthleteResults } from "@/lib/api";
+import { ApiError, getAthlete, getAthleteProgression, getAthleteResults } from "@/lib/api";
 import {
   buildAthleteUrl,
   parseAthleteResultsQuery,
@@ -41,8 +42,13 @@ export default async function AthletePage({ params, searchParams }: PageProps) {
   let data;
 
   try {
-    const [athlete, results] = await Promise.all([getAthlete(id), getAthleteResults(id, query)]);
-    data = { athlete, results };
+    const [athlete, results, progression] = await Promise.all([
+      getAthlete(id),
+      getAthleteResults(id, query),
+      // La progression est un plus : son échec n'empêche pas d'afficher le profil.
+      getAthleteProgression(id).catch(() => null),
+    ]);
+    data = { athlete, results, progression };
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       await redirectOrNotFound("athletes", id);
@@ -61,7 +67,7 @@ export default async function AthletePage({ params, searchParams }: PageProps) {
     );
   }
 
-  const { athlete, results } = data;
+  const { athlete, results, progression } = data;
   const { items, pagination } = results;
 
   return (
@@ -77,6 +83,10 @@ export default async function AthletePage({ params, searchParams }: PageProps) {
       <AthleteHeader athlete={athlete} />
       <AthleteStats athlete={athlete} />
       <AthleteBestTimes bestTimes={athlete.best_times} />
+
+      {progression && progression.series.length > 0 && (
+        <AthleteProgressionBlock progression={progression} />
+      )}
 
       <section className="space-y-4">
         <h2 className="text-2xl font-extrabold tracking-tight">Historique des résultats</h2>

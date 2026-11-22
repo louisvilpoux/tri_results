@@ -1,5 +1,6 @@
 import type {
   AthleteProfile,
+  AthleteProgression,
   AthleteResultsQuery,
   AthleteResultsResponse,
 } from "@/types/athlete";
@@ -88,6 +89,11 @@ export function getRaceStats(raceId: string): Promise<RaceStats> {
 /** Tendances de la course entre éditions, par discipline et format. */
 export function getRaceTrends(raceId: string): Promise<RaceTrends> {
   return apiGet<RaceTrends>(`/races/${raceId}/trends`);
+}
+
+/** Progression de l'athlète par discipline et format (courses classées, au moins deux). */
+export function getAthleteProgression(athleteId: string): Promise<AthleteProgression> {
+  return apiGet<AthleteProgression>(`/athletes/${athleteId}/progression`);
 }
 
 export function getRace(raceId: string): Promise<Race> {

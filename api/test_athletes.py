@@ -454,3 +454,50 @@ def test_list_and_profile_show_the_same_club() -> None:
     listed = client.get("/athletes", params={"q": row.nom, "limit": 100}).json()["items"]
     same = [item for item in listed if item["id"] == row.athlete_id]
     assert same and same[0]["club"] == latest_club
+
+
+def test_athlete_progression() -> None:
+    """Progression (GET /athletes/{id}/progression) : séries d'au moins deux courses classées par
+    discipline et format, dans l'ordre chronologique ; place / classés et écart à la médiane
+    cohérents ; « même course » = courses faites au moins deux années."""
+    athlete_id = find_athlete(
+        """
+        SELECT athlete_id FROM results
+        WHERE NOT equipe AND NOT sous_classement AND clt > 0 AND clt < 99990
+          AND format_epreuve NOT IN ('JEUNES', 'RELAIS', '') AND bike_time ~ '^\\d{2}:'
+        GROUP BY athlete_id, type_epreuve, format_epreuve, name_epreuve
+        HAVING COUNT(DISTINCT year_epreuve) >= 3
+        ORDER BY athlete_id LIMIT 1
+        """
+    )
+    progression = client.get(f"/athletes/{athlete_id}/progression").json()
+    assert progression["series"]
+    sizes = [len(series["courses"]) for series in progression["series"]]
+    assert sizes == sorted(sizes, reverse=True) and min(sizes) >= 2
+
+    for series in progression["series"]:
+        assert series["format_epreuve"] not in ("JEUNES", "RELAIS")
+        dates = [course["date"] or course["year"] for course in series["courses"]]
+        assert dates == sorted(dates)
+        for course in series["courses"]:
+            assert 1 <= course["clt"] <= course["classes"]
+            assert course["pourcentage"] == round(course["clt"] / course["classes"], 4)
+            if course["total"] and course["mediane"]:
+                gap = timedelta_seconds(course["total"]) - timedelta_seconds(course["mediane"])
+                assert course["ecart_mediane"] == gap
+            assert set(course["segments"]) <= {segment["key"] for segment in series["segments"]}
+        for repeated in series["memes_courses"]:
+            years = {
+                course["year"]
+                for course in series["courses"]
+                if course["name_epreuve"] == repeated["name_epreuve"]
+            }
+            assert len(years) == repeated["editions"] >= 2
+
+    assert any(series["memes_courses"] for series in progression["series"])
+    assert client.get("/athletes/0/progression").status_code == 404
+
+
+def timedelta_seconds(value: str) -> int:
+    hours, minutes, seconds = (int(part) for part in value.split(":"))
+    return hours * 3600 + minutes * 60 + seconds
