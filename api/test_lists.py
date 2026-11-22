@@ -57,6 +57,23 @@ def test_events_filters() -> None:
     assert by_type and all(discipline in item["types"] for item in by_type)
 
 
+def test_events_name_search() -> None:
+    """Recherche par nom sur la page Courses : tous les mots, sans accents ni casse, combinable
+    avec les filtres ; 2 caractères minimum, comme pour les athlètes."""
+    items = get("/events", q="TRIATHLON ardres", limit=100)["items"]
+    assert items
+    for item in items:
+        name = item["name_epreuve"].lower()
+        assert "triathlon" in name and "ardres" in name
+
+    year = items[0]["year_epreuve"]
+    by_year = get("/events", q="ardres", year=year, limit=100)["items"]
+    assert by_year and all(item["year_epreuve"] == year for item in by_year)
+
+    assert get("/events", q="etaples", limit=5)["items"]  # « Étaples » sans accent
+    assert client.get("/events", params={"q": "a"}).status_code == 422
+
+
 def test_events_format_filter() -> None:
     formats = get("/events", limit=1)["filters"]["formats"]
     assert formats and "M" in formats

@@ -10,13 +10,14 @@ export const metadata: Metadata = {
   title: "Courses",
   description:
     "Toutes les courses de triathlon, duathlon et bike & run : dates, lieux, formats et " +
-    "classements, filtrables par saison et par discipline.",
+    "classements, avec recherche par nom et filtres par saison et par discipline.",
 };
 
 const PAGE_SIZE = 20;
 
 interface PageProps {
   searchParams: Promise<{
+    q?: string;
     annee?: string;
     discipline?: string;
     format?: string;
@@ -25,6 +26,7 @@ interface PageProps {
 }
 
 interface RacesQuery {
+  q: string | null;
   year: string | null;
   discipline: string | null;
   format: string | null;
@@ -33,7 +35,10 @@ interface RacesQuery {
 
 function parseQuery(params: Awaited<PageProps["searchParams"]>): RacesQuery {
   const offset = Number(params.offset);
+  const q = params.q?.trim() ?? "";
   return {
+    // L'API exige au moins 2 caractères pour filtrer par nom.
+    q: q.length >= 2 ? q : null,
     year: params.annee && /^\d{4}$/.test(params.annee) ? params.annee : null,
     discipline: params.discipline || null,
     format: params.format || null,
@@ -43,6 +48,7 @@ function parseQuery(params: Awaited<PageProps["searchParams"]>): RacesQuery {
 
 function buildRacesUrl(query: RacesQuery): string {
   const params = new URLSearchParams();
+  if (query.q) params.set("q", query.q);
   if (query.year) params.set("annee", query.year);
   if (query.discipline) params.set("discipline", query.discipline);
   if (query.format) params.set("format", query.format);
@@ -69,7 +75,8 @@ export default async function RacesPage({ searchParams }: PageProps) {
   }
 
   const { items, pagination, filters } = data;
-  const hasFilters = query.year !== null || query.discipline !== null || query.format !== null;
+  const hasFilters =
+    query.q !== null || query.year !== null || query.discipline !== null || query.format !== null;
 
   return (
     <div className="space-y-6">
@@ -83,6 +90,17 @@ export default async function RacesPage({ searchParams }: PageProps) {
       </section>
 
       <FilterForm action="/races" resetHref={hasFilters ? "/races" : undefined}>
+        <FilterField label="Nom">
+          <input
+            type="search"
+            name="q"
+            defaultValue={query.q ?? ""}
+            minLength={2}
+            placeholder="2 caractères min."
+            className={`${FILTER_FIELD_CLASS} sm:w-72`}
+          />
+        </FilterField>
+
         <FilterField label="Saison">
           <select name="annee" defaultValue={query.year ?? ""} className={FILTER_FIELD_CLASS}>
             <option value="">Toutes</option>

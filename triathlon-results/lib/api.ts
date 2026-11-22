@@ -64,6 +64,8 @@ export function getRace(raceId: string): Promise<Race> {
 
 /** Liste des courses (nom + année), les plus récentes d'abord (GET /events). */
 export function listEvents(filters: {
+  /** Recherche dans le nom (2 caractères min.) ; absente : toutes les courses. */
+  q?: string | null;
   year: string | null;
   discipline: string | null;
   format: string | null;
@@ -74,6 +76,7 @@ export function listEvents(filters: {
     limit: String(filters.limit),
     offset: String(filters.offset),
   });
+  if (filters.q) params.set("q", filters.q);
   if (filters.year) params.set("year", filters.year);
   if (filters.discipline) params.set("type_epreuve", filters.discipline);
   if (filters.format) params.set("format_epreuve", filters.format);

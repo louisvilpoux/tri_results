@@ -966,6 +966,7 @@ def pagination(total: int, limit: int, offset: int) -> dict[str, Any]:
 
 @app.get("/events")
 def list_events(
+    q: str | None = Query(None, min_length=2, max_length=100, description="Filtre sur le nom"),
     year: str | None = Query(None, pattern=r"^\d{4}$", description="Année (ex: 2024)"),
     type_epreuve: str | None = Query(None, description="Discipline (ex: triathlon)"),
     format_epreuve: str | None = Query(None, description="Format (ex: M), colonne format_epreuve"),
@@ -973,11 +974,12 @@ def list_events(
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    """Liste des courses (nom + année), les plus récentes d'abord, avec les années,
-    disciplines et formats disponibles pour les filtres."""
+    """Liste des courses (nom + année), les plus récentes d'abord, filtrables par nom (mêmes
+    règles que /search : tous les mots, sans accents ni casse), avec les années, disciplines et
+    formats disponibles pour les filtres."""
     page = search_races_page(
         db,
-        [],
+        search_words(q) if q else [],
         limit,
         offset,
         year=year,
