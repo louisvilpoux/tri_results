@@ -1,6 +1,8 @@
 # État des lieux de la qualité des données — 22/11/2026
 
-Audit du 22/11/2026 au commit `d38c0de`, base reconstruite avec `transform/run_sql.py`.
+Audit du 22/11/2026 au commit `d38c0de`, refait le même jour au commit `ea15b02` avec les
+corrections de lieux de `transform/lieux_courses.csv` (43 lignes), base reconstruite avec
+`transform/run_sql.py`.
 Audit précédent : [etat_qualite_donnees_2026-11-20.md](etat_qualite_donnees_2026-11-20.md)
 (mêmes identifiants Q1 à Q14 ; D1 à D6 renvoient à [retour_utilisateur.md](retour_utilisateur.md)).
 
@@ -14,12 +16,13 @@ Audit précédent : [etat_qualite_donnees_2026-11-20.md](etat_qualite_donnees_20
 | — chronoweb | 55 835 | 55 536 | |
 | races (épreuves) | 3 575 | 3 574 | toutes ont au moins un résultat |
 | noms de course | 471 | 471 | |
-| athlètes (`unified_id`) | 273 319 | 268 187 | −5 132 : tirets, virgules, noms tronqués réunis ; +392 homonymes séparés |
-| — avec un résultat individuel | | 258 341 | |
+| athlètes (`unified_id`) | 273 319 | 268 188 | −5 131 : tirets, virgules, noms tronqués réunis ; +392 homonymes séparés |
+| — avec un résultat individuel | | 258 342 | |
 | lignes d'équipe | 9 615 | 9 619 | |
 | lignes de sous-classement | 7 680 (38 épreuves) | 7 682 (38 épreuves) | |
 | doublons de source retirés | | 110 paires (62 prolivesport, 48 chronoweb) | |
-| ids stables | — | 3 684 clés d'épreuve, 268 664 clés d'athlète, 108 redirections | nouveau |
+| ids stables | — | 3 684 clés d'épreuve, 268 664 clés d'athlète ; 110 redirections (108 épreuves, 2 athlètes) | nouveau |
+| lieux distincts | | 412 | format unique « Ville (code postal) » ; toutes les épreuves ont un lieu |
 
 Contrôles sans anomalie : aucune épreuve sans résultat, sans date, avec une date future ou une
 année différente de sa date ; aucun athlète deux fois dans la même épreuve ; aucun total à
@@ -40,7 +43,7 @@ segments prolivesport : 100 % cohérents avec le total à 5 % près (fftri 98,1 
 | Q4 | Temps chronoweb illisibles | 0 | 0 ; ailleurs, 6 totaux et 286 lignes avec un segment négatifs (« -00:00:01 ») | Corrigé |
 | Q5 | Catégories d'âge | 3 141 valeurs | 3 050 valeurs, dont 2 592 parasites | **Ouvert** (mis de côté) |
 | Q6 | Épreuves en double le même jour | 38 sous-classements | 38 | Corrigé |
-| Q7 | Lieu manquant ou incohérent | 2 219 épreuves | 171 épreuves (29 courses) sans lieu, 13 courses à lieux différents ; corrections à la main possibles | **Corrigé** le 22/11 (reste à compléter) |
+| Q7 | Lieu manquant ou incohérent | 2 219 épreuves | 0 épreuve sans lieu ; 1 course à deux lieux, voulu | **Corrigé** le 22/11 |
 | Q8 | Club manquant ou parasite | 40 % sans club | 39,7 % des résultats individuels sans club ; club affiché = le plus récent | Corrigé |
 | Q9 | Noms mal encodés | 0 | 0 | Corrigé |
 | Q10 | Segments prolivesport décalés | partiel | 0 ligne incohérente | **Corrigé** |
@@ -68,7 +71,7 @@ segments prolivesport : 100 % cohérents avec le total à 5 % près (fftri 98,1 
 | Q8 | `d38c0de` | Club affiché : celui de la course la plus récente, le même dans la liste et le profil. |
 | Q17 | `5f93b9d` | Alias « La 0-3000 » et « T97.4 » (noms fftri sans ponctuation). |
 | Q7 | lieu fftri | Lieu lu dans l'en-tête de la page fftri de chaque épreuve. |
-| Q7 | lieux harmonisés | Format unique « Ville (code postal) », une écriture par ville dans une course, lieu de la course pour une épreuve sans lieu ; corrections à la main dans `transform/lieux_courses.csv`. |
+| Q7 | `ea15b02` | Format unique « Ville (code postal) », une écriture par ville dans une course, lieu de la course pour une épreuve sans lieu ; corrections à la main dans `transform/lieux_courses.csv` (43 lignes). |
 | Q15 | sexe chronoweb | Sexe lu dans la catégorie après le rang (`sexe_categorie`) : 0 valeur autre que M, F ou vide ; chronoweb passe de 15 912 à 47 462 résultats avec M ou F. |
 
 ---
@@ -134,12 +137,19 @@ ramène les écritures d'une même ville à une seule dans chaque course (« Cha
 « Château-Thierry ») et donne à une épreuve sans lieu celui de sa course. Les courses à plus d'un
 lieu passent de 46 à 13.
 
-Reste, à corriger à la main dans `transform/lieux_courses.csv` (liste produite par
-`python transform/export_lieux_a_verifier.py`) : 171 épreuves de 29 courses sans lieu (surtout
-prolivesport, « nan nan nan nan » ; Épinal et Bouzigues chez fftri), et 13 courses dont les
-lieux diffèrent selon l'édition : faute de frappe de la source (« Chantiily (60500) »), lieu
-voisin (« Toulouse » / « Tournefeuille (31170) », « Celles-sur-Plaine » / « Pierre-Percée »),
-erreur (« Limoges » pour le Triathlon de Chalain Jura).
+Corrections à la main (`transform/lieux_courses.csv`, 43 lignes, liste de départ produite par
+`python transform/export_lieux_a_verifier.py`) : avant elles, 171 épreuves de 29 courses étaient
+sans lieu (surtout prolivesport, « nan nan nan nan » ; Épinal et Bouzigues chez fftri) et 13
+courses avaient des lieux différents selon l'édition (« Chantiily (60500) », « Toulouse » /
+« Tournefeuille (31170) », « Limoges » pour le Triathlon de Chalain Jura). Après :
+
+- aucune épreuve sans lieu (412 lieux distincts) ; les 4 dernières courses (Aquathlon Achicourt,
+  Aquathlon du Calaisis, Bike&Run Berck sur Mer, 1/2 Finale Jeunes de Sangatte, 25 épreuves
+  prolivesport) ont été complétées à la main ;
+- 1 course à deux lieux, voulu : Triathlon de la Pierre Percee, Celles-sur-Plaine (88110) en 2022
+  (ligne avec année), Pierre-Percée (54540) les autres années.
+
+Les lieux saisis à la main sont gardés tels quels (pas de mise en forme automatique).
 
 ### Q13 — Épreuves sans format
 Inchangé : 57 épreuves (« CD » d'Altriman, « Poursuite », finales…) n'apparaissent dans aucun
