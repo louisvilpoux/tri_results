@@ -885,12 +885,20 @@ def search_races_page(
     type_epreuve: str | None = None,
     format_epreuve: str | None = None,
 ) -> dict[str, Any]:
-    """Courses (nom + année, comme /races/{id}/event) dont le nom contient tous les mots —
-    toutes si `words` est vide —, les plus récentes d'abord. Les épreuves sans résultat sont
-    ignorées. Utilisé par /search et /events."""
+    """Courses (nom + année, comme /races/{id}/event) dont chaque mot se trouve dans le nom
+    ou dans le lieu (« carcassonne », « triathlon ardres », un code postal « 62610 ») — toutes
+    si `words` est vide —, les plus récentes d'abord. Les épreuves sans résultat sont ignorées.
+    Utilisé par /search et /events."""
     has_results = select(Result.id).where(Result.epreuve_id == Race.id).exists()
     normalized_name = func.unaccent(func.lower(Race.name_epreuve))
-    filters = [has_results, *(contains_word(normalized_name, word) for word in words)]
+    normalized_place = func.unaccent(func.lower(func.coalesce(Race.lieu_epreuve, "")))
+    filters = [
+        has_results,
+        *(
+            or_(contains_word(normalized_name, word), contains_word(normalized_place, word))
+            for word in words
+        ),
+    ]
     if year:
         filters.append(Race.year_epreuve == year)
     if type_epreuve:
@@ -966,7 +974,9 @@ def pagination(total: int, limit: int, offset: int) -> dict[str, Any]:
 
 @app.get("/events")
 def list_events(
-    q: str | None = Query(None, min_length=2, max_length=100, description="Filtre sur le nom"),
+    q: str | None = Query(
+        None, min_length=2, max_length=100, description="Filtre sur le nom ou la ville"
+    ),
     year: str | None = Query(None, pattern=r"^\d{4}$", description="Année (ex: 2024)"),
     type_epreuve: str | None = Query(None, description="Discipline (ex: triathlon)"),
     format_epreuve: str | None = Query(None, description="Format (ex: M), colonne format_epreuve"),
@@ -974,9 +984,9 @@ def list_events(
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    """Liste des courses (nom + année), les plus récentes d'abord, filtrables par nom (mêmes
-    règles que /search : tous les mots, sans accents ni casse), avec les années, disciplines et
-    formats disponibles pour les filtres."""
+    """Liste des courses (nom + année), les plus récentes d'abord, filtrables par nom ou ville
+    (mêmes règles que /search : chaque mot dans le nom ou le lieu, sans accents ni casse), avec
+    les années, disciplines et formats disponibles pour les filtres."""
     page = search_races_page(
         db,
         search_words(q) if q else [],

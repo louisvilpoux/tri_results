@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "Courses",
   description:
     "Toutes les courses de triathlon, duathlon et bike & run : dates, lieux, formats et " +
-    "classements, avec recherche par nom et filtres par saison et par discipline.",
+    "classements, avec recherche par nom ou par ville et filtres par saison et par discipline.",
 };
 
 const PAGE_SIZE = 20;
@@ -37,7 +37,7 @@ function parseQuery(params: Awaited<PageProps["searchParams"]>): RacesQuery {
   const offset = Number(params.offset);
   const q = params.q?.trim() ?? "";
   return {
-    // L'API exige au moins 2 caractères pour filtrer par nom.
+    // L'API exige au moins 2 caractères pour filtrer par nom ou par ville.
     q: q.length >= 2 ? q : null,
     year: params.annee && /^\d{4}$/.test(params.annee) ? params.annee : null,
     discipline: params.discipline || null,
@@ -90,13 +90,13 @@ export default async function RacesPage({ searchParams }: PageProps) {
       </section>
 
       <FilterForm action="/races" resetHref={hasFilters ? "/races" : undefined}>
-        <FilterField label="Nom">
+        <FilterField label="Nom ou ville">
           <input
             type="search"
             name="q"
             defaultValue={query.q ?? ""}
             minLength={2}
-            placeholder="2 caractères min."
+            placeholder="Ex. Ardres, Carcassonne…"
             className={`${FILTER_FIELD_CLASS} sm:w-72`}
           />
         </FilterField>

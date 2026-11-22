@@ -220,14 +220,18 @@ Réalisés
       avec le nombre de résultats de chaque type. URL : `/search?q=deauville&type=races&offset=20`.
     - Athlètes : nom, club, nombre de courses, dernière saison ; les plus actifs d'abord.
     - Courses : regroupées par nom + année comme la page course, avec période, lieu et disciplines ; les plus récentes d'abord.
+      Chaque mot est cherché dans le nom de la course ou dans son lieu (22/11/2026) : « carcassonne », un code postal
+      « 62610 », ou « saint pierre », qui trouve aussi « Trirun Man » (à Saint Pierre). Placeholder du champ :
+      « Athlète, course ou ville… ».
     - Code : `app/search/`, `components/search/`, `types/search.ts`, `searchSite` dans `lib/api.ts`.
 - liste des courses : `/races` (lien « Courses » du header), alimentée par `GET /events`.
-    - Courses (nom + année) les plus récentes d'abord, filtres nom, saison, discipline (`races.type_epreuve`) et
+    - Courses (nom + année) les plus récentes d'abord, filtres nom ou ville, saison, discipline (`races.type_epreuve`) et
       format (`races.format_epreuve`), 20 par page. Discipline et format s'appliquent à la même épreuve :
       « triathlon + M » = les courses qui ont une épreuve de triathlon au format M.
-    - Nom (22/11/2026) : champ de recherche comme sur la liste des athlètes (2 caractères min., paramètre `q` de
-      `GET /events`) ; mêmes règles que la recherche globale : tous les mots, sans accents ni casse (« etaples »
-      trouve « Triathlon Étaples-sur-Mer »).
+    - Nom ou ville (22/11/2026) : champ de recherche comme sur la liste des athlètes (2 caractères min., paramètre
+      `q` de `GET /events`), même recherche que la recherche globale (`search_races_page`) : chaque mot dans le nom
+      ou le lieu, sans accents ni casse (« etaples » trouve « Triathlon Étaples-sur-Mer », « carcassonne » les
+      courses à Carcassonne).
     - URL : `/races?q=ardres&annee=2022&discipline=triathlon&format=M&offset=20`.
 - liste des athlètes : `/athletes` (lien « Athlètes » du header), alimentée par `GET /athletes`.
     - Athlètes les plus actifs d'abord, filtres nom (mêmes règles que la recherche) et sexe, 20 par page.

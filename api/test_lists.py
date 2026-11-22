@@ -74,6 +74,27 @@ def test_events_name_search() -> None:
     assert client.get("/events", params={"q": "a"}).status_code == 422
 
 
+def test_events_search_by_place() -> None:
+    """La recherche trouve aussi une course par sa ville ou son code postal, même quand son nom
+    ne les contient pas (Trirun Man, à Saint Pierre) ; nom et ville se combinent."""
+    for item in get("/events", q="carcassonne", limit=100)["items"]:
+        text_found = f"{item['name_epreuve']} {item['lieu_epreuve'] or ''}".lower()
+        assert "carcassonne" in text_found
+
+    # chaque mot dans le nom ou le lieu (« Saint-Pierre (97500) » compte aussi)
+    by_place = get("/events", q="saint pierre", limit=100)["items"]
+    assert any("pierre" not in item["name_epreuve"].lower() for item in by_place)
+    for item in by_place:
+        text_found = f"{item['name_epreuve']} {item['lieu_epreuve'] or ''}".lower()
+        assert "saint" in text_found and "pierre" in text_found
+
+    by_postcode = get("/events", q="62610", limit=100)["items"]
+    assert by_postcode and all("62610" in (item["lieu_epreuve"] or "") for item in by_postcode)
+
+    races = client.get("/search", params={"q": "carcassonne"}).json()["races"]
+    assert races["total"] > 0
+
+
 def test_events_format_filter() -> None:
     formats = get("/events", limit=1)["filters"]["formats"]
     assert formats and "M" in formats

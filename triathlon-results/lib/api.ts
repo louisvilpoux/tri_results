@@ -64,7 +64,7 @@ export function getRace(raceId: string): Promise<Race> {
 
 /** Liste des courses (nom + année), les plus récentes d'abord (GET /events). */
 export function listEvents(filters: {
-  /** Recherche dans le nom (2 caractères min.) ; absente : toutes les courses. */
+  /** Recherche dans le nom ou la ville (2 caractères min.) ; absente : toutes les courses. */
   q?: string | null;
   year: string | null;
   discipline: string | null;

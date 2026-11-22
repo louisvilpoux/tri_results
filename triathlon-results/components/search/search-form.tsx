@@ -52,7 +52,7 @@ export function SearchForm({ variant, defaultValue, autoFocus }: SearchFormProps
         defaultValue={defaultValue}
         autoFocus={autoFocus}
         aria-label="Rechercher un athlète ou une course"
-        placeholder="Athlète ou course…"
+        placeholder="Athlète, course ou ville…"
         className={cn(
           "w-full border border-gray-200 bg-white text-[#17202E] outline-none",
           "placeholder:text-gray-400 focus:border-[#FC6B32] focus:ring-2 focus:ring-[#FC6B32]/20",
