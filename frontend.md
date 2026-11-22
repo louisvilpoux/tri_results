@@ -334,7 +334,12 @@ Points connus (données) :
   hommes, 147 femmes, 88 sans catégorie ou en catégorie mixte).
 - Lieu des épreuves fftri (22/11/2026) : les 2 219 épreuves fftri_t2_area n'avaient pas de lieu ; il est lu dans
   l'en-tête de leur page fftri (`sources/fftri_t2_area_lieux.py`) et affiché dans l'en-tête de la course
-  (« Sizun (29450) » pour Tribreizh 2022). 23 épreuves restent sans lieu.
+  (« Sizun (29450) » pour Tribreizh 2022).
+- Lieux harmonisés et corrigeables (22/11/2026) : tous les lieux sont au format « Ville (code postal) » (prolivesport
+  écrivait « 62610 ARDRES 62 - Pas-de-Calais France », « nan nan nan nan ») ; dans une course, une seule écriture par
+  ville ; une épreuve sans lieu prend celui de sa course. Les lieux manquants ou faux se corrigent à la main dans
+  `transform/lieux_courses.csv` (voir backend.md, lieux.sql). 171 épreuves (29 courses) restent sans lieu, 13 courses
+  ont des lieux différents selon l'édition (« Chantiily » / « Chantilly », « Limoges » pour Chalain).
 - Clubs (corrigé le 20/11/2026) : 5 694 clubs écrits avec « ` » au lieu d'une apostrophe (« TRIATHLON CLUB
   D`HAZEBROUCK ») sont corrigés ; 1 519 valeurs qui disaient seulement « pas de club » (« NON LICENCIE », « NL »,
   « NONE », « 0 », « - », « ??? »…) sont vidées, comme les licences individuelles (« INDIVIDUEL », « LICENCE

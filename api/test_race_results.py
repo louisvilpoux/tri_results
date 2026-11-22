@@ -349,3 +349,25 @@ def test_fftri_races_have_a_place() -> None:
     if row.total == 0:
         pytest.skip("Aucune épreuve fftri_t2_area dans la base")
     assert row.avec_lieu >= 0.9 * row.total
+
+
+def test_places_have_one_format() -> None:
+    """Lieux au format « Ville (code postal) » ou « Ville », quelle que soit la source
+    (lieu_lisible, transform/raw_data.sql) : plus de « nan » ni de « 62610 ARDRES 62 -
+    Pas-de-Calais France » (prolivesport)."""
+    try:
+        with engine.connect() as connection:
+            row = connection.execute(
+                text(
+                    """
+                    SELECT
+                        COUNT(*) FILTER (WHERE lieu_epreuve ~* '(^|\\s)nan(\\s|$)') AS nan,
+                        COUNT(*) FILTER (WHERE lieu_epreuve ~ '^\\d{5} | - ') AS prolivesport
+                    FROM races
+                    """
+                )
+            ).one()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    assert row.nan == 0
+    assert row.prolivesport == 0

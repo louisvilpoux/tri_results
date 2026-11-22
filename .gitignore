@@ -6,3 +6,5 @@ sources/protiming
 .ipynb_checkpoints
 chrono
 api/__pycache__
+# export de travail (transform/export_lieux_a_verifier.py)
+transform/lieux_a_verifier.csv

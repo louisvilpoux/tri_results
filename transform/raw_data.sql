@@ -9,6 +9,70 @@ EXCEPTION WHEN others THEN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
+-- Lieu d'une épreuve, au même format pour toutes les sources : « Ville (code postal) », ou
+-- « Ville » sans code postal. Les sources l'écrivent chacune à sa façon :
+--   - fftri_t2_area : « SAINT PIERRE (97410) » ;
+--   - prolivesport : « 62610 ARDRES 62 - Pas-de-Calais France », « nan Ardres nan France »
+--     (« nan » : valeur vide au scraping), « nan nan nan nan » ;
+--   - chronoweb : texte libre (« Les angles », « chateau-thierry », « Lac de St Pardoux »).
+-- Une ville tout en majuscules ou tout en minuscules reçoit des majuscules initiales ; les petits
+-- mots (de, la, sur, en…) restent en minuscules sauf en tête : « LA ROCHE SUR YON (85000) » →
+-- « La Roche sur Yon (85000) ». Les lieux restés différents d'une source à l'autre se corrigent
+-- dans transform/lieux_courses.csv (voir lieux.sql).
+CREATE OR REPLACE FUNCTION lieu_lisible(lieu text)
+RETURNS text AS $$
+DECLARE
+    texte text;
+    ville text;
+    code_postal text;
+    morceaux text[];
+    resultat text := '';
+BEGIN
+    -- « nan » et espaces en trop retirés
+    texte := btrim(regexp_replace(
+        regexp_replace(COALESCE(lieu, ''), '(^|\s)nan(?=\s|$)', ' ', 'gi'), '\s+', ' ', 'g'
+    ));
+    IF texte = '' THEN
+        RETURN NULL;
+    END IF;
+
+    IF texte ~ '^.+ \(\d{5}\)$' THEN
+        -- fftri_t2_area : « Ville (code postal) »
+        ville := substring(texte FROM '^(.+) \(\d{5}\)$');
+        code_postal := substring(texte FROM '\((\d{5})\)$');
+    ELSIF texte ~ '^\d{5} .+ (\d{2,3}|2A|2B) - ' THEN
+        -- prolivesport : « code postal Ville département - nom du département pays »
+        code_postal := substring(texte FROM '^(\d{5}) ');
+        ville := substring(texte FROM '^\d{5} (.+?) (?:\d{2,3}|2A|2B) - ');
+    ELSIF texte ~ ' (\d{2,3}|2A|2B) - ' THEN
+        -- prolivesport sans code postal : « Ville département - nom du département pays »
+        ville := substring(texte FROM '^(.+?) (?:\d{2,3}|2A|2B) - ');
+    ELSE
+        -- prolivesport sans département (« Ardres France ») et texte libre (chronoweb)
+        ville := regexp_replace(texte, ' France$', '');
+    END IF;
+
+    IF ville = upper(ville) OR ville = lower(ville) THEN
+        ville := initcap(ville);
+    END IF;
+    -- petits mots en minuscules, sauf le premier (« La Roche-Sur-Yon » → « La Roche-sur-Yon »)
+    morceaux := regexp_split_to_array(ville, '(?=[ -])|(?<=[ -])');
+    FOR i IN 1 .. cardinality(morceaux) LOOP
+        IF i > 1 AND lower(morceaux[i]) IN ('de', 'du', 'des', 'la', 'le', 'les', 'sur', 'sous',
+                                            'en', 'et', 'aux', 'au', 'lès', 'lez') THEN
+            resultat := resultat || lower(morceaux[i]);
+        ELSE
+            resultat := resultat || morceaux[i];
+        END IF;
+    END LOOP;
+
+    -- élision après le premier mot : « Saint-Georges-D'Oléron » → « Saint-Georges-d'Oléron »
+    resultat := regexp_replace(resultat, '([ -])D''', '\1d''', 'g');
+    resultat := regexp_replace(resultat, '([ -])L''', '\1l''', 'g');
+    RETURN resultat || COALESCE(' (' || code_postal || ')', '');
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
 -- Sexe lu dans la catégorie (fftri_t2_area, chronoweb, protiming) : la lettre M ou F qui
 -- l'ouvre, après le rang que chronoweb colle parfois devant (« 14/MV3 » → M, « 1/FSE » → F).
 -- Avant, le sexe était le premier caractère de la catégorie : « 14/MV3 » donnait « 1 », et
@@ -59,8 +123,8 @@ bike as bike_time, null as rang_bike, null as rang_course_bike, null as indice_p
 t2 as t2_time, null as rang_t2, null as rang_course_t2, null as indice_performance_t2, 
 run as run_time, null as rang_run, null as rang_course_run, null as indice_performance_run,
 -- lieu lu dans l'en-tête de la page de l'épreuve (« SAINT PIERRE (97410) », voir
--- sources/fftri_t2_area_lieux.py), mis en minuscules avec majuscules initiales
-name_epreuve, format_epreuve, year_epreuve, date_epreuve, initcap(lieu_epreuve) as lieu_epreuve,
+-- sources/fftri_t2_area_lieux.py)
+name_epreuve, format_epreuve, year_epreuve, date_epreuve, lieu_lisible(lieu_epreuve) as lieu_epreuve,
 scraped_at, 'fftri_t2_area' as source, sexe_categorie(cat) as sexe,
 null as type_epreuve, null as format_normalise
 FROM raw_fftri_t2_area_0
@@ -79,7 +143,7 @@ t2 as t2_time, ((regexp_match(t2, '\((\d+)e\)'))[1]) as rang_t2, null as rang_co
 run as run_time, ((regexp_match(run, '\((\d+)e\)'))[1]) as rang_run, null as rang_course_run, null as indice_performance_run,
 -- l'année est retirée du nom pour relier les éditions (elle reste dans year_epreuve)
 prolivesport_event_name(name_epreuve, year_epreuve) as name_epreuve, format_epreuve, year_epreuve,
-date_epreuve::date::text as date_epreuve, lieu_epreuve,
+date_epreuve::date::text as date_epreuve, lieu_lisible(lieu_epreuve) as lieu_epreuve,
 scraped_at, 'prolivesport' as source,
 -- prolivesport fournit le sexe (M, F, X pour les équipes mixtes) ; sa colonne cat contient
 -- des catégories (SE, MA, VE…) dont la première lettre n'est pas le sexe.
@@ -107,7 +171,7 @@ chronoweb_temps(bike) as bike_time, null as rang_bike, null as rang_course_bike,
 chronoweb_temps(t2) as t2_time, null as rang_t2, null as rang_course_t2, null as indice_performance_t2,
 chronoweb_temps(run) as run_time, null as rang_run, null as rang_course_run, null as indice_performance_run,
 name_epreuve, format_epreuve, year_epreuve,
-date_epreuve, lieu_epreuve,
+date_epreuve, lieu_lisible(lieu_epreuve) as lieu_epreuve,
 scraped_at, 'chronoweb' as source, sexe_categorie(cat) as sexe,
 -- format_epreuve est le nom de l'onglet Excel (« Half Relais », « Benjamins », « Aquathlon
 -- 6-9 »…) : discipline et format en sont déduits comme pour prolivesport (voir disciplines.sql)
@@ -136,7 +200,7 @@ bike as bike_time, null as rang_bike, null as rang_course_bike, null as indice_p
 t2 as t2_time, null as rang_t2, null as rang_course_t2, null as indice_performance_t2,
 run as run_time, null as rang_run, null as rang_course_run, null as indice_performance_run,
 name_epreuve, format_epreuve, EXTRACT(YEAR FROM to_date(date_epreuve, 'DD/MM/YYYY'))::text as year_epreuve, 
-date_epreuve, lieu_epreuve,
+date_epreuve, lieu_lisible(lieu_epreuve) as lieu_epreuve,
 scraped_at, 'protiming' as source, sexe_categorie(cat) as sexe,
 null as type_epreuve, null as format_normalise
 from raw_protiming_0

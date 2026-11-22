@@ -189,6 +189,16 @@ Dossier : `transform`
       un jour près, au moins la moitié des athlètes en commun) ; la version fftri_t2_area est gardée et la table
       doublons_sources garde la trace des paires retirées (colonne `source`). Les autres épreuves de la source dans
       ces courses prennent le nom fftri_t2_area pour être regroupées avec elles. Exécuté avant nb_races.sql.
+    - lieux.sql : lieux des épreuves, déjà mis au format « Ville (code postal) » par `lieu_lisible` (raw_data.sql,
+      toutes sources). Dans une course, les écritures d'une même ville sont ramenées à la plus complète ; une
+      épreuve sans lieu prend le lieu le plus fréquent de sa course ; puis les corrections écrites à la main dans
+      `transform/lieux_courses.csv` (nom_course;annee;lieu, séparateur « ; ») remplacent le lieu de la source : sans
+      année pour toute la course, avec année pour une édition. run_sql.py charge ce CSV dans une table temporaire
+      juste avant lieux.sql (`manual_csv`). Exécuté après doublons_sources.sql.
+      Pour compléter ou corriger les lieux : `python transform/export_lieux_a_verifier.py` écrit
+      `transform/lieux_a_verifier.csv` (non versionné), au même format, avec les courses dont une édition n'a pas de
+      lieu ou dont les éditions ont des lieux différents, le lieu le plus fréquent pré-rempli et les lieux vus ;
+      corriger, copier les lignes dans `transform/lieux_courses.csv`, reconstruire la base.
 4. génération des index :
     - pg_index.sql : création des index pour améliorer les performances des requêtes sur les tables.
 

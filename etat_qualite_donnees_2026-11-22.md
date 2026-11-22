@@ -40,7 +40,7 @@ segments prolivesport : 100 % cohérents avec le total à 5 % près (fftri 98,1 
 | Q4 | Temps chronoweb illisibles | 0 | 0 ; ailleurs, 6 totaux et 286 lignes avec un segment négatifs (« -00:00:01 ») | Corrigé |
 | Q5 | Catégories d'âge | 3 141 valeurs | 3 050 valeurs, dont 2 592 parasites | **Ouvert** (mis de côté) |
 | Q6 | Épreuves en double le même jour | 38 sous-classements | 38 | Corrigé |
-| Q7 | Lieu manquant | 2 219 épreuves | 23 épreuves fftri_t2_area (2 219 avant correction) | **Corrigé** le 22/11 |
+| Q7 | Lieu manquant ou incohérent | 2 219 épreuves | 171 épreuves (29 courses) sans lieu, 13 courses à lieux différents ; corrections à la main possibles | **Corrigé** le 22/11 (reste à compléter) |
 | Q8 | Club manquant ou parasite | 40 % sans club | 39,7 % des résultats individuels sans club ; club affiché = le plus récent | Corrigé |
 | Q9 | Noms mal encodés | 0 | 0 | Corrigé |
 | Q10 | Segments prolivesport décalés | partiel | 0 ligne incohérente | **Corrigé** |
@@ -67,7 +67,8 @@ segments prolivesport : 100 % cohérents avec le total à 5 % près (fftri 98,1 
 | Q16 | `126f29f` | Id d'épreuve et d'athlète stables (`ids_stables`), anciens id redirigés. |
 | Q8 | `d38c0de` | Club affiché : celui de la course la plus récente, le même dans la liste et le profil. |
 | Q17 | `5f93b9d` | Alias « La 0-3000 » et « T97.4 » (noms fftri sans ponctuation). |
-| Q7 | lieu fftri | Lieu lu dans l'en-tête de la page fftri de chaque épreuve : 23 épreuves sans lieu au lieu de 2 219. |
+| Q7 | lieu fftri | Lieu lu dans l'en-tête de la page fftri de chaque épreuve. |
+| Q7 | lieux harmonisés | Format unique « Ville (code postal) », une écriture par ville dans une course, lieu de la course pour une épreuve sans lieu ; corrections à la main dans `transform/lieux_courses.csv`. |
 | Q15 | sexe chronoweb | Sexe lu dans la catégorie après le rang (`sexe_categorie`) : 0 valeur autre que M, F ou vide ; chronoweb passe de 15 912 à 47 462 résultats avec M ou F. |
 
 ---
@@ -124,9 +125,21 @@ prolivesport sont complets). Contrairement au constat du 20/11, la source le don
 la page d'une épreuve sur fftri.t2area.com affiche la ville et le code postal (« SAINT PIERRE
 (97410) »). Le scraper le lit maintenant (`extract_lieu`, `sources/fftri_t2_area.py`), et
 `sources/fftri_t2_area_lieux.py` l'a ajouté aux 2 237 CSV déjà téléchargés (une page par
-épreuve). raw_data.sql le met en forme : « Saint Pierre (97410) ». Restent 23 épreuves sans lieu
-(page sans lieu, ou deux CSV sans année dont l'URL est inconnue : `team-val-eure_duathlon-l.csv`,
-`trialong_triathlon-l.csv`).
+épreuve).
+
+Harmonisation : `lieu_lisible` (raw_data.sql) met les lieux de toutes les sources au format
+« Ville (code postal) » (« 62610 ARDRES 62 - Pas-de-Calais France » → « Ardres (62610) ») et vide
+les « nan nan nan nan » de prolivesport, qui comptaient jusque-là comme des lieux. `lieux.sql`
+ramène les écritures d'une même ville à une seule dans chaque course (« Chateau thierry » →
+« Château-Thierry ») et donne à une épreuve sans lieu celui de sa course. Les courses à plus d'un
+lieu passent de 46 à 13.
+
+Reste, à corriger à la main dans `transform/lieux_courses.csv` (liste produite par
+`python transform/export_lieux_a_verifier.py`) : 171 épreuves de 29 courses sans lieu (surtout
+prolivesport, « nan nan nan nan » ; Épinal et Bouzigues chez fftri), et 13 courses dont les
+lieux diffèrent selon l'édition : faute de frappe de la source (« Chantiily (60500) »), lieu
+voisin (« Toulouse » / « Tournefeuille (31170) », « Celles-sur-Plaine » / « Pierre-Percée »),
+erreur (« Limoges » pour le Triathlon de Chalain Jura).
 
 ### Q13 — Épreuves sans format
 Inchangé : 57 épreuves (« CD » d'Altriman, « Poursuite », finales…) n'apparaissent dans aucun
