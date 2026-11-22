@@ -70,6 +70,9 @@ CREATE TABLE results (
     -- temps total classé anormalement court (moins de la moitié du temps médian de l'épreuve) :
     -- probable erreur de la source, signalée à l'utilisateur (voir temps_totaux.sql)
     temps_suspect BOOLEAN NOT NULL DEFAULT false,
+    -- club de l'athlète à cette épreuve (nettoyé dans raw_data.sql) ; sert au club actuel
+    -- affiché sur le profil (voir athletes_club.sql)
+    club TEXT,
     cat TEXT,
     clt_cat TEXT,
     id_league TEXT,

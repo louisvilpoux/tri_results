@@ -131,6 +131,8 @@ source de la même course, ou le récupérer dans le calendrier FFTRI.
   Quelques écritures rares de licence individuelle restent (« H-LIC.INDIVIDUELLE-C »,
   « TRIATHLON INDIVIDUEL », 5 lignes) ; les « clubs » qui commencent par « INDIVIDUEL » suivi
   d'un nom (« INDIVIDUEL TO BE SPORT ») sont aussi vidés.
+- Club affiché (22/11/2026) : celui de la course la plus récente (`athletes_club.sql`), le même
+  dans la liste et sur le profil ; un athlète qui change de club apparaît avec son club actuel.
 
 ### Q11 — Noms de course (D3, corrigé)
 « Saint » / « Sainte » Aldegonde sont réunis en « Duathlon de Sainte Aldegonde - Pays de

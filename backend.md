@@ -131,6 +131,11 @@ Dossier : `transform`
     - athletes_sexe.sql : le sexe d'un athlète est le plus fréquent (M ou F) dans ses résultats individuels, comme sur
       son profil ; il est écrit sur toutes ses lignes `athletes`, dont la ligne de référence utilisée par le filtre
       sexe de la liste des athlètes. Exécuté après doublons_sources.sql.
+    - athletes_club.sql : le club d'un athlète est celui de son résultat individuel le plus récent qui donne un
+      club (results.club, repris de raw_data) ; il est écrit sur toutes ses lignes `athletes`. Avant, la liste et
+      le profil prenaient le club le plus fréquent sans ordre fixé en cas d'égalité (« VILPOUX Louis » : 3 lignes
+      Courbevoie en 2022, 3 lignes Wasquehal en 2024-2025, un club différent sur chaque page). Exécuté après
+      doublons_sources.sql.
     - nb_races.sql : table pour obtenir le nombre de courses différentes auquel un athlète a participé.
     - athletes_tmp.sql : table pour isoler les informations sur l'athlète
     - athletes.sql : table pour gérer les différentes entrées possible pour un même athlète en utilisant un unified_id.

@@ -410,3 +410,47 @@ def test_old_ids_redirect() -> None:
     response = client.get(f"/redirections/{kind}/{row.ancien_id}")
     assert response.status_code == 200
     assert response.json() == {"id": row.nouvel_id}
+
+
+def test_list_and_profile_show_the_same_club() -> None:
+    """Un athlète qui a changé de club a le même club dans la liste et sur son profil : celui
+    de sa course la plus récente (transform/athletes_club.sql). Ex. VILPOUX Louis, Courbevoie en
+    2022 puis Wasquehal en 2024-2025."""
+    try:
+        with engine.connect() as connection:
+            row = connection.execute(
+                text(
+                    """
+                    SELECT x.athlete_id, a.nom
+                    FROM results x
+                    JOIN athletes a ON a.id = x.athlete_id
+                    WHERE NOT x.equipe AND x.club IS NOT NULL
+                    GROUP BY x.athlete_id, a.nom
+                    HAVING COUNT(DISTINCT x.club) > 1
+                    ORDER BY x.athlete_id
+                    LIMIT 1
+                    """
+                )
+            ).first()
+            latest_club = connection.execute(
+                text(
+                    """
+                    SELECT club FROM results
+                    WHERE athlete_id = :id AND club IS NOT NULL AND NOT equipe
+                    ORDER BY COALESCE(date_epreuve, year_epreuve) DESC, club
+                    LIMIT 1
+                    """
+                ),
+                {"id": row.athlete_id if row else 0},
+            ).scalar()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    if row is None:
+        pytest.skip("Aucun athlète qui a changé de club")
+
+    profile = get_profile(row.athlete_id)
+    assert profile["club"] == latest_club
+
+    listed = client.get("/athletes", params={"q": row.nom, "limit": 100}).json()["items"]
+    same = [item for item in listed if item["id"] == row.athlete_id]
+    assert same and same[0]["club"] == latest_club

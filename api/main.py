@@ -592,8 +592,14 @@ def get_best_times(results: list[Result]) -> list[dict[str, Any]]:
 def get_athlete(athlete_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
     """Profil consolidé d'un athlète (athlete_id = unified_id), calculé sur ses résultats."""
     results = list(db.scalars(athlete_results(athlete_id)).all())
+    # Le club est le même sur toutes les lignes de l'athlète : celui de sa course la plus récente
+    # (transform/athletes_club.sql). Même ordre que la liste des athlètes, pour que les rares
+    # égalités restantes (athlète sans résultat qui donne un club) soient tranchées pareil.
     athlete_rows = (
-        db.query(Athlete.nom, Athlete.club).filter(Athlete.unified_id == athlete_id).all()
+        db.query(Athlete.nom, Athlete.club)
+        .filter(Athlete.unified_id == athlete_id)
+        .order_by(Athlete.id)
+        .all()
     )
     if not results:  # aucun résultat individuel (ex. équipe de bike&run)
         raise HTTPException(status_code=404, detail="Athlete not found")
@@ -797,7 +803,9 @@ def search_athletes_page(
     # résultats, comme sur le profil.
     identities: dict[int, list[Any]] = {athlete_id: [] for athlete_id in ids}
     for row in db.execute(
-        select(Athlete.unified_id, Athlete.nom, Athlete.club).where(Athlete.unified_id.in_(ids))
+        select(Athlete.unified_id, Athlete.nom, Athlete.club)
+        .where(Athlete.unified_id.in_(ids))
+        .order_by(Athlete.id)  # même ordre que le profil (get_athlete)
     ):
         identities[row.unified_id].append(row)
 

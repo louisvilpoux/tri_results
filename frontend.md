@@ -323,6 +323,10 @@ Points connus (données) :
   un id a été remplacé (deux profils réunis, épreuve en double retirée), les pages `/races/[id]`,
   `/races/[id]/results` et `/athletes/[id]` redirigent (308) vers le nouvel id au lieu d'afficher la page 404
   (`lib/redirections.ts`, `GET /redirections/...`).
+- Club affiché (22/11/2026) : la liste des athlètes et le profil affichaient parfois deux clubs différents pour un
+  athlète qui a changé de club (VILPOUX Louis : Courbevoie dans la liste, Wasquehal sur le profil). Le club affiché
+  est maintenant partout celui de sa course la plus récente (`transform/athletes_club.sql`) ; pour les rares
+  athlètes sans résultat qui donne un club, la liste et le profil lisent leurs lignes dans le même ordre.
 - Clubs (corrigé le 20/11/2026) : 5 694 clubs écrits avec « ` » au lieu d'une apostrophe (« TRIATHLON CLUB
   D`HAZEBROUCK ») sont corrigés ; 1 519 valeurs qui disaient seulement « pas de club » (« NON LICENCIE », « NL »,
   « NONE », « 0 », « - », « ??? »…) sont vidées, comme les licences individuelles (« INDIVIDUEL », « LICENCE

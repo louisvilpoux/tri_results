@@ -15,6 +15,7 @@ SELECT
     t.team_name IS NOT NULL AS equipe,
     COALESCE(t.team_name, a.nom) AS nom_athlete,
     rfta.sexe,
+    rfta.club,
     rfta.cat,
     rfta.clt_cat,
     rfta.id_league,
@@ -83,7 +84,7 @@ CROSS JOIN LATERAL (
 )
 
 INSERT INTO results (clt, clt_f, epreuve_id, name_epreuve, type_epreuve, 
-format_epreuve, date_epreuve, year_epreuve, athlete_id, nom_athlete, sexe, equipe, cat, 
+format_epreuve, date_epreuve, year_epreuve, athlete_id, nom_athlete, sexe, club, equipe, cat, 
 clt_cat, id_league, league, url, rang_global, rang_sexe, rang_categorie, 
 categorie, indice_performance, indice_performance_reference, total_time, 
 swim_time, rang_swim, rang_course_swim, indice_performance_swim, t1_time, 
@@ -93,7 +94,7 @@ indice_performance_t2, run_time, rang_run, rang_course_run,
 indice_performance_run, source)
 SELECT 
 clt, clt_f, epreuve_id, name_epreuve, type_epreuve, 
-format_epreuve, date_epreuve, year_epreuve, athlete_id, nom_athlete, sexe, equipe, cat, 
+format_epreuve, date_epreuve, year_epreuve, athlete_id, nom_athlete, sexe, club, equipe, cat, 
 clt_cat, id_league, league, url, rang_global, rang_sexe, rang_categorie, 
 categorie, indice_performance, indice_performance_reference, total_time, 
 swim_time, rang_swim, rang_course_swim, indice_performance_swim, t1_time, 
