@@ -2,7 +2,7 @@
 
 Audit initial du 20/11/2026 au commit `007557a`, mis à jour le 20/11/2026 (noms d'athlètes, après `f5ecb2c`)
 (base reconstruite avec `transform/run_sql.py`). Fait suite à
-[retour_utilisateur.md](retour_utilisateur.md) (identifiants D1 à D6).
+[retour_utilisateur_2026-11-19.md](retour_utilisateur_2026-11-19.md) (identifiants D1 à D6).
 
 ## Volumes
 

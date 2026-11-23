@@ -4,7 +4,7 @@ Audit du 22/11/2026 au commit `d38c0de`, refait le même jour au commit `ea15b02
 corrections de lieux de `transform/lieux_courses.csv` (43 lignes), base reconstruite avec
 `transform/run_sql.py`.
 Audit précédent : [etat_qualite_donnees_2026-11-20.md](etat_qualite_donnees_2026-11-20.md)
-(mêmes identifiants Q1 à Q14 ; D1 à D6 renvoient à [retour_utilisateur.md](retour_utilisateur.md)).
+(mêmes identifiants Q1 à Q14 ; D1 à D6 renvoient à [retour_utilisateur_2026-11-19.md](retour_utilisateur_2026-11-19.md)).
 
 ## Volumes
 
