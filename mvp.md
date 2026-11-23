@@ -8,6 +8,10 @@
       filtres `year`, `type_epreuve` et `format_epreuve` (égalité exacte sur la colonne de `races`), pagination ;
       renvoie aussi `filters.years`, `filters.types` et `filters.formats` disponibles ; les formats sont
       triés XS, S, M, L, XL, XXL puis les autres par ordre alphabétique (JEUNES, RELAIS).
+    - /courses : liste des courses, une ligne par course (même nom) et non par édition ; mêmes filtres et
+      pagination que /events, appliqués aux épreuves. `edition` : l'édition la plus récente qui répond aux
+      filtres (id, année, période) ; `editions` : toutes les éditions de la course (id, année), de la plus
+      récente à la plus ancienne ; `types` : toutes ses disciplines. Triées par la date de `edition`.
     - /races/{id} : voir les informations d'une épreuve (un format) donnée ; `lieu_epreuve` nettoyé des "nan".
     - /races/{id}/event : la course à laquelle appartient l'épreuve (même nom + même année) : période, lieu,
       participants distincts, formats (participants, vainqueur, première femme) et autres éditions (une épreuve par année).

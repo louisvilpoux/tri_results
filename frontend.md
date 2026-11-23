@@ -309,8 +309,15 @@ Réalisés
       « 62610 », ou « saint pierre », qui trouve aussi « Trirun Man » (à Saint Pierre). Placeholder du champ :
       « Athlète, course ou ville… ».
     - Code : `app/search/`, `components/search/`, `types/search.ts`, `searchSite` dans `lib/api.ts`.
-- liste des courses : `/races` (lien « Courses » du header), alimentée par `GET /events`.
-    - Courses (nom + année) les plus récentes d'abord, filtres nom ou ville, saison, discipline (`races.type_epreuve`) et
+- liste des courses : `/races` (lien « Courses » du header), alimentée par `GET /courses`.
+    - Une ligne par course, et non plus par édition (U13 du retour utilisateur du 23/11/2026 : « Triathlon de
+      Beauvais » occupait 9 lignes ; 2 097 lignes → 471). Chaque ligne : nom (lien vers l'édition mise en avant),
+      date et lieu de cette édition, disciplines, « 7 éditions, 2015–2022 » et une puce par année vers chaque
+      édition (les 8 plus récentes, puis « +N » vers l'édition mise en avant, dont la page liste les autres).
+      L'édition mise en avant est la plus récente qui répond aux filtres : avec « Saison 2017 », celle de 2017,
+      en orange. Code : `components/races/course-list.tsx`. L'accueil (« Dernières compétitions ») et l'onglet
+      Courses de `/search` restent une ligne par édition (`GET /events`, `RaceHitList`).
+    - Courses les plus récentes d'abord, filtres nom ou ville, saison, discipline (`races.type_epreuve`) et
       format (`races.format_epreuve`), 20 par page. Discipline et format s'appliquent à la même épreuve :
       « triathlon + M » = les courses qui ont une épreuve de triathlon au format M.
     - Nom ou ville (22/11/2026) : champ de recherche comme sur la liste des athlètes (2 caractères min., paramètre

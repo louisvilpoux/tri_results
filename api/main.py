@@ -1369,6 +1369,29 @@ def race_format_sort_key(race: "Race") -> tuple[Any, ...]:
     )
 
 
+def race_filters(
+    words: list[str],
+    year: str | None = None,
+    type_epreuve: str | None = None,
+    format_epreuve: str | None = None,
+) -> list[ColumnElement[bool]]:
+    """Conditions sur une épreuve communes à /search, /events et /courses : chaque mot dans le
+    nom ou le lieu (sans accents ni casse), année, discipline et format exacts."""
+    normalized_name = func.unaccent(func.lower(Race.name_epreuve))
+    normalized_place = func.unaccent(func.lower(func.coalesce(Race.lieu_epreuve, "")))
+    filters: list[ColumnElement[bool]] = [
+        or_(contains_word(normalized_name, word), contains_word(normalized_place, word))
+        for word in words
+    ]
+    if year:
+        filters.append(Race.year_epreuve == year)
+    if type_epreuve:
+        filters.append(Race.type_epreuve == type_epreuve)
+    if format_epreuve:
+        filters.append(Race.format_epreuve == format_epreuve)
+    return filters
+
+
 def search_races_page(
     db: Session,
     words: list[str],
@@ -1383,21 +1406,7 @@ def search_races_page(
     si `words` est vide —, les plus récentes d'abord. Les épreuves sans résultat sont ignorées.
     Utilisé par /search et /events."""
     has_results = select(Result.id).where(Result.epreuve_id == Race.id).exists()
-    normalized_name = func.unaccent(func.lower(Race.name_epreuve))
-    normalized_place = func.unaccent(func.lower(func.coalesce(Race.lieu_epreuve, "")))
-    filters = [
-        has_results,
-        *(
-            or_(contains_word(normalized_name, word), contains_word(normalized_place, word))
-            for word in words
-        ),
-    ]
-    if year:
-        filters.append(Race.year_epreuve == year)
-    if type_epreuve:
-        filters.append(Race.type_epreuve == type_epreuve)
-    if format_epreuve:
-        filters.append(Race.format_epreuve == format_epreuve)
+    filters = [has_results, *race_filters(words, year, type_epreuve, format_epreuve)]
     events = (
         select(
             Race.name_epreuve,
@@ -1490,6 +1499,16 @@ def list_events(
         format_epreuve=format_epreuve,
     )
 
+    return {
+        "items": page["items"],
+        "pagination": pagination(page["total"], limit, offset),
+        "filters": race_filter_options(db),
+    }
+
+
+def race_filter_options(db: Session) -> dict[str, list[str]]:
+    """Années, disciplines et formats proposés par les filtres de la liste des courses
+    (épreuves avec au moins un résultat)."""
     has_results = select(Result.id).where(Result.epreuve_id == Race.id).exists()
     years = db.scalars(
         select(Race.year_epreuve)
@@ -1510,13 +1529,123 @@ def list_events(
     ).all()
 
     return {
-        "items": page["items"],
-        "pagination": pagination(page["total"], limit, offset),
-        "filters": {
-            "years": years,
-            "types": types,
-            "formats": sorted(formats, key=format_sort_key),
-        },
+        "years": list(years),
+        "types": list(types),
+        "formats": sorted(formats, key=format_sort_key),
+    }
+
+
+@app.get("/courses")
+def list_courses(
+    q: str | None = Query(
+        None, min_length=2, max_length=100, description="Filtre sur le nom ou la ville"
+    ),
+    year: str | None = Query(None, pattern=r"^\d{4}$", description="Année (ex: 2024)"),
+    type_epreuve: str | None = Query(None, description="Discipline (ex: triathlon)"),
+    format_epreuve: str | None = Query(None, description="Format (ex: M), colonne format_epreuve"),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Liste des courses, une ligne par course (même nom) et non par édition (U13 du retour
+    utilisateur du 23/11/2026 : « Triathlon de Beauvais » occupait 9 lignes).
+
+    Mêmes filtres que /events, appliqués aux épreuves : une course apparaît si l'une de ses
+    éditions a une épreuve qui y répond. `edition` est l'édition la plus récente qui répond aux
+    filtres (lien principal, date, lieu) ; `editions` liste toutes les éditions de la course,
+    de la plus récente à la plus ancienne, et `types` toutes ses disciplines. Courses triées
+    par la date de `edition`, la plus récente d'abord. Une édition = nom + année, représentée
+    par son épreuve au plus petit id, toutes épreuves confondues (l'id de la page course
+    canonique, comme les éditions de /races/{id}/event)."""
+    has_results = select(Result.id).where(Result.epreuve_id == Race.id).exists()
+    filters = race_filters(
+        search_words(q) if q else [], year, type_epreuve, format_epreuve
+    )
+    # éditions qui répondent aux filtres
+    matching = (
+        select(
+            Race.name_epreuve,
+            Race.year_epreuve,
+            func.min(Race.date_epreuve).label("date_start"),
+            func.max(Race.date_epreuve).label("date_end"),
+            func.max(Race.lieu_epreuve).label("lieu_epreuve"),
+            func.min(Race.id).label("race_id"),
+        )
+        .where(has_results, *filters)
+        .group_by(Race.name_epreuve, Race.year_epreuve)
+        .subquery()
+    )
+    # par course, l'édition qui répond la plus récente
+    latest = (
+        select(matching)
+        .distinct(matching.c.name_epreuve)
+        .order_by(
+            matching.c.name_epreuve,
+            matching.c.date_end.desc().nulls_last(),
+            matching.c.year_epreuve.desc(),
+        )
+        .subquery()
+    )
+    total = db.scalar(select(func.count()).select_from(latest)) or 0
+    rows = db.execute(
+        select(latest)
+        .order_by(latest.c.date_end.desc().nulls_last(), latest.c.name_epreuve)
+        .offset(offset)
+        .limit(limit)
+    ).all()
+
+    # toutes les éditions et disciplines des courses de la page
+    names = [row.name_epreuve for row in rows]
+    editions: dict[str, list[dict[str, Any]]] = {name: [] for name in names}
+    types: dict[str, set[str]] = {name: set() for name in names}
+    if names:
+        edition_rows = db.execute(
+            select(
+                Race.name_epreuve,
+                Race.year_epreuve,
+                func.max(Race.date_epreuve).label("date_end"),
+                func.min(Race.id).label("race_id"),
+                func.array_agg(func.distinct(Race.type_epreuve)).label("types"),
+            )
+            .where(has_results, Race.name_epreuve.in_(names))
+            .group_by(Race.name_epreuve, Race.year_epreuve)
+            .order_by(
+                Race.name_epreuve,
+                func.max(Race.date_epreuve).desc().nulls_last(),
+                Race.year_epreuve.desc(),
+            )
+        ).all()
+        for edition in edition_rows:
+            editions[edition.name_epreuve].append(
+                {"id": edition.race_id, "year_epreuve": edition.year_epreuve}
+            )
+            types[edition.name_epreuve].update(t for t in edition.types if t)
+
+    def edition_id(name: str, year: str, fallback: int) -> int:
+        """Id de l'édition parmi toutes ses épreuves (pas seulement celles qui répondent)."""
+        return next(
+            (item["id"] for item in editions[name] if item["year_epreuve"] == year), fallback
+        )
+
+    items = [
+        {
+            "name_epreuve": row.name_epreuve,
+            "lieu_epreuve": clean_lieu(row.lieu_epreuve),
+            "types": sorted(types[row.name_epreuve], key=discipline_sort_key),
+            "edition": {
+                "id": edition_id(row.name_epreuve, row.year_epreuve, row.race_id),
+                "year_epreuve": row.year_epreuve,
+                "date_start": row.date_start,
+                "date_end": row.date_end,
+            },
+            "editions": editions[row.name_epreuve],
+        }
+        for row in rows
+    ]
+    return {
+        "items": items,
+        "pagination": pagination(total, limit, offset),
+        "filters": race_filter_options(db),
     }
 
 

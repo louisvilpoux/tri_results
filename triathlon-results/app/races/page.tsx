@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
-import { RaceHitList } from "@/components/search/race-hit-list";
+import { CourseList } from "@/components/races/course-list";
 import { FILTER_FIELD_CLASS, FilterField, FilterForm } from "@/components/shared/filter-form";
 import { PaginationBar } from "@/components/shared/pagination-bar";
-import { listEvents } from "@/lib/api";
+import { listCourses } from "@/lib/api";
 import { capitalize } from "@/lib/format";
 import { pageMetadata } from "@/lib/seo";
 
@@ -64,7 +64,7 @@ export default async function RacesPage({ searchParams }: PageProps) {
 
   let data;
   try {
-    data = await listEvents({ ...query, limit: PAGE_SIZE });
+    data = await listCourses({ ...query, limit: PAGE_SIZE });
   } catch (error) {
     return (
       <div className="rounded-xl border border-red-200 bg-white p-8">
@@ -87,7 +87,7 @@ export default async function RacesPage({ searchParams }: PageProps) {
         <h1 className="mt-2 text-3xl font-black tracking-tight">Courses</h1>
         <p className="mt-1 text-sm text-gray-500">
           {pagination.total.toLocaleString("fr-FR")} course{pagination.total > 1 && "s"}, les plus
-          récentes d’abord.
+          récentes d’abord. Une ligne par course, avec ses éditions.
         </p>
       </section>
 
@@ -143,7 +143,7 @@ export default async function RacesPage({ searchParams }: PageProps) {
 
       {items.length > 0 ? (
         <div className="space-y-4">
-          <RaceHitList races={items} />
+          <CourseList courses={items} />
           <PaginationBar
             pagination={pagination}
             shownCount={items.length}

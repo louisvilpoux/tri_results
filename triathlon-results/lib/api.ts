@@ -7,6 +7,7 @@ import type {
 import type { Race, RaceEvent, RaceStats, RaceTimes, RaceTrends } from "@/types/race";
 import type {
   AthleteListResponse,
+  CourseListResponse,
   EventListResponse,
   SearchResponse,
   SearchType,
@@ -105,8 +106,7 @@ export function getRace(raceId: string): Promise<Race> {
   return apiGet<Race>(`/races/${raceId}`);
 }
 
-/** Liste des courses (nom + année), les plus récentes d'abord (GET /events). */
-export function listEvents(filters: {
+interface RaceListQuery {
   /** Recherche dans le nom ou la ville (2 caractères min.) ; absente : toutes les courses. */
   q?: string | null;
   year: string | null;
@@ -114,7 +114,10 @@ export function listEvents(filters: {
   format: string | null;
   limit: number;
   offset: number;
-}): Promise<EventListResponse> {
+}
+
+/** Paramètres communs à GET /events et GET /courses. */
+function raceListParams(filters: RaceListQuery): URLSearchParams {
   const params = new URLSearchParams({
     limit: String(filters.limit),
     offset: String(filters.offset),
@@ -123,7 +126,17 @@ export function listEvents(filters: {
   if (filters.year) params.set("year", filters.year);
   if (filters.discipline) params.set("type_epreuve", filters.discipline);
   if (filters.format) params.set("format_epreuve", filters.format);
-  return apiGet<EventListResponse>("/events", params);
+  return params;
+}
+
+/** Liste des éditions (nom + année), les plus récentes d'abord (GET /events). */
+export function listEvents(filters: RaceListQuery): Promise<EventListResponse> {
+  return apiGet<EventListResponse>("/events", raceListParams(filters));
+}
+
+/** Liste des courses, une ligne par course avec ses éditions (GET /courses). */
+export function listCourses(filters: RaceListQuery): Promise<CourseListResponse> {
+  return apiGet<CourseListResponse>("/courses", raceListParams(filters));
 }
 
 /** Liste des athlètes, les plus actifs d'abord (GET /athletes). */

@@ -1,4 +1,4 @@
-// Types alignés sur GET /search, GET /events et GET /athletes (api/main.py).
+// Types alignés sur GET /search, GET /events, GET /courses et GET /athletes (api/main.py).
 import type { Pagination } from "@/types/result";
 
 export type SearchType = "all" | "athletes" | "races";
@@ -27,16 +27,43 @@ export interface SearchGroup<T> {
   total: number;
 }
 
-/** GET /events : liste des courses, avec les valeurs disponibles pour les filtres. */
+/** Valeurs proposées par les filtres de la liste des courses. */
+export interface RaceListFilters {
+  years: string[];
+  types: string[];
+  /** Formats (colonne format_epreuve), hors sources au format non fiable. */
+  formats: string[];
+}
+
+/** GET /events : liste des éditions (nom + année), avec les valeurs des filtres. */
 export interface EventListResponse {
   items: RaceHit[];
   pagination: Pagination;
-  filters: {
-    years: string[];
-    types: string[];
-    /** Formats (colonne format_epreuve), hors sources au format non fiable. */
-    formats: string[];
-  };
+  filters: RaceListFilters;
+}
+
+/** Édition d'une course : lien vers /races/{id}. */
+export interface CourseEdition {
+  id: number;
+  year_epreuve: string | null;
+}
+
+/** Une course (même nom) et toutes ses éditions. */
+export interface CourseHit {
+  name_epreuve: string | null;
+  lieu_epreuve: string | null;
+  types: string[];
+  /** Édition la plus récente qui répond aux filtres : lien principal, date. */
+  edition: CourseEdition & { date_start: string | null; date_end: string | null };
+  /** Toutes les éditions, de la plus récente à la plus ancienne. */
+  editions: CourseEdition[];
+}
+
+/** GET /courses : une ligne par course (U13 du retour utilisateur du 23/11/2026). */
+export interface CourseListResponse {
+  items: CourseHit[];
+  pagination: Pagination;
+  filters: RaceListFilters;
 }
 
 /** GET /athletes : liste des athlètes (un par unified_id). */

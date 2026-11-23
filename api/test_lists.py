@@ -193,3 +193,58 @@ def test_sitemaps_list_existing_pages() -> None:
     assert first == sorted(first) and len(first) == min(50_000, count["total"])
     assert client.get(f"/athletes/{first[0]}").status_code == 200
     assert get(f"/sitemap/athletes/{count['pages']}") == []
+
+
+def test_courses_one_line_per_course() -> None:
+    """U13 (retour utilisateur du 23/11/2026) : /courses donne une ligne par course, avec
+    toutes ses éditions, au lieu d'une ligne par édition comme /events."""
+    data = get("/courses", limit=100)
+    names = [item["name_epreuve"] for item in data["items"]]
+    assert len(names) == len(set(names))
+    assert data["pagination"]["total"] < get("/events", limit=1)["pagination"]["total"]
+    for item in data["items"]:
+        years = [edition["year_epreuve"] for edition in item["editions"]]
+        assert years == sorted(years, reverse=True)
+        # sans filtre, l'édition mise en avant est la plus récente
+        assert item["edition"]["year_epreuve"] == years[0]
+        assert item["edition"]["id"] == item["editions"][0]["id"]
+
+
+def test_courses_group_the_editions_of_events() -> None:
+    """Les éditions d'une course sont celles que /events liste sous le même nom, avec les
+    mêmes id (page course canonique)."""
+    events = get("/events", q="beauvais", limit=100)["items"]
+    courses = get("/courses", q="beauvais", limit=100)["items"]
+    assert len(courses) < len(events)
+    by_name = {course["name_epreuve"]: course for course in courses}
+    for event in events:
+        editions = by_name[event["name_epreuve"]]["editions"]
+        assert {"id": event["id"], "year_epreuve": event["year_epreuve"]} in editions
+
+
+def test_courses_most_recent_first() -> None:
+    items = get("/courses", limit=50)["items"]
+    dates = [item["edition"]["date_end"] for item in items if item["edition"]["date_end"]]
+    assert dates == sorted(dates, reverse=True)
+
+
+def test_courses_year_filter_highlights_that_edition() -> None:
+    """Avec une saison, l'édition mise en avant est celle de cette saison ; la ligne garde
+    toutes les éditions de la course."""
+    year = get("/courses", limit=1)["filters"]["years"][1]
+    for item in get("/courses", year=year, limit=50)["items"]:
+        assert item["edition"]["year_epreuve"] == year
+        assert {"id": item["edition"]["id"], "year_epreuve": year} in item["editions"]
+
+
+def test_courses_pagination_is_stable() -> None:
+    full = get("/courses", limit=40)["items"]
+    first = get("/courses", limit=20, offset=0)["items"]
+    second = get("/courses", limit=20, offset=20)["items"]
+    names = [item["name_epreuve"] for item in first + second]
+    assert names == [item["name_epreuve"] for item in full]
+
+
+def test_courses_validation() -> None:
+    assert client.get("/courses", params={"q": "a"}).status_code == 422
+    assert client.get("/courses", params={"year": "abc"}).status_code == 422
