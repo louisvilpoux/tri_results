@@ -3,8 +3,9 @@
 -- Clé d'une épreuve : source | nom publié par la source | format publié | date (ou année quand
 -- la source ne donne pas la date, chronoweb), ex. « fftri_t2_area|tribreizh|triathlon l|
 -- 2022-06-26 ». C'est le nom publié, pas le nom regroupé par noms_epreuves.sql : changer les
--- règles de regroupement ne change pas l'id. Une épreuve qui réunit plusieurs noms publiés (ou
--- deux sources) a plusieurs clés.
+-- règles de regroupement ne change pas l'id. De même, le format publié est celui de la source
+-- avant la réunion des classements hommes et femmes (format_source, epreuves_sexe.sql). Une
+-- épreuve qui réunit plusieurs noms ou formats publiés (ou deux sources) a plusieurs clés.
 --
 -- Exécuté après races.sql et avant results.sql (rien ne référence encore races.id).
 
@@ -14,7 +15,8 @@ SELECT DISTINCT entite, cle, poids
 FROM (
     SELECT
         r.id AS entite,
-        b.source || '|' || COALESCE(b.nom_source, b.name_epreuve) || '|' || b.format_epreuve
+        b.source || '|' || COALESCE(b.nom_source, b.name_epreuve)
+            || '|' || COALESCE(b.format_source, b.format_epreuve)
             || '|' || COALESCE(b.date_epreuve, b.year_epreuve, '') AS cle,
         COUNT(*) OVER (PARTITION BY r.id) AS poids
     FROM raw_data b

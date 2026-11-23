@@ -164,12 +164,26 @@ Dossier : `transform`
          ni jour, triés ; « St », « Ste » et « Sainte » comptent pour « Saint ») sont ramenés au plus lisible (majuscules, puis accents, puis le plus fréquent) :
          « Triathlon Bray-Dunes » / « Triathlon de Bray-Dunes », « Touquet Bike & Run » / « Bike & Run Le Touquet ».
       Exécuté avant races.sql.
+    - epreuves_sexe.sql (D9, 23/11/2026) : réunit une épreuve publiée en deux classements, un par sexe
+      (« S Homme » / « S Femme », « D3H » / « D3F », « BEH » / « BEF », « SM » / « SW », « HOMMES » / « FEMMES »).
+      Avant, chacun était une épreuve au même format : les repères et « Et moi ? » de l'épreuve des hommes ne
+      comptaient que les hommes, et la première femme n'apparaissait pas. Conditions : même source, nom de
+      course, date, discipline et format ; noms publiés identiques une fois le sexe retiré (`format_sans_sexe`) ;
+      chaque épreuve à au moins 90 % d'un seul sexe et les deux sexes présents. Des divisions ou catégories
+      différentes (D1H / D2H, BEF / CAF, PTS2 / PTS4) restent séparées. Nom de l'épreuve réunie : les noms
+      publiés (« S Feminin / S Masculin ») ; le nom publié de chaque ligne est gardé dans `raw_data.format_source`
+      (clé de l'id stable : l'épreuve réunie garde le plus petit id, l'autre redirige). Le classement publié
+      par sexe passe dans `rang_sexe` ; `clt` devient le classement de l'épreuve réunie par temps total, parmi
+      les classés de la source (un classé sans temps après ceux qui en ont un), non-classés inchangés. Le
+      23/11/2026 : 109 épreuves réunies (18 231 résultats), prolivesport et chronoweb ; ex. Duathlon de Sainte
+      Aldegonde 2025 S : 210 + 81 participants, première femme 123ᵉ au général. Exécuté avant races.sql.
 3. génération des tables spécifiques :
     - races.sql : table pour décrire chaque épreuve. La discipline est ce qui précède la lettre de distance dans
       format_epreuve et le format est cette lettre (« cross triathlon m clm » → cross triathlon, M ; la variante
       CLM, EQ ou OPEN reste dans format_initial). prolivesport et chronoweb : voir disciplines.sql.
     - ids_epreuves.sql : donne à chaque épreuve son id stable. Clé : source | nom publié (raw_data.nom_source,
-      gardé par noms_epreuves.sql) | format publié | date ou année. Exécuté après races.sql et avant results.sql.
+      gardé par noms_epreuves.sql) | format publié (raw_data.format_source, gardé par epreuves_sexe.sql) | date ou
+      année. Exécuté après races.sql et avant results.sql.
     - ids_athletes.sql : donne à chaque athlète son id stable, à partir de ses clés de nom (athlete_key). La ligne
       de référence (id = unified_id) prend l'id stable, les autres lignes un id négatif. Exécuté après
       athletes_tronques.sql et avant results.sql. Les homonymes séparés (homonymes.sql) ont pour clé

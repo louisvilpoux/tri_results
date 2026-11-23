@@ -16,7 +16,10 @@ CREATE TABLE raw_data (
     type_epreuve TEXT, format_normalise TEXT,
     -- nom de l'épreuve tel que publié, quand noms_epreuves.sql l'a changé (sert à la clé de
     -- l'id stable, voir ids_epreuves.sql) ; NULL quand il n'a pas changé
-    nom_source TEXT
+    nom_source TEXT,
+    -- format publié (nom de l'épreuve dans la course), quand epreuves_sexe.sql a réuni les
+    -- classements hommes et femmes d'une épreuve (sert à la clé de l'id stable) ; NULL sinon
+    format_source TEXT
 );
 
 CREATE TABLE races (

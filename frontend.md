@@ -503,6 +503,14 @@ Points connus (données) :
   leurs 7 680 résultats déjà présents dans la grande épreuve ne comptent plus deux fois dans les profils (course,
   historique, meilleurs temps). 2 doublons identiques sont supprimés (Altriman 2021 « Aquathlon 6-9 » / « 8-11 »,
   Pilon 2022 « Poursuite » / « XS Poursuite »).
+- Classements hommes et femmes publiés comme deux épreuves (D9 du second retour utilisateur du 23/11/2026) :
+  « S Masculin » et « S Feminin » du Duathlon de Sainte Aldegonde 2025 étaient deux épreuves au format S ; les
+  repères et « Et moi ? » de l'épreuve S ne comptaient que les hommes, sans choix Hommes / Femmes, et la carte du
+  format n'avait pas de première femme. 109 épreuves de ce type sont réunies par `transform/epreuves_sexe.sql`
+  (voir backend.md) : une carte par format sur la page course (« S », 291 participants, vainqueur et première
+  femme), repères Tous / Hommes / Femmes, classement général par temps (la place publiée par la source, chez
+  les hommes ou chez les femmes, reste dans `rang_sexe`). Les anciens liens vers l'épreuve qui disparaît
+  redirigent (308) vers l'épreuve réunie.
 - Épreuves sans temps (20/11/2026) : 270 épreuves prolivesport (17 584 résultats, ex. Cross-Duathlon du Haricot
   2016-2021, Chamouille 2017 et 2019) n'ont ni temps total ni classement dans la source. Les temps ne sont pas
   recalculés à partir des segments : chez prolivesport, même quand le total existe, la somme des segments ne lui
