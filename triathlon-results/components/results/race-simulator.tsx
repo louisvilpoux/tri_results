@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Calculator, ChevronDown, RotateCcw } from "lucide-react";
+import { Calculator, ChevronDown, RotateCcw, TriangleAlert } from "lucide-react";
 
 import {
   SIMULATOR_CATEGORIE_PARAM,
@@ -54,6 +54,53 @@ function timesOf(athletes: TimedAthlete[], key: string): number[] {
     .map((athlete) => athlete[key])
     .filter((value): value is number => typeof value === "number")
     .sort((a, b) => a - b);
+}
+
+/** « Natation », « T1 et T2 », « Natation, T1 et T2 ». */
+function joinLabels(labels: string[]): string {
+  return labels.length <= 1
+    ? (labels[0] ?? "")
+    : `${labels.slice(0, -1).join(", ")} et ${labels[labels.length - 1]}`;
+}
+
+/**
+ * Avertissement quand un champ (segment ou transition) est vide alors que l'utilisateur a
+ * commencé à saisir (U10, retour utilisateur du 23/11/2026) : sans lui, T1 et T2 laissés vides
+ * comptaient pour zéro dans le total calculé, sans que rien ne le signale.
+ */
+function missingFieldsWarning({
+  missing,
+  missingSegments,
+  totalTyped,
+  computedTotal,
+}: {
+  missing: string[];
+  missingSegments: string[];
+  totalTyped: boolean;
+  computedTotal: number | null;
+}): string | null {
+  if (missing.length === 0) return null;
+  const plural = missing.length > 1;
+  // « Champ non rempli : Natation. » : formulation qui s'accorde avec tous les champs
+  const subject = `${plural ? "Champs non remplis" : "Champ non rempli"} : ${joinLabels(missing)}.`;
+  const fillIn = plural ? "saisis-les ou indique ton total" : "saisis-le ou indique ton total";
+
+  if (totalTyped && missingSegments.length > 0) {
+    return (
+      `${subject} Pas de place pour ${joinLabels(missingSegments)} ; ` +
+      "ton total saisi est utilisé tel quel."
+    );
+  }
+  if (totalTyped) {
+    return `${subject} Ton total saisi est utilisé tel quel.`;
+  }
+  if (computedTotal !== null) {
+    return (
+      `${subject} ${plural ? "Ils comptent" : "Il compte"} pour 0 : ` +
+      "le total calculé peut donc être trop optimiste."
+    );
+  }
+  return `${subject} Le total ne peut pas être calculé : ${fillIn}.`;
 }
 
 interface Placement {
@@ -233,6 +280,18 @@ function SimulatorBody({
 
   const setInput = (key: string, value: string) => setInputs({ ...inputs, [key]: value });
   const hasInput = Object.values(inputs).some((value) => value.trim() !== "");
+  // champs vides (segments et transitions), signalés dès que l'utilisateur a commencé à saisir
+  const missingFields = fields.filter((field) => parsed[field.key] === null);
+  const warning = hasInput
+    ? missingFieldsWarning({
+        missing: missingFields.map((field) => field.label),
+        missingSegments: missingFields
+          .filter((field) => data.segments.includes(field))
+          .map((field) => field.label),
+        totalTyped,
+        computedTotal,
+      })
+    : null;
 
   const rows: Placement[] = [];
   if (typeof total === "number") {
@@ -343,6 +402,16 @@ function SimulatorBody({
           </button>
         )}
       </div>
+
+      {warning && (
+        <p
+          role="status"
+          className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+        >
+          <TriangleAlert size={16} aria-hidden className="mt-0.5 shrink-0" />
+          {warning}
+        </p>
+      )}
 
       {rows.length > 0 ? (
         <div className="overflow-x-auto">

@@ -226,7 +226,10 @@ Réalisés
       segments (transitions comprises si remplies), ou celui qu'il saisit. Il voit, pour le total puis chaque
       segment : place (1 + classés plus rapides) sur le nombre de classés, top %, écart au premier et à la médiane ;
       en option, sa place chez les hommes ou les femmes et dans une catégorie ; et les athlètes juste devant et
-      juste derrière lui au général (liens vers leur profil). Bouton « Réinitialiser » (affiché dès qu'un temps, le
+      juste derrière lui au général (liens vers leur profil). Avertissement (U10 du retour utilisateur du 23/11/2026)
+      dès qu'un champ reste vide alors que la saisie a commencé : « Champs non remplis : T1 et T2. Ils comptent pour 0 :
+      le total calculé peut donc être trop optimiste. » ; selon le cas, le total ne peut pas être calculé (segment
+      manquant) ou le total saisi est utilisé tel quel (pas de place pour les segments manquants). Bouton « Réinitialiser » (affiché dès qu'un temps, le
       sexe ou la catégorie est rempli) : vide les temps, le sexe, la catégorie et les paramètres `moi_…` de
       l'adresse. Mêmes classés que les repères. Les temps des classés
       (`GET /races/{id}/times`, jusqu'à environ 900 Ko pour un Ironman de 5 800 classés) ne sont chargés qu'à
