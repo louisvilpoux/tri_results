@@ -251,8 +251,8 @@ Réalisés
       suspect (voir ci-dessous) non plus.
     - Progression (22/11/2026), entre les meilleurs temps et l'historique (`components/athletes/athlete-progression.tsx`,
       `GET /athletes/{id}/progression`) : pour une discipline et un format couru au moins deux fois (le plus couru
-      d'abord), un point par course classée, de la plus ancienne à la plus récente (saisons sous l'axe, nom et date
-      de la course au survol, dernière course mise en valeur) : petits graphiques des temps de natation, vélo et
+      d'abord), un point par course classée, de la plus ancienne à la plus récente (saisons sous l'axe, nom, date
+      et valeur de la course active écrits au-dessus du graphique, dernière course mise en valeur) : petits graphiques des temps de natation, vélo et
       course à pied (course 1, vélo, course 2 en duathlon) et du classement en pourcentage (place / classés,
       « Top 6 % »). Une phrase rappelle que plus bas = plus rapide ou mieux classé, et que les temps d'une course à
       l'autre ne sont pas directement comparables. « Même course » : pour une course faite au moins deux années (choix dans une
@@ -270,6 +270,17 @@ Réalisés
       l'écart à la médiane) et toujours la valeur `reference` (0 % ; la médiane, écrite « méd. ») : passer du top
       3 % au top 4 % ne trace plus une chute sur toute la hauteur. Une graduation à moins de 14 px d'une autre
       n'est pas écrite.
+    - Valeurs des points (U9 du retour utilisateur du 23/11/2026) : elles n'étaient lisibles que dans
+      l'infobulle native (lente sur ordinateur, invisible sur mobile), et les petits graphiques de plus de 6 points
+      n'écrivaient que la première et la dernière année. Chaque graphique (`LineChart`) écrit maintenant au-dessus
+      de lui le nom et la valeur du point actif (pour plusieurs courbes, une valeur par courbe avec sa couleur) :
+      par défaut le point mis en valeur (édition affichée, dernière course), sinon celui que l'on survole, que
+      l'on touche sur mobile ou que l'on choisit au clavier (flèches, Début, Fin, Échap), repéré par un trait
+      vertical. Le choix est partagé entre les graphiques d'un même bloc (`selected` / `onSelectedChange`) :
+      toucher une course sur la natation la montre aussi sur le vélo, la course à pied et le classement ; il
+      revient au point par défaut quand on change de format ou de course. Sous l'axe, toutes les années sont
+      écrites quand elles sont à au moins 34 px l'une de l'autre, petits graphiques compris. L'infobulle native
+      est retirée ; la description pour les lecteurs d'écran (`aria-label`) donne toujours toutes les valeurs.
     - Historique : date, épreuve (lien vers son classement), format, catégorie, « clt / participants », temps.
       Tri par date (défaut, plus récente d'abord), classement ou temps ; filtres saison et discipline ; pagination.
     - URL : `/athletes/123?annee=2024&discipline=triathlon&sort_by=clt&order=asc&offset=20`.

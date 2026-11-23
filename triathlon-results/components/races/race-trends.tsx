@@ -51,6 +51,8 @@ export function RaceTrendsBlock({
 }) {
   const [selectedKey, setSelectedKey] = useState(initialKey ?? seriesKey(trends.series[0]));
   const [sexe, setSexe] = useState<SexeFilter>("tous");
+  // édition choisie sur un graphique, montrée sur tous (U9)
+  const [selectedEdition, setSelectedEdition] = useState<number | null>(null);
 
   const series =
     trends.series.find((item) => seriesKey(item) === selectedKey) ?? trends.series[0];
@@ -99,7 +101,10 @@ export function RaceTrendsBlock({
                 label: seriesLabel(item),
               }))}
               selected={seriesKey(series)}
-              onSelect={setSelectedKey}
+              onSelect={(key) => {
+                setSelectedKey(key);
+                setSelectedEdition(null);
+              }}
             />
           )}
         </div>
@@ -133,6 +138,8 @@ export function RaceTrendsBlock({
               },
             ]}
             format={shortDuration}
+            selected={selectedEdition}
+            onSelectedChange={setSelectedEdition}
           />
         </div>
 
@@ -149,6 +156,8 @@ export function RaceTrendsBlock({
                 currentYear={currentYear}
                 values={summaries.map((summary) => toSeconds(summary.segments[segment.key]))}
                 format={shortDuration}
+                selected={selectedEdition}
+                onSelectedChange={setSelectedEdition}
               />
             ))}
           </div>
@@ -185,12 +194,16 @@ function SmallChart({
   currentYear,
   values,
   format,
+  selected,
+  onSelectedChange,
 }: {
   title: string;
   years: string[];
   currentYear: string | null;
   values: (number | null)[];
   format: (value: number) => string;
+  selected: number | null;
+  onSelectedChange: (index: number | null) => void;
 }) {
   return (
     <div className="rounded-lg bg-[#F5F6F8] p-3">
@@ -202,6 +215,8 @@ function SmallChart({
         height={140}
         format={format}
         compact
+        selected={selected}
+        onSelectedChange={onSelectedChange}
       />
     </div>
   );

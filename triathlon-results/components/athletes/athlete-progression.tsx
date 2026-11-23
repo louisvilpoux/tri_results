@@ -46,6 +46,8 @@ function raceName(race: ProgressionRace): string {
  */
 export function AthleteProgressionBlock({ progression }: { progression: AthleteProgression }) {
   const [selectedKey, setSelectedKey] = useState(seriesKey(progression.series[0]));
+  // course choisie sur un graphique, montrée sur tous (U9)
+  const [selectedRace, setSelectedRace] = useState<number | null>(null);
   const series =
     progression.series.find((item) => seriesKey(item) === selectedKey) ?? progression.series[0];
   if (!series) return null;
@@ -79,7 +81,10 @@ export function AthleteProgressionBlock({ progression }: { progression: AthleteP
               label: seriesLabel(item),
             }))}
             selected={seriesKey(series)}
-            onSelect={setSelectedKey}
+            onSelect={(key) => {
+              setSelectedKey(key);
+              setSelectedRace(null);
+            }}
           />
         )}
       </div>
@@ -92,6 +97,8 @@ export function AthleteProgressionBlock({ progression }: { progression: AthleteP
                 labels={labels}
                 pointNames={names}
                 highlight={last}
+                selected={selectedRace}
+                onSelectedChange={setSelectedRace}
                 lines={[
                   {
                     label: segment.label,
@@ -110,6 +117,8 @@ export function AthleteProgressionBlock({ progression }: { progression: AthleteP
               labels={labels}
               pointNames={names}
               highlight={last}
+              selected={selectedRace}
+              onSelectedChange={setSelectedRace}
               lines={[
                 {
                   label: "Classement",
@@ -160,6 +169,7 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
  */
 function SameRace({ series }: { series: ProgressionSeries }) {
   const [name, setName] = useState(series.memes_courses[0].name_epreuve);
+  const [selectedEdition, setSelectedEdition] = useState<number | null>(null);
   const races = series.courses.filter((race) => race.name_epreuve === name);
   const labels = races.map((race) => race.year);
   const names = races.map(raceName);
@@ -172,7 +182,10 @@ function SameRace({ series }: { series: ProgressionSeries }) {
           <span className="sr-only">Course</span>
           <select
             value={name}
-            onChange={(event) => setName(event.target.value)}
+            onChange={(event) => {
+              setName(event.target.value);
+              setSelectedEdition(null);
+            }}
             className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-[#17202E]"
           >
             {series.memes_courses.map((repeated) => (
@@ -249,6 +262,8 @@ function SameRace({ series }: { series: ProgressionSeries }) {
             labels={labels}
             pointNames={names}
             highlight={races.length - 1}
+            selected={selectedEdition}
+            onSelectedChange={setSelectedEdition}
             lines={[
               {
                 label: "Classement",
@@ -271,6 +286,8 @@ function SameRace({ series }: { series: ProgressionSeries }) {
             labels={labels}
             pointNames={names}
             highlight={races.length - 1}
+            selected={selectedEdition}
+            onSelectedChange={setSelectedEdition}
             lines={[
               {
                 label: "Écart à la médiane",
