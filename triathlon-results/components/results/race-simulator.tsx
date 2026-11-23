@@ -4,7 +4,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Calculator, ChevronDown, RotateCcw } from "lucide-react";
 
-import { SIMULATOR_PARAM_PREFIX } from "@/lib/simulator";
+import {
+  SIMULATOR_CATEGORIE_PARAM,
+  SIMULATOR_PARAM_PREFIX,
+  SIMULATOR_SEXE_PARAM,
+} from "@/lib/simulator";
 import { formatGap } from "@/lib/time";
 import type { RaceTimes, TimedAthlete } from "@/types/race";
 
@@ -77,22 +81,29 @@ function placement(label: string, sorted: number[], value: number): Placement | 
  * Bloc « Et moi ? » de la page classement : l'utilisateur saisit ses temps et voit où il se
  * serait classé, au général, dans chaque segment, chez les hommes ou les femmes et dans une
  * catégorie. Les temps des classés (GET /api/races/{id}/times) ne sont chargés qu'à l'ouverture ;
- * le calcul se fait ensuite dans le navigateur, à chaque frappe. Les temps saisis sont gardés
- * dans l'adresse (moi_swim=…) pour pouvoir partager la simulation.
+ * le calcul se fait ensuite dans le navigateur, à chaque frappe. Les temps saisis, le sexe et
+ * la catégorie sont gardés dans l'adresse (moi_swim=…, moi_sexe=…, moi_categorie=…) pour
+ * pouvoir partager la simulation.
  */
 export function RaceSimulator({
   raceId,
   initialTimes,
+  initialSexe,
+  initialCategorie,
 }: {
   raceId: string;
   initialTimes: Record<string, string>;
+  initialSexe: SexeFilter;
+  initialCategorie: string;
 }) {
-  const [open, setOpen] = useState(Object.keys(initialTimes).length > 0);
+  const [open, setOpen] = useState(
+    Object.keys(initialTimes).length > 0 || initialSexe !== "" || initialCategorie !== ""
+  );
   const [data, setData] = useState<RaceTimes | null>(null);
   const [failed, setFailed] = useState(false);
   const [inputs, setInputs] = useState<Record<string, string>>(initialTimes);
-  const [sexe, setSexe] = useState<SexeFilter>("");
-  const [categorie, setCategorie] = useState("");
+  const [sexe, setSexe] = useState<SexeFilter>(initialSexe);
+  const [categorie, setCategorie] = useState(initialCategorie);
 
   useEffect(() => {
     if (!open || data || failed) return;
@@ -102,7 +113,7 @@ export function RaceSimulator({
       .catch(() => setFailed(true));
   }, [open, data, failed, raceId]);
 
-  // Temps saisis gardés dans l'adresse, sans recharger la page.
+  // Temps saisis, sexe et catégorie gardés dans l'adresse, sans recharger la page.
   useEffect(() => {
     const url = new URL(window.location.href);
     [...url.searchParams.keys()]
@@ -111,8 +122,10 @@ export function RaceSimulator({
     Object.entries(inputs).forEach(([key, value]) => {
       if (value.trim()) url.searchParams.set(`${SIMULATOR_PARAM_PREFIX}${key}`, value.trim());
     });
+    if (sexe) url.searchParams.set(SIMULATOR_SEXE_PARAM, sexe);
+    if (categorie) url.searchParams.set(SIMULATOR_CATEGORIE_PARAM, categorie);
     window.history.replaceState(null, "", url);
-  }, [inputs]);
+  }, [inputs, sexe, categorie]);
 
   return (
     <section className="space-y-4" aria-labelledby="simulateur-titre">

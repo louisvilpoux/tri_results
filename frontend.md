@@ -231,10 +231,12 @@ Réalisés
       l'adresse. Mêmes classés que les repères. Les temps des classés
       (`GET /races/{id}/times`, jusqu'à environ 900 Ko pour un Ironman de 5 800 classés) ne sont chargés qu'à
       l'ouverture du bloc, par la route Next `app/api/races/[id]/times` qui relaie l'API au navigateur (qui ne
-      connaît pas `API_BASE_URL`) ; le calcul se fait ensuite dans le navigateur, à chaque frappe. Les temps saisis
-      sont gardés dans l'adresse (`?moi_swim=00:32:00&moi_bike=…`), le bloc s'ouvre déjà rempli depuis un lien
-      partagé ; constantes dans `lib/simulator.ts` (un composant « use client » ne peut pas exporter de valeurs
-      vers la page serveur). Limite rappelée : comparaison avec cette édition, sans les conditions du jour.
+      connaît pas `API_BASE_URL`) ; le calcul se fait ensuite dans le navigateur, à chaque frappe. Les temps
+      saisis, le sexe et la catégorie sont gardés dans l'adresse
+      (`?moi_swim=00:32:00&moi_bike=…&moi_sexe=M&moi_categorie=MV1`, préfixe `moi_` pour ne pas se mélanger aux
+      filtres `s` et `categorie` du classement) ; le bloc s'ouvre déjà rempli depuis un lien partagé. Constantes
+      dans `lib/simulator.ts` (un composant « use client » ne peut pas exporter de valeurs vers la page serveur).
+      Limite rappelée : comparaison avec cette édition, sans les conditions du jour.
 - page profil athlète : `/athletes/[id]` (id = `unified_id`, celui des liens du classement d'une course).
     - En-tête : nom, club, sexe, saisons, disciplines avec leur nombre de courses.
     - Chiffres clés : courses, podiums, top 10, meilleur classement, nombre de saisons.

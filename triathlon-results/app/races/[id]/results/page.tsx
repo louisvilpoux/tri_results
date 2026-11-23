@@ -9,7 +9,12 @@ import { ResultsTable } from "@/components/results/results-table";
 import { PaginationBar } from "@/components/shared/pagination-bar";
 import { ApiError, getRace, getRaceCategories, getRaceResults, getRaceStats } from "@/lib/api";
 import { formatDate } from "@/lib/format";
-import { SIMULATOR_KEYS, SIMULATOR_PARAM_PREFIX } from "@/lib/simulator";
+import {
+  SIMULATOR_CATEGORIE_PARAM,
+  SIMULATOR_KEYS,
+  SIMULATOR_PARAM_PREFIX,
+  SIMULATOR_SEXE_PARAM,
+} from "@/lib/simulator";
 import { raceResultsMetadata } from "@/lib/seo";
 import { redirectOrNotFound } from "@/lib/redirections";
 import { DISCIPLINES_WITHOUT_SPLITS } from "@/types/result";
@@ -48,6 +53,11 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
     const value = urlParams[`${SIMULATOR_PARAM_PREFIX}${key}`];
     if (typeof value === "string" && value.trim()) simulatorTimes[key] = value;
   }
+  // sexe et catégorie choisis dans le simulateur (moi_sexe, moi_categorie)
+  const sexeParam = urlParams[SIMULATOR_SEXE_PARAM];
+  const simulatorSexe = sexeParam === "M" || sexeParam === "F" ? sexeParam : "";
+  const categorieParam = urlParams[SIMULATOR_CATEGORIE_PARAM];
+  const simulatorCategorie = typeof categorieParam === "string" ? categorieParam.trim() : "";
 
   let data;
 
@@ -143,7 +153,12 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
       {stats && stats.segments.length > 0 && (
         <>
           <RaceBenchmarks stats={stats} />
-          <RaceSimulator raceId={id} initialTimes={simulatorTimes} />
+          <RaceSimulator
+            raceId={id}
+            initialTimes={simulatorTimes}
+            initialSexe={simulatorSexe}
+            initialCategorie={simulatorCategorie}
+          />
         </>
       )}
 
