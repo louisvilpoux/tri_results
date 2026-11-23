@@ -491,3 +491,39 @@ def test_race_trends() -> None:
         assert edition["tous"]["classes"] <= edition["tous"]["participants"]
         assert set(edition["tous"]["segments"]) <= {s["key"] for s in series["segments"]}
     assert client.get("/races/0/trends").status_code == 404
+
+
+def test_race_times_for_simulator() -> None:
+    """Temps des classés pour le simulateur « Et moi ? » (GET /races/{id}/times) : mêmes classés
+    que les repères, temps en secondes cohérents avec le classement ; une place calculée comme
+    le simulateur (1 + classés plus rapides) correspond au classement."""
+    race_id = race_with(
+        """
+        SELECT epreuve_id FROM results
+        WHERE swim_time ~ '^\\d{2}:' AND bike_time ~ '^\\d{2}:' AND run_time ~ '^\\d{2}:'
+          AND type_epreuve = 'triathlon'
+        GROUP BY epreuve_id HAVING COUNT(*) BETWEEN 100 AND 400
+        ORDER BY epreuve_id LIMIT 1
+        """
+    )
+    times = client.get(f"/races/{race_id}/times").json()
+    assert [segment["key"] for segment in times["segments"]] == ["swim", "bike", "run"]
+    assert [transition["key"] for transition in times["transitions"]] == ["t1", "t2"]
+
+    stats = client.get(f"/races/{race_id}/stats").json()["segments"]
+    totals = sorted(a["total"] for a in times["athletes"] if a["total"] is not None)
+    assert len(totals) == stats[0]["classes"]
+    assert totals[0] == timedelta_seconds(stats[0]["vainqueur"])
+
+    for athlete in times["athletes"]:
+        assert athlete["sexe"] in ("M", "F", None)
+        assert athlete["categorie"] is None or not athlete["categorie"][0].isdigit()
+        if athlete["total"] is not None:
+            place = 1 + sum(1 for total in totals if total < athlete["total"])
+            assert place <= athlete["clt"] + 5  # ex aequo et classement de la source
+    assert client.get("/races/0/times").status_code == 404
+
+
+def timedelta_seconds(value: str) -> int:
+    hours, minutes, seconds = (int(part) for part in value.split(":"))
+    return hours * 3600 + minutes * 60 + seconds

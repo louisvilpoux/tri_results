@@ -4,7 +4,7 @@ import type {
   AthleteResultsQuery,
   AthleteResultsResponse,
 } from "@/types/athlete";
-import type { Race, RaceEvent, RaceStats, RaceTrends } from "@/types/race";
+import type { Race, RaceEvent, RaceStats, RaceTimes, RaceTrends } from "@/types/race";
 import type {
   AthleteListResponse,
   EventListResponse,
@@ -94,6 +94,11 @@ export function getRaceTrends(raceId: string): Promise<RaceTrends> {
 /** Progression de l'athlète par discipline et format (courses classées, au moins deux). */
 export function getAthleteProgression(athleteId: string): Promise<AthleteProgression> {
   return apiGet<AthleteProgression>(`/athletes/${athleteId}/progression`);
+}
+
+/** Temps des classés (simulateur « Et moi ? ») ; relayé au navigateur par app/api/races/[id]/times. */
+export function getRaceTimes(raceId: string): Promise<RaceTimes> {
+  return apiGet<RaceTimes>(`/races/${raceId}/times`);
 }
 
 export function getRace(raceId: string): Promise<Race> {

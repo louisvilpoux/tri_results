@@ -3,11 +3,13 @@ import Link from "next/link";
 import { ArrowLeft, CalendarDays, Info, MapPin, TriangleAlert, Trophy } from "lucide-react";
 
 import { RaceBenchmarks } from "@/components/results/race-benchmarks";
+import { RaceSimulator } from "@/components/results/race-simulator";
 import { ResultsFilters } from "@/components/results/results-filters";
 import { ResultsTable } from "@/components/results/results-table";
 import { PaginationBar } from "@/components/shared/pagination-bar";
 import { ApiError, getRace, getRaceCategories, getRaceResults, getRaceStats } from "@/lib/api";
 import { formatDate } from "@/lib/format";
+import { SIMULATOR_KEYS, SIMULATOR_PARAM_PREFIX } from "@/lib/simulator";
 import { raceResultsMetadata } from "@/lib/seo";
 import { redirectOrNotFound } from "@/lib/redirections";
 import { DISCIPLINES_WITHOUT_SPLITS } from "@/types/result";
@@ -20,7 +22,8 @@ import {
 
 interface PageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<RaceResultsSearchParams>;
+  // + temps saisis dans le simulateur « Et moi ? » (moi_swim, moi_total…)
+  searchParams: Promise<RaceResultsSearchParams & Partial<Record<string, string>>>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -37,7 +40,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function RaceResultsPage({ params, searchParams }: PageProps) {
   const { id } = await params;
-  const query = parseRaceResultsQuery(await searchParams);
+  const urlParams = await searchParams;
+  const query = parseRaceResultsQuery(urlParams);
+  // temps saisis dans le simulateur, lus clé par clé (l'objet des paramètres ne s'énumère pas)
+  const simulatorTimes: Record<string, string> = {};
+  for (const key of SIMULATOR_KEYS) {
+    const value = urlParams[`${SIMULATOR_PARAM_PREFIX}${key}`];
+    if (typeof value === "string" && value.trim()) simulatorTimes[key] = value;
+  }
 
   let data;
 
@@ -130,7 +140,12 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
         </div>
       </section>
 
-      {stats && stats.segments.length > 0 && <RaceBenchmarks stats={stats} />}
+      {stats && stats.segments.length > 0 && (
+        <>
+          <RaceBenchmarks stats={stats} />
+          <RaceSimulator raceId={id} initialTimes={simulatorTimes} />
+        </>
+      )}
 
       {/* Classement */}
       <section className="space-y-4">

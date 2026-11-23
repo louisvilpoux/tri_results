@@ -220,6 +220,21 @@ Réalisés
       31 classés, top 25 % de 13, pour que les tuiles restent dans l'ordre. Sous 20 classés : pas
       d'histogramme ; épreuve sans temps : pas de bloc. Un échec de l'API des repères n'empêche pas d'afficher
       le classement. Limite : catégories telles que publiées par la source (Q5).
+    - « Et moi ? » (23/11/2026) : simulateur sous les repères (`components/results/race-simulator.tsx`), replié par
+      défaut. L'utilisateur saisit ses temps (natation, T1, vélo, T2, course à pied ; course 1, vélo, course 2 en
+      duathlon ; « 1:35:00 » ou « 32:00 », temps mal écrit signalé sous sa case) ; le total est la somme des
+      segments (transitions comprises si remplies), ou celui qu'il saisit. Il voit, pour le total puis chaque
+      segment : place (1 + classés plus rapides) sur le nombre de classés, top %, écart au premier et à la médiane ;
+      en option, sa place chez les hommes ou les femmes et dans une catégorie ; et les athlètes juste devant et
+      juste derrière lui au général (liens vers leur profil). Bouton « Réinitialiser » (affiché dès qu'un temps, le
+      sexe ou la catégorie est rempli) : vide les temps, le sexe, la catégorie et les paramètres `moi_…` de
+      l'adresse. Mêmes classés que les repères. Les temps des classés
+      (`GET /races/{id}/times`, jusqu'à environ 900 Ko pour un Ironman de 5 800 classés) ne sont chargés qu'à
+      l'ouverture du bloc, par la route Next `app/api/races/[id]/times` qui relaie l'API au navigateur (qui ne
+      connaît pas `API_BASE_URL`) ; le calcul se fait ensuite dans le navigateur, à chaque frappe. Les temps saisis
+      sont gardés dans l'adresse (`?moi_swim=00:32:00&moi_bike=…`), le bloc s'ouvre déjà rempli depuis un lien
+      partagé ; constantes dans `lib/simulator.ts` (un composant « use client » ne peut pas exporter de valeurs
+      vers la page serveur). Limite rappelée : comparaison avec cette édition, sans les conditions du jour.
 - page profil athlète : `/athletes/[id]` (id = `unified_id`, celui des liens du classement d'une course).
     - En-tête : nom, club, sexe, saisons, disciplines avec leur nombre de courses.
     - Chiffres clés : courses, podiums, top 10, meilleur classement, nombre de saisons.

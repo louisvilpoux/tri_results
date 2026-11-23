@@ -222,6 +222,9 @@ dont le rang tombe dans le podium vaut null (top 10 % à partir de 31 classés, 
 d'au moins 2 éditions, Jeunes et Relais exclus). Une épreuve par année : la plus grande, hors sous-classement.
 Pour chaque édition, tous puis par sexe : participants, classés, part de classés, médiane et top 10 % du temps
 total, médiane de chaque segment (calculs de `race_benchmarks`, partagés avec `/stats`).
+`GET /races/{id}/times` : temps en secondes de chaque classé (total, segments, T1 et T2), avec nom, lien de
+profil (sauf équipe), place, sexe et catégorie sans le rang chronoweb, pour le simulateur « Et moi ? » de la page
+classement, qui calcule les places dans le navigateur. Mêmes classés que les repères.
 `GET /athletes/{id}/progression` : courses classées de l'athlète par discipline et format (séries d'au moins 2,
 la plus longue d'abord ; sans équipe, sous-classement, temps suspect, Jeunes ni Relais), dans l'ordre
 chronologique : total et segments (si le classement de l'épreuve les affiche), place, nombre de classés,

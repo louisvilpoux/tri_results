@@ -141,3 +141,25 @@ export interface RaceTrends {
   name_epreuve: string;
   series: TrendSeries[];
 }
+
+// Temps des classés d'une épreuve, pour le simulateur « Et moi ? » (GET /races/{id}/times).
+
+export interface TimedAthlete {
+  /** null pour une équipe (pas de profil). */
+  athlete_id: number | null;
+  nom: string;
+  clt: number;
+  sexe: "M" | "F" | null;
+  categorie: string | null;
+  /** Temps en secondes, par clé : total, segments (swim, bike, run…) et transitions (t1, t2). */
+  [time: string]: number | string | null;
+}
+
+export interface RaceTimes {
+  id: number;
+  /** Segments classés (natation, vélo, course à pied ; course 1, vélo, course 2 en duathlon). */
+  segments: { key: string; label: string }[];
+  /** T1 et T2 : saisissables pour calculer le total, non classées. */
+  transitions: { key: string; label: string }[];
+  athletes: TimedAthlete[];
+}

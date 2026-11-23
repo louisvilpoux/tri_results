@@ -542,6 +542,68 @@ def race_benchmarks(db: Session, race: Race) -> dict[str, Any]:
     }
 
 
+@app.get("/races/{race_id}/times")
+def get_race_times(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Temps des classés d'une épreuve, pour le simulateur « Et moi ? » de la page classement :
+    le navigateur y place les temps saisis par l'utilisateur, à chaque frappe, sans nouvel appel.
+
+    Mêmes classés que les repères (classés avec un temps, sans temps suspect). `segments` : les
+    segments classés (natation, vélo, course à pied ; course 1, vélo, course 2 en duathlon) ;
+    `transitions` : T1 et T2, saisissables pour calculer le total mais non classées. Temps en
+    secondes (null si absent) ; catégorie sans le rang chronoweb (« 12/FBE » → « FBE »)."""
+    race = db.get(Race, race_id)
+    if race is None:
+        raise HTTPException(status_code=404, detail="Race not found")
+
+    discipline = (race.type_epreuve or "").removeprefix("cross ")
+    shows_splits = discipline not in DISCIPLINES_WITHOUT_SPLITS and race_has_splits(db, race_id)
+    segments = SEGMENTS_BY_DISCIPLINE.get(discipline, []) if shows_splits else []
+    transitions = (
+        [("t1", "T1", "t1_time"), ("t2", "T2", "t2_time")] if segments else []
+    )
+    columns = [("total", "Total", "total_time"), *segments, *transitions]
+
+    category = func.nullif(func.regexp_replace(Result.categorie, r"^\d+/", ""), "")
+    rows = db.execute(
+        select(
+            Result.athlete_id,
+            Result.nom_athlete,
+            Result.equipe,
+            Result.clt,
+            Result.sexe,
+            category.label("categorie"),
+            *(valid_time_or_null(getattr(Result, column)).label(key) for key, _, column in columns),
+        )
+        .where(
+            Result.epreuve_id == race_id,
+            valid_rank_or_null(Result.clt).isnot(None),
+            Result.temps_suspect.is_(False),
+        )
+        .order_by(Result.clt, Result.id)
+    ).all()
+
+    def seconds(value: str | None) -> int | None:
+        return time_to_seconds(value) if value else None
+
+    return {
+        "id": race_id,
+        "segments": [{"key": key, "label": label} for key, label, _ in segments],
+        "transitions": [{"key": key, "label": label} for key, label, _ in transitions],
+        "athletes": [
+            {
+                # une équipe n'a pas de profil : pas de lien
+                "athlete_id": None if row.equipe else row.athlete_id,
+                "nom": " ".join((row.nom_athlete or "").split()),
+                "clt": row.clt,
+                "sexe": row.sexe if row.sexe in ("M", "F") else None,
+                "categorie": row.categorie,
+                **{key: seconds(getattr(row, key)) for key, _, _ in columns},
+            }
+            for row in rows
+        ],
+    }
+
+
 # ----------------------
 # Tendances d'une course entre éditions
 # ----------------------
