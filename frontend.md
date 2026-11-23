@@ -250,16 +250,23 @@ Réalisés
       `GET /athletes/{id}/progression`) : pour une discipline et un format couru au moins deux fois (le plus couru
       d'abord), un point par course classée, de la plus ancienne à la plus récente (saisons sous l'axe, nom et date
       de la course au survol, dernière course mise en valeur) : petits graphiques des temps de natation, vélo et
-      course à pied (course 1, vélo, course 2 en duathlon) et du classement en pourcentage (place / classés, axe
-      inversé : le meilleur en haut, « Top 6 % »). Une phrase rappelle que les temps d'une course à l'autre ne sont
-      pas directement comparables. « Même course » : pour une course faite au moins deux années (choix dans une
+      course à pied (course 1, vélo, course 2 en duathlon) et du classement en pourcentage (place / classés,
+      « Top 6 % »). Une phrase rappelle que plus bas = plus rapide ou mieux classé, et que les temps d'une course à
+      l'autre ne sont pas directement comparables. « Même course » : pour une course faite au moins deux années (choix dans une
       liste, la plus répétée d'abord), tableau par édition (total et segments avec l'écart à la participation
       précédente, place et top %, écart à la médiane de l'édition, qui corrige l'effet d'un parcours ou d'une météo
       différents) et graphiques du classement en % et de l'écart à la médiane. Courses retenues : classées, sans
       équipe, sous-classement, temps suspect, ni formats Jeunes et Relais. Un échec de l'API n'empêche pas
       d'afficher le profil. Graphiques : `components/shared/line-chart.tsx`, partagé avec les tendances d'une course
-      (un même libellé de saison écrit une seule fois, option `invert`, graduations `tickFormat`) ; durées :
-      `lib/time.ts`.
+      (un même libellé de saison écrit une seule fois, graduations `tickFormat`) ; durées : `lib/time.ts`.
+    - Sens et échelles des graphiques (U7 et U8 du retour utilisateur du 23/11/2026) : sur tous les graphiques
+      (progression, même course, tendances), les valeurs augmentent vers le haut ; plus bas = plus rapide ou mieux
+      classé. Avant, le classement en % était inversé (le meilleur en haut) alors que les temps et l'écart à la
+      médiane ne l'étaient pas : deux graphiques côte à côte se lisaient en sens contraire. L'axe couvre au moins
+      `minSpan` (par défaut 10 % de la plus grande valeur ; 20 points pour le classement en %, 10 minutes pour
+      l'écart à la médiane) et toujours la valeur `reference` (0 % ; la médiane, écrite « méd. ») : passer du top
+      3 % au top 4 % ne trace plus une chute sur toute la hauteur. Une graduation à moins de 14 px d'une autre
+      n'est pas écrite.
     - Historique : date, épreuve (lien vers son classement), format, catégorie, « clt / participants », temps.
       Tri par date (défaut, plus récente d'abord), classement ou temps ; filtres saison et discipline ; pagination.
     - URL : `/athletes/123?annee=2024&discipline=triathlon&sort_by=clt&order=asc&offset=20`.

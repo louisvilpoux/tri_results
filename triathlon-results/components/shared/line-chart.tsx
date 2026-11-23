@@ -14,7 +14,13 @@ export interface ChartLine {
  * - Un point par entrée de `labels` (année d'une édition, saison d'une course), espacés
  *   régulièrement ; une valeur manquante coupe la courbe.
  * - `highlight` : index du point mis en valeur (édition affichée, dernière course).
- * - `invert` : les petites valeurs en haut (classement en pourcentage : le meilleur en haut).
+ * - Sur tous les graphiques, les valeurs augmentent vers le haut (U7 du retour utilisateur du
+ *   23/11/2026 : le classement s'affichait à l'envers des temps) : plus bas = plus rapide ou
+ *   mieux classé.
+ * - Échelle (U8) : l'axe couvre au moins `minSpan` (par défaut 10 % de la plus grande valeur),
+ *   pour qu'un petit écart (du top 3 % au top 4 %) ne trace pas une chute sur toute la hauteur ;
+ *   `reference` (0 pour un pourcentage ou un écart à la médiane) est toujours dans l'axe et
+ *   écrit en graduation.
  * - Le SVG est dessiné à la largeur réelle du conteneur (mesurée), pour que le texte garde la
  *   même taille sur téléphone et sur grand écran.
  * - Sous l'axe, un libellé n'est écrit qu'une fois (plusieurs courses la même saison) et à au
@@ -29,7 +35,8 @@ export function LineChart({
   format,
   tickFormat = format,
   compact = false,
-  invert = false,
+  minSpan,
+  reference,
 }: {
   labels: string[];
   /** Nom de chaque point dans l'infobulle (nom de la course…) ; par défaut, son libellé. */
@@ -42,7 +49,10 @@ export function LineChart({
   /** Écriture des graduations de l'axe vertical, plus courte si besoin ; par défaut `format`. */
   tickFormat?: (value: number) => string;
   compact?: boolean;
-  invert?: boolean;
+  /** Étendue minimale de l'axe vertical, dans l'unité des valeurs. */
+  minSpan?: number;
+  /** Valeur toujours comprise dans l'axe et écrite en graduation (0…). */
+  reference?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(compact ? 240 : 600);
@@ -73,9 +83,22 @@ export function LineChart({
   const count = labels.length;
   const min = Math.min(...values);
   const max = Math.max(...values);
-  const margin = (max - min) * 0.1 || Math.max(Math.abs(max) * 0.05, 1);
-  const low = min - margin;
-  const high = max + margin;
+  // Axe : les valeurs et la référence, sur une étendue d'au moins minSpan (élargie autour du
+  // centre, sans passer sous la référence quand toutes les valeurs sont au-dessus), plus 8 %
+  // de marge.
+  let axisLow = reference === undefined ? min : Math.min(min, reference);
+  let axisHigh = reference === undefined ? max : Math.max(max, reference);
+  const span = Math.max(minSpan ?? Math.abs(max) * 0.1, axisHigh - axisLow, 1);
+  const extra = span - (axisHigh - axisLow);
+  axisLow -= extra / 2;
+  axisHigh += extra / 2;
+  if (reference !== undefined && min >= reference && axisLow < reference) {
+    axisHigh += reference - axisLow;
+    axisLow = reference;
+  }
+  const margin = span * 0.08;
+  const low = axisLow - margin;
+  const high = axisHigh + margin;
   const innerWidth = width - padding.left - padding.right;
   const innerHeight = height - padding.top - padding.bottom;
   // marge de 12 px de part et d'autre, pour que les points ne touchent ni l'axe ni le bord
@@ -86,15 +109,20 @@ export function LineChart({
     (count > 1
       ? (index / (count - 1)) * (innerWidth - 2 * inset)
       : (innerWidth - 2 * inset) / 2);
-  const y = (value: number) => {
-    const share = (value - low) / (high - low);
-    return padding.top + (invert ? share : 1 - share) * innerHeight;
-  };
+  // les valeurs augmentent vers le haut
+  const y = (value: number) => padding.top + (1 - (value - low) / (high - low)) * innerHeight;
 
-  // graduations : de la plus petite à la plus grande valeur (2 en petit format, 4 sinon)
-  const ticks = compact
-    ? [min, max]
-    : [0, 1, 2, 3].map((step) => min + (step / 3) * (max - min));
+  // Graduations : la plus petite et la plus grande valeur (4 graduations hors petit format),
+  // puis la référence ; une graduation à moins de 14 px d'une autre n'est pas écrite (valeurs
+  // très proches, comme le top 3 % et le top 4 %).
+  const candidateTicks = [
+    ...(compact ? [min, max] : [0, 1, 2, 3].map((step) => min + (step / 3) * (max - min))),
+    ...(reference === undefined ? [] : [reference]),
+  ];
+  const ticks: number[] = [];
+  for (const tick of candidateTicks) {
+    if (ticks.every((other) => Math.abs(y(other) - y(tick)) >= 14)) ticks.push(tick);
+  }
 
   // Libellés sous l'axe : le point mis en valeur d'abord, puis le premier, le dernier et les
   // autres (en petit format, seulement s'il y a 6 points ou moins) ; un même libellé une seule

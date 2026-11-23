@@ -157,8 +157,9 @@ export function RaceTrendsBlock({
         <EditionsTable series={series} summaries={summaries} currentYear={currentYear} />
 
         <p className="text-xs text-gray-400">
-          Une évolution peut venir d’un changement de parcours ou de la météo, pas seulement du
-          niveau des participants ; les éditions peuvent venir de sources différentes.
+          Plus bas = plus rapide. Une évolution peut venir d’un changement de parcours ou de la
+          météo, pas seulement du niveau des participants ; les éditions peuvent venir de sources
+          différentes.
         </p>
       </div>
     </section>

@@ -12,6 +12,16 @@ import type { AthleteProgression, ProgressionRace, ProgressionSeries } from "@/t
 
 const LINE_COLOR = "#FC6B32";
 
+// Étendue minimale des axes (U8 du retour utilisateur du 23/11/2026) : passer du top 3 % au top
+// 4 % ne doit pas tracer une chute sur toute la hauteur du graphique.
+const RANK_MIN_SPAN = 20; // points de pourcentage
+const GAP_MIN_SPAN = 10 * 60; // 10 minutes autour de la médiane
+
+/** Graduation du classement : « 0 % » pour la référence, « 6 % » sinon. */
+function rankTick(value: number): string {
+  return value <= 0 ? "0 %" : `${Math.max(1, Math.ceil(value))} %`;
+}
+
 function seriesKey(series: ProgressionSeries): string {
   return `${series.type_epreuve}|${series.format_epreuve}`;
 }
@@ -111,17 +121,19 @@ export function AthleteProgressionBlock({ progression }: { progression: AthleteP
               ]}
               height={140}
               format={(value) => topPercent(value / 100)}
-              tickFormat={(value) => `${Math.max(1, Math.ceil(value))} %`}
+              tickFormat={rankTick}
               compact
-              invert
+              minSpan={RANK_MIN_SPAN}
+              reference={0}
             />
           </ChartCard>
         </div>
 
         <p className="text-xs text-gray-400">
-          Les temps d’une course à l’autre ne sont pas directement comparables (parcours,
-          distances réelles, conditions) : le classement en pourcentage (place / classés, le
-          meilleur en haut) est le repère le plus fiable.
+          Sur tous les graphiques, plus bas = plus rapide ou mieux classé. Les temps d’une course
+          à l’autre ne sont pas directement comparables (parcours, distances réelles,
+          conditions) : le classement en pourcentage (place / classés) est le repère le plus
+          fiable.
         </p>
 
         {series.memes_courses.length > 0 && (
@@ -248,12 +260,13 @@ function SameRace({ series }: { series: ProgressionSeries }) {
             ]}
             height={140}
             format={(value) => topPercent(value / 100)}
-            tickFormat={(value) => `${Math.max(1, Math.ceil(value))} %`}
+            tickFormat={rankTick}
             compact
-            invert
+            minSpan={RANK_MIN_SPAN}
+            reference={0}
           />
         </ChartCard>
-        <ChartCard title="Écart à la médiane (plus bas : plus rapide)">
+        <ChartCard title="Écart à la médiane">
           <LineChart
             labels={labels}
             pointNames={names}
@@ -267,7 +280,12 @@ function SameRace({ series }: { series: ProgressionSeries }) {
             ]}
             height={140}
             format={(value) => formatGap(Math.round(value))}
+            tickFormat={(value) =>
+              Math.round(value) === 0 ? "méd." : formatGap(Math.round(value))
+            }
             compact
+            minSpan={GAP_MIN_SPAN}
+            reference={0}
           />
         </ChartCard>
       </div>
