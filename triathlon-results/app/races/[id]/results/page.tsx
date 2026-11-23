@@ -196,6 +196,7 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
             showSplits={
               race.avec_segments && !DISCIPLINES_WITHOUT_SPLITS.includes(race.type_epreuve ?? "")
             }
+            discipline={race.type_epreuve}
             sansTemps={sansTemps}
           />
           <PaginationBar

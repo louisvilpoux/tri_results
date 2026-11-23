@@ -17,6 +17,15 @@ const TIME_COLUMNS: { label: string; value: TimeColumn }[] = [
   { label: "Total", value: "total_time" },
 ];
 
+/**
+ * En duathlon (et cross duathlon), la colonne natation contient la première course à pied et la
+ * colonne course la seconde : elles s'appellent Course 1 et Course 2, comme dans les repères.
+ */
+const DUATHLON_LABELS: Partial<Record<TimeColumn, string>> = {
+  swim_time: "Course 1",
+  run_time: "Course 2",
+};
+
 /** Sur mobile, seuls le rang, l'athlète et le temps total sont affichés. */
 const DESKTOP_ONLY = "hidden md:table-cell";
 const CELL = "px-3 py-4 sm:px-4";
@@ -27,6 +36,8 @@ interface ResultsTableProps {
   results: RaceResult[];
   /** false : seul le temps total est affiché (aquathlon, bike&run, swimrun). */
   showSplits: boolean;
+  /** Discipline de l'épreuve (« duathlon »…), pour le nom des colonnes de segments. */
+  discipline?: string | null;
   /**
    * Épreuve sans temps total publié : ni classement ni temps total, segments non triables
    * (participants par ordre alphabétique, voir races_without_time dans api/main.py).
@@ -39,11 +50,18 @@ export function ResultsTable({
   query,
   results,
   showSplits,
+  discipline,
   sansTemps = false,
 }: ResultsTableProps) {
+  const isDuathlon = (discipline ?? "").includes("duathlon");
   const timeColumns = (
     showSplits ? TIME_COLUMNS : TIME_COLUMNS.filter((column) => column.value === "total_time")
-  ).filter((column) => !(sansTemps && column.value === "total_time"));
+  )
+    .filter((column) => !(sansTemps && column.value === "total_time"))
+    .map((column) => ({
+      ...column,
+      label: (isDuathlon && DUATHLON_LABELS[column.value]) || column.label,
+    }));
 
   function sortHeader(
     column: RaceResultSortBy,

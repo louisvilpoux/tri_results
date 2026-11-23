@@ -198,6 +198,9 @@ Réalisés
 - page de résultats d'une course : `/races/[id]/results` (et non `/formats/[id]/results` comme prévu plus haut).
     - En-tête alimenté par `GET /races/{id}` (nom, date, format, lieu) ; 404 si l'épreuve n'existe pas.
     - Tri en cliquant sur les en-têtes : classement, athlète, natation, T1, vélo, T2, course, total.
+    - Duathlon et cross duathlon : les colonnes natation et course s'appellent « Course 1 » et « Course 2 »
+      (la colonne natation contient la première course à pied), comme dans les repères et la progression
+      (`DUATHLON_LABELS`, `components/results/results-table.tsx`).
     - Aquathlon, bike&run et swimrun : seul le temps total est affiché (pas de colonnes natation, T1, vélo, T2,
       course), via `DISCIPLINES_WITHOUT_SPLITS` dans `types/result.ts`. Il en va de même pour toute épreuve dont la
       source n'a publié aucun temps intermédiaire (`avec_segments` de `GET /races/{id}`, 20/11/2026) : environ 80
