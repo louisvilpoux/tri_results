@@ -14,7 +14,7 @@ export function RaceEventHeader({ event }: { event: RaceEvent }) {
             Course{event.year_epreuve && ` · Édition ${event.year_epreuve}`}
           </p>
 
-          <h1 className="mt-3 text-3xl font-black capitalize sm:text-4xl">
+          <h1 className="mt-3 text-3xl font-black sm:text-4xl">
             {event.name_epreuve ?? "Course"}
           </h1>
 

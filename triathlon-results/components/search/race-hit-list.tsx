@@ -18,7 +18,7 @@ export function RaceHitList({ races }: { races: RaceHit[] }) {
             </span>
 
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-semibold capitalize text-[#17202E] group-hover:text-[#FC6B32]">
+              <span className="block truncate font-semibold text-[#17202E] group-hover:text-[#FC6B32]">
                 {race.name_epreuve ?? "Course"}
               </span>
               <span className="block truncate text-sm text-gray-500">

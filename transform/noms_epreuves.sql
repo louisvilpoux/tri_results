@@ -117,7 +117,9 @@ INSERT INTO alias_courses (alias, nom_garde) VALUES
     -- La Réunion : nom tiré de l'adresse fftri (« calendrier/0-3000/ », « calendrier/t974/ »),
     -- qui perd la ponctuation ; vrais noms lus sur fftri.t2area.com le 22/11/2026
     ('0 3000', 'La 0-3000'),
-    ('T974', 'T97.4');
+    ('T974', 'T97.4'),
+    -- Beauvais : la source écrit « l'argentine » (D7, retour utilisateur du 23/11/2026)
+    ('Triathlon de l''argentine - Beauvais', 'Triathlon de l''Argentine - Beauvais');
 
 -- Les étapes travaillent sur la liste des noms distincts (nom_initial → nom), appliquée à
 -- raw_data à la fin.

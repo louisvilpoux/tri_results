@@ -426,6 +426,14 @@ Points connus (données) :
 - Lieu des épreuves fftri (22/11/2026) : les 2 219 épreuves fftri_t2_area n'avaient pas de lieu ; il est lu dans
   l'en-tête de leur page fftri (`sources/fftri_t2_area_lieux.py`) et affiché dans l'en-tête de la course
   (« Sizun (29450) » pour Tribreizh 2022).
+- Noms de course (D7 du retour utilisateur du 23/11/2026) : la classe CSS `capitalize` mettait une majuscule à
+  chaque mot du nom dans l'historique, les meilleurs temps, les listes de courses et la recherche, et les titres
+  des pages course et classement (« Ironman Des Sables D'Olonne », « Triathlon De Quend »), alors que « Même
+  course » affichait le nom lisible (« Ironman des Sables d'Olonne »). Elle est retirée : toutes les pages
+  affichent le nom construit par `transform/noms_epreuves.sql`. Ne pas la remettre sur un nom de course. La
+  source écrivait « Triathlon de l'argentine - Beauvais » : alias vers « Triathlon de l'Argentine - Beauvais »
+  (ligne de `transform/lieux_courses.csv` mise au nouveau nom). Restent tout en majuscules 4 noms publiés ainsi
+  par la source (« CROSS DUATHLON & RANDO DU HARICOT »…).
 - Lieux harmonisés et corrigeables (22/11/2026) : tous les lieux sont au format « Ville (code postal) » (prolivesport
   écrivait « 62610 ARDRES 62 - Pas-de-Calais France », « nan nan nan nan ») ; dans une course, une seule écriture par
   ville ; une épreuve sans lieu prend celui de sa course. Les lieux manquants ou faux se corrigent à la main dans

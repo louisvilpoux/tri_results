@@ -30,7 +30,7 @@ export function AthleteBestTimes({ bestTimes }: { bestTimes: AthleteBestTime[] }
 
             <Link
               href={`/races/${best.epreuve_id}/results`}
-              className="mt-2 block truncate text-sm font-semibold capitalize text-gray-600 hover:text-[#FC6B32]"
+              className="mt-2 block truncate text-sm font-semibold text-gray-600 hover:text-[#FC6B32]"
             >
               {best.name_epreuve ?? "Voir le classement"}
             </Link>

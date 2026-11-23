@@ -72,7 +72,7 @@ export function AthleteResultsTable({ athleteId, query, results }: AthleteResult
               <td className={CELL}>
                 <Link
                   href={`/races/${result.epreuve_id}/results`}
-                  className="font-semibold capitalize text-[#17202E] hover:text-[#FC6B32]"
+                  className="font-semibold text-[#17202E] hover:text-[#FC6B32]"
                 >
                   {result.name_epreuve}
                 </Link>

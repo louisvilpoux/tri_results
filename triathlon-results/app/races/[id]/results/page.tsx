@@ -113,7 +113,7 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
               {sansTemps ? "Participants" : "Classement officiel"}
             </p>
 
-            <h1 className="mt-3 text-3xl font-black capitalize sm:text-4xl">
+            <h1 className="mt-3 text-3xl font-black sm:text-4xl">
               {race.name_epreuve ?? "Résultats de la course"}
             </h1>
 
