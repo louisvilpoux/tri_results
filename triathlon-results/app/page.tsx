@@ -95,7 +95,9 @@ export default function Home() {
     <div className="space-y-12">
 
       {/* Hero */}
-      <section className="relative overflow-hidden rounded-2xl bg-[#17202E] px-6 py-16 text-white sm:px-12 sm:py-20">
+      {/* Pas d'overflow-hidden sur la section : il couperait les suggestions de recherche (U4) ;
+          seules les décorations sont rognées. */}
+      <section className="relative rounded-2xl bg-[#17202E] px-6 py-16 text-white sm:px-12 sm:py-20">
         <div className="relative z-10 max-w-2xl">
 
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-orange-300">
@@ -122,8 +124,10 @@ export default function Home() {
         </div>
 
         {/* Décoration */}
-        <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full border-[50px] border-white/5" />
-        <div className="absolute -bottom-40 right-20 h-96 w-96 rounded-full border-[50px] border-[#FC6B32]/10" />
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+          <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full border-[50px] border-white/5" />
+          <div className="absolute -bottom-40 right-20 h-96 w-96 rounded-full border-[50px] border-[#FC6B32]/10" />
+        </div>
       </section>
 
       {/* Disciplines */}

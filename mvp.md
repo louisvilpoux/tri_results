@@ -33,6 +33,11 @@
         - filtres : `year_epreuve`, `type_epreuve`, `format_epreuve`.
     - /athletes/{id}/races : voir toutes les courses auxquelles un athlète à participé.
 
+    - /suggest : suggestions du champ de recherche (`q`, 2 caractères min. ; `limit`, défaut 5, max 10) :
+      `athletes` (comme /search) et `courses` (comme /courses), sans nombre total. `type` : `all` (défaut),
+      `athletes` ou `courses` (l'autre liste est vide) ; filtres des listes repris : `s` (sexe des athlètes),
+      `year`, `type_epreuve`, `format_epreuve` (courses).
+
     - /search : recherche d'athlètes et de courses par nom (`q`, 2 caractères min.). Tous les mots doivent apparaître,
       dans n'importe quel ordre, sans tenir compte des majuscules ni des accents.
         - `type` : `all` (défaut), `athletes` ou `races` ; pagination `limit` (défaut 6, max 50) et `offset`.

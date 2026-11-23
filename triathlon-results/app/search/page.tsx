@@ -94,7 +94,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const header = (
     <section className="space-y-4">
       <h1 className="text-3xl font-black tracking-tight">Recherche</h1>
-      <SearchForm variant="page" defaultValue={q} autoFocus={!q} />
+      <SearchForm key={q} variant="page" defaultValue={q} autoFocus={!q} />
     </section>
   );
 

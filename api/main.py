@@ -1261,10 +1261,16 @@ def contains_word(column: ColumnElement, word: str) -> ColumnElement:
 
 
 def search_athletes_page(
-    db: Session, words: list[str], limit: int, offset: int, sexe: str | None = None
+    db: Session,
+    words: list[str],
+    limit: int,
+    offset: int,
+    sexe: str | None = None,
+    with_total: bool = True,
 ) -> dict[str, Any]:
     """Athlètes (un par unified_id) dont le nom contient tous les mots — tous les athlètes si
-    `words` est vide —, les plus actifs d'abord. Utilisé par /search et /athletes."""
+    `words` est vide —, les plus actifs d'abord. Utilisé par /search, /athletes et /suggest
+    (sans `total`, `with_total=False`, pour éviter la requête de comptage)."""
     # nb_races n'est renseigné que pour les athlètes ayant des résultats
     # (transform/nb_races.sql) : on écarte les autres (souvent des équipes de relais).
     sexe_filter = [Athlete.sexe == sexe] if sexe else []
@@ -1284,7 +1290,7 @@ def search_athletes_page(
             .where(Athlete.id == Athlete.unified_id, Athlete.nb_races.isnot(None), *sexe_filter)
             .subquery()
         )
-    total = db.scalar(select(func.count()).select_from(matching)) or 0
+    total = (db.scalar(select(func.count()).select_from(matching)) or 0) if with_total else None
     ids = db.scalars(
         select(matching.c.unified_id)
         .order_by(matching.c.nb_races.desc().nulls_last(), matching.c.unified_id)
@@ -1535,32 +1541,20 @@ def race_filter_options(db: Session) -> dict[str, list[str]]:
     }
 
 
-@app.get("/courses")
-def list_courses(
-    q: str | None = Query(
-        None, min_length=2, max_length=100, description="Filtre sur le nom ou la ville"
-    ),
-    year: str | None = Query(None, pattern=r"^\d{4}$", description="Année (ex: 2024)"),
-    type_epreuve: str | None = Query(None, description="Discipline (ex: triathlon)"),
-    format_epreuve: str | None = Query(None, description="Format (ex: M), colonne format_epreuve"),
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
-    db: Session = Depends(get_db),
+def courses_page(
+    db: Session,
+    words: list[str],
+    limit: int,
+    offset: int,
+    year: str | None = None,
+    type_epreuve: str | None = None,
+    format_epreuve: str | None = None,
+    with_total: bool = True,
 ) -> dict[str, Any]:
-    """Liste des courses, une ligne par course (même nom) et non par édition (U13 du retour
-    utilisateur du 23/11/2026 : « Triathlon de Beauvais » occupait 9 lignes).
-
-    Mêmes filtres que /events, appliqués aux épreuves : une course apparaît si l'une de ses
-    éditions a une épreuve qui y répond. `edition` est l'édition la plus récente qui répond aux
-    filtres (lien principal, date, lieu) ; `editions` liste toutes les éditions de la course,
-    de la plus récente à la plus ancienne, et `types` toutes ses disciplines. Courses triées
-    par la date de `edition`, la plus récente d'abord. Une édition = nom + année, représentée
-    par son épreuve au plus petit id, toutes épreuves confondues (l'id de la page course
-    canonique, comme les éditions de /races/{id}/event)."""
+    """Courses (une ligne par nom) dont une épreuve répond aux filtres, avec toutes leurs
+    éditions : voir /courses. Utilisé par /courses et /suggest (sans `total`)."""
     has_results = select(Result.id).where(Result.epreuve_id == Race.id).exists()
-    filters = race_filters(
-        search_words(q) if q else [], year, type_epreuve, format_epreuve
-    )
+    filters = race_filters(words, year, type_epreuve, format_epreuve)
     # éditions qui répondent aux filtres
     matching = (
         select(
@@ -1586,7 +1580,7 @@ def list_courses(
         )
         .subquery()
     )
-    total = db.scalar(select(func.count()).select_from(latest)) or 0
+    total = (db.scalar(select(func.count()).select_from(latest)) or 0) if with_total else None
     rows = db.execute(
         select(latest)
         .order_by(latest.c.date_end.desc().nulls_last(), latest.c.name_epreuve)
@@ -1642,11 +1636,81 @@ def list_courses(
         }
         for row in rows
     ]
+    return {"items": items, "total": total}
+
+
+@app.get("/courses")
+def list_courses(
+    q: str | None = Query(
+        None, min_length=2, max_length=100, description="Filtre sur le nom ou la ville"
+    ),
+    year: str | None = Query(None, pattern=r"^\d{4}$", description="Année (ex: 2024)"),
+    type_epreuve: str | None = Query(None, description="Discipline (ex: triathlon)"),
+    format_epreuve: str | None = Query(None, description="Format (ex: M), colonne format_epreuve"),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Liste des courses, une ligne par course (même nom) et non par édition (U13 du retour
+    utilisateur du 23/11/2026 : « Triathlon de Beauvais » occupait 9 lignes).
+
+    Mêmes filtres que /events, appliqués aux épreuves : une course apparaît si l'une de ses
+    éditions a une épreuve qui y répond. `edition` est l'édition la plus récente qui répond aux
+    filtres (lien principal, date, lieu) ; `editions` liste toutes les éditions de la course,
+    de la plus récente à la plus ancienne, et `types` toutes ses disciplines. Courses triées
+    par la date de `edition`, la plus récente d'abord. Une édition = nom + année, représentée
+    par son épreuve au plus petit id, toutes épreuves confondues (l'id de la page course
+    canonique, comme les éditions de /races/{id}/event)."""
+    page = courses_page(
+        db, search_words(q) if q else [], limit, offset, year, type_epreuve, format_epreuve
+    )
     return {
-        "items": items,
-        "pagination": pagination(total, limit, offset),
+        "items": page["items"],
+        "pagination": pagination(page["total"], limit, offset),
         "filters": race_filter_options(db),
     }
+
+
+SuggestType = Literal["all", "athletes", "courses"]
+
+
+@app.get("/suggest")
+def suggest(
+    q: str = Query(..., min_length=2, max_length=100, description="Texte saisi"),
+    type: SuggestType = Query(
+        "all", description="all, athletes (page Athlètes) ou courses (page Courses)"
+    ),
+    s: Literal["M", "F"] | None = Query(None, description="Sexe des athlètes (page Athlètes)"),
+    year: str | None = Query(None, pattern=r"^\d{4}$", description="Année (page Courses)"),
+    type_epreuve: str | None = Query(None, description="Discipline (page Courses)"),
+    format_epreuve: str | None = Query(None, description="Format (page Courses)"),
+    limit: int = Query(5, ge=1, le=10),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Suggestions pendant la saisie dans le champ de recherche (U4 du retour utilisateur du
+    23/11/2026) : les athlètes les plus actifs et les courses les plus récentes (une ligne par
+    course, comme /courses) qui répondent à la recherche, mêmes règles que /search. Sans
+    nombre total de résultats, pour répondre vite : la page /search les donne. `type` limite
+    les suggestions aux athlètes ou aux courses (champs de filtre des listes) : l'autre liste
+    est vide et sa requête n'est pas faite. Les autres filtres déjà appliqués sur la liste
+    (sexe ; année, discipline, format) s'appliquent aussi aux suggestions, comme sur /athletes
+    et /courses."""
+    words = search_words(q)
+    if not words:
+        raise HTTPException(status_code=422, detail="Recherche vide")
+    athletes = (
+        search_athletes_page(db, words, limit, 0, sexe=s, with_total=False)["items"]
+        if type in ("all", "athletes")
+        else []
+    )
+    courses = (
+        courses_page(
+            db, words, limit, 0, year, type_epreuve, format_epreuve, with_total=False
+        )["items"]
+        if type in ("all", "courses")
+        else []
+    )
+    return {"q": q, "athletes": athletes, "courses": courses}
 
 
 # ----------------------

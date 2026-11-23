@@ -10,6 +10,8 @@ import type {
   CourseListResponse,
   EventListResponse,
   SearchResponse,
+  SuggestResponse,
+  SuggestType,
   SearchType,
 } from "@/types/search";
 import type { RaceResultsQuery, RaceResultsResponse } from "@/types/result";
@@ -137,6 +139,23 @@ export function listEvents(filters: RaceListQuery): Promise<EventListResponse> {
 /** Liste des courses, une ligne par course avec ses éditions (GET /courses). */
 export function listCourses(filters: RaceListQuery): Promise<CourseListResponse> {
   return apiGet<CourseListResponse>("/courses", raceListParams(filters));
+}
+
+/** Filtres d'une liste repris par ses suggestions (paramètres de GET /suggest). */
+export const SUGGEST_FILTERS = ["s", "year", "type_epreuve", "format_epreuve"] as const;
+export type SuggestFilters = Partial<Record<(typeof SUGGEST_FILTERS)[number], string | null>>;
+
+/** Suggestions d'un champ de recherche : 5 athlètes et/ou 5 courses (GET /suggest). */
+export function suggest(
+  q: string,
+  type: SuggestType = "all",
+  filters: SuggestFilters = {}
+): Promise<SuggestResponse> {
+  const params = new URLSearchParams({ q, type });
+  for (const [name, value] of Object.entries(filters)) {
+    if (value) params.set(name, value);
+  }
+  return apiGet<SuggestResponse>("/suggest", params);
 }
 
 /** Liste des athlètes, les plus actifs d'abord (GET /athletes). */

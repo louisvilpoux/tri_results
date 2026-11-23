@@ -80,3 +80,13 @@ export interface SearchResponse {
   athletes?: SearchGroup<AthleteHit>;
   races?: SearchGroup<RaceHit>;
 }
+
+/** Suggestions demandées : tout (recherche globale), athlètes ou courses (listes). */
+export type SuggestType = "all" | "athletes" | "courses";
+
+/** GET /suggest : suggestions pendant la saisie (U4 du retour utilisateur du 23/11/2026). */
+export interface SuggestResponse {
+  q: string;
+  athletes: AthleteHit[];
+  courses: CourseHit[];
+}

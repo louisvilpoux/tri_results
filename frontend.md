@@ -300,6 +300,18 @@ Réalisés
 - recherche globale : `/search?q=…` (alimentée par `GET /search`).
     - Champ de recherche (formulaire GET `next/form`, validé par Entrée) dans le header (icône vers `/search` sur mobile),
       dans le bandeau de l'accueil (à la place du bouton « Explorer les résultats ») et en haut de `/search`.
+    - Suggestions pendant la saisie (U4 du retour utilisateur du 23/11/2026) : à partir de 2 caractères et après
+      250 ms sans frappe, une liste s'ouvre sous le champ (les trois champs ; sur mobile, ceux de l'accueil et de
+      `/search`) : 5 athlètes (nom, club, nombre de courses ; lien vers le profil), 5 courses, une ligne par course
+      comme `/races` (lieu, nombre d'éditions et dernière édition, disciplines ; lien vers la dernière édition),
+      puis « Voir tous les résultats pour « … » ». Les mots saisis sont en orange gras, sans tenir compte des
+      accents. Clavier : ↑ ↓ parcourent la liste, Entrée ouvre la suggestion choisie (sans choix, lance la recherche
+      comme avant), Échap ferme ; modèle « combobox » d'ARIA. Chaque nouvelle frappe annule la requête en cours.
+      `GET /suggest` (comme `/search` et `/courses`, sans les requêtes de comptage : 80 à 180 ms en local contre 150
+      à 340 ms pour `/search`), relayé au navigateur par `app/api/suggest/route.ts`. Code :
+      `components/search/suggest-input.tsx` (champ à suggestions réutilisable), utilisé par
+      `components/search/search-form.tsx` et par les champs de filtre des listes (voir ci-dessous). Le bandeau de l'accueil n'a plus `overflow-hidden` (il coupait la
+      liste) : seules ses décorations sont rognées. Pas d'index trigramme pour l'instant (voir la fin du fichier).
     - Tous les mots doivent apparaître, dans n'importe quel ordre, sans tenir compte des majuscules ni des accents.
     - Onglets « Tout » (6 athlètes + 6 courses, lien « Tout voir »), « Athlètes » et « Courses » (20 par page, pagination),
       avec le nombre de résultats de chaque type. URL : `/search?q=deauville&type=races&offset=20`.
@@ -324,9 +336,16 @@ Réalisés
       `q` de `GET /events`), même recherche que la recherche globale (`search_races_page`) : chaque mot dans le nom
       ou le lieu, sans accents ni casse (« etaples » trouve « Triathlon Étaples-sur-Mer », « carcassonne » les
       courses à Carcassonne).
+    - Suggestions pendant la saisie dans « Nom ou ville » (comme la recherche globale, U4) : 5 courses seulement
+      (`GET /suggest?type=courses`), avec la saison, la discipline et le format déjà appliqués ; une suggestion
+      ouvre l'édition mise en avant (« 10 éditions, édition 2017 » avec « Saison 2017 »). Entrée sans suggestion
+      choisie applique le filtre comme avant.
     - URL : `/races?q=ardres&annee=2022&discipline=triathlon&format=M&offset=20`.
 - liste des athlètes : `/athletes` (lien « Athlètes » du header), alimentée par `GET /athletes`.
     - Athlètes les plus actifs d'abord, filtres nom (mêmes règles que la recherche) et sexe, 20 par page.
+    - Suggestions pendant la saisie dans « Nom » (U4) : 5 athlètes seulement (`GET /suggest?type=athletes`), du
+      sexe déjà filtré ; une suggestion ouvre le profil, Entrée sans suggestion choisie applique le filtre.
+      `FilterField` prend alors `htmlFor` : la liste de suggestions ne peut pas être dans un `<label>`.
     - URL : `/athletes?q=leroy&sexe=F&offset=20`.
 - header : le lien « Résultats » (`/results`) a été supprimé (doublon de « Courses » : un classement s'ouvre depuis sa course).
 - composants partagés : `components/shared/sortable-header.tsx`, `pagination-bar.tsx`, `filter-form.tsx`

@@ -128,3 +128,51 @@ def test_type_limits_the_groups(race_name: str) -> None:
     assert set(search(q=race_name, type="races")) >= {"races"}
     assert "athletes" not in search(q=race_name, type="races")
     assert "races" not in search(q=race_name, type="athletes")
+
+
+def test_suggest_returns_athletes_and_courses_like_search() -> None:
+    """U4 (retour utilisateur du 23/11/2026) : /suggest donne les mêmes premiers athlètes que
+    /search et les mêmes premières courses que /courses, sans nombre total."""
+    data = client.get("/suggest", params={"q": "dupont", "limit": 5}).json()
+    searched = client.get("/search", params={"q": "dupont", "type": "athletes", "limit": 5})
+    assert [a["id"] for a in data["athletes"]] == [
+        a["id"] for a in searched.json()["athletes"]["items"]
+    ]
+    courses = client.get("/courses", params={"q": "beauvais", "limit": 5}).json()["items"]
+    suggested = client.get("/suggest", params={"q": "beauvais"}).json()["courses"]
+    assert suggested == courses
+    assert "total" not in data
+
+
+def test_suggest_limits_and_validation() -> None:
+    data = client.get("/suggest", params={"q": "ma", "limit": 3}).json()
+    assert len(data["athletes"]) <= 3 and len(data["courses"]) <= 3
+    assert client.get("/suggest", params={"q": "a"}).status_code == 422
+    assert client.get("/suggest", params={"q": "---"}).status_code == 422
+    assert client.get("/suggest", params={"q": "ma", "limit": 50}).status_code == 422
+
+
+def test_suggest_type() -> None:
+    """Champs de filtre des pages Courses et Athlètes : une seule liste de suggestions."""
+    full = client.get("/suggest", params={"q": "beauvais"}).json()
+    athletes = client.get("/suggest", params={"q": "beauvais", "type": "athletes"}).json()
+    courses = client.get("/suggest", params={"q": "beauvais", "type": "courses"}).json()
+    assert athletes["athletes"] == full["athletes"] and athletes["courses"] == []
+    assert courses["courses"] == full["courses"] and courses["athletes"] == []
+    assert client.get("/suggest", params={"q": "ma", "type": "teams"}).status_code == 422
+
+
+def test_suggest_follows_list_filters() -> None:
+    """Les suggestions des listes suivent les filtres déjà appliqués : mêmes premiers
+    éléments que /athletes et /courses avec ces filtres."""
+    athletes = client.get("/athletes", params={"q": "leroy", "s": "F", "limit": 5}).json()
+    suggested = client.get(
+        "/suggest", params={"q": "leroy", "type": "athletes", "s": "F"}
+    ).json()["athletes"]
+    assert [a["id"] for a in suggested] == [a["id"] for a in athletes["items"]]
+
+    params = {"q": "triathlon", "year": "2022", "type_epreuve": "triathlon", "format_epreuve": "M"}
+    courses = client.get("/courses", params={**params, "limit": 5}).json()["items"]
+    suggested = client.get("/suggest", params={**params, "type": "courses"}).json()["courses"]
+    assert suggested == courses
+    assert all(course["edition"]["year_epreuve"] == "2022" for course in suggested)

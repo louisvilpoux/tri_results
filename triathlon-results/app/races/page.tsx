@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { CourseList } from "@/components/races/course-list";
+import { SuggestInput } from "@/components/search/suggest-input";
 import { FILTER_FIELD_CLASS, FilterField, FilterForm } from "@/components/shared/filter-form";
 import { PaginationBar } from "@/components/shared/pagination-bar";
 import { listCourses } from "@/lib/api";
@@ -92,14 +93,21 @@ export default async function RacesPage({ searchParams }: PageProps) {
       </section>
 
       <FilterForm action="/races" resetHref={hasFilters ? "/races" : undefined}>
-        <FilterField label="Nom ou ville">
-          <input
-            type="search"
-            name="q"
+        <FilterField label="Nom ou ville" htmlFor="filtre-course">
+          <SuggestInput
+            key={query.q ?? ""}
+            id="filtre-course"
+            type="courses"
+            filters={{
+              year: query.year,
+              type_epreuve: query.discipline,
+              format_epreuve: query.format,
+            }}
             defaultValue={query.q ?? ""}
-            minLength={2}
             placeholder="Ex. Ardres, Carcassonne…"
-            className={`${FILTER_FIELD_CLASS} sm:w-72`}
+            className="sm:w-72"
+            inputClassName={`${FILTER_FIELD_CLASS} w-full`}
+            panelClassName="left-0 w-full sm:w-[28rem]"
           />
         </FilterField>
 

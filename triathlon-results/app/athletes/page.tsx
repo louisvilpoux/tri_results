@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { AthleteHitList } from "@/components/search/athlete-hit-list";
+import { SuggestInput } from "@/components/search/suggest-input";
 import { FILTER_FIELD_CLASS, FilterField, FilterForm } from "@/components/shared/filter-form";
 import { PaginationBar } from "@/components/shared/pagination-bar";
 import { listAthletes } from "@/lib/api";
@@ -78,14 +79,17 @@ export default async function AthletesPage({ searchParams }: PageProps) {
       </section>
 
       <FilterForm action="/athletes" resetHref={hasFilters ? "/athletes" : undefined}>
-        <FilterField label="Nom">
-          <input
-            type="search"
-            name="q"
+        <FilterField label="Nom" htmlFor="filtre-nom">
+          <SuggestInput
+            key={query.q ?? ""}
+            id="filtre-nom"
+            type="athletes"
+            filters={{ s: query.sexe }}
             defaultValue={query.q ?? ""}
-            minLength={2}
             placeholder="2 caractères min."
-            className={`${FILTER_FIELD_CLASS} sm:w-72`}
+            className="sm:w-72"
+            inputClassName={`${FILTER_FIELD_CLASS} w-full`}
+            panelClassName="left-0 w-full sm:w-96"
           />
         </FilterField>
 

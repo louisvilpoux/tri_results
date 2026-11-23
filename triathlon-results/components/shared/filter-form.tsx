@@ -46,10 +46,30 @@ export function FilterForm({ action, resetHref, children }: FilterFormProps) {
   );
 }
 
-/** Libellé + champ, empilés. */
-export function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
+/**
+ * Libellé + champ, empilés. Avec `htmlFor` (id du champ), le libellé ne contient pas le champ :
+ * pour un champ à suggestions, dont la liste (un bloc) ne peut pas être dans un <label>.
+ */
+export function FilterField({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  children: React.ReactNode;
+}) {
+  const className = "flex flex-col gap-1.5 text-xs font-semibold text-gray-500";
+  if (htmlFor) {
+    return (
+      <div className={className}>
+        <label htmlFor={htmlFor}>{label}</label>
+        {children}
+      </div>
+    );
+  }
   return (
-    <label className="flex flex-col gap-1.5 text-xs font-semibold text-gray-500">
+    <label className={className}>
       {label}
       {children}
     </label>
