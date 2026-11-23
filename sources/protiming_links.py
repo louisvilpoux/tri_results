@@ -1,60 +1,60 @@
+"""Liste des événements protiming à scraper : écrit ./sources/protiming/url/urls.csv.
+
+Une ligne par événement (une édition d'une course, avec une ou plusieurs épreuves), pour les types
+d'événement retenus. La liste vient de la page « Résultats » du site, filtrée par type
+(`/results?type=triathlon`), lue page par page.
+
+Lancement depuis la racine du projet : `python sources/protiming_links.py`.
+"""
 import pandas as pd
-import requests
-from bs4 import BeautifulSoup
-import re
-from urllib.parse import urljoin
-import certifi
-import ssl
 
-context = ssl.create_default_context(cafile=certifi.where())
-context = ssl._create_unverified_context()
+from protiming_api import get_route_data
 
-headers = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    ),
-    "Referer": "https://www.prolivesport.fr/",
-    "access-token": "AUTH_PLSWS_V2",
-}
+# Types d'événement du site (`eventType.type`) gardés. Les autres sont d'autres sports (running,
+# trail, raid, vtt…).
+TYPES_EVENEMENT = ["triathlon", "duathlon", "swim_run", "bike_and_run"]
+URLS_CSV = "./sources/protiming/url/urls.csv"
 
-def get_last_page(soup):
-    nav_pagination = soup.find("nav", attrs={"aria-label": "pagination"})
-    li_elements = nav_pagination.find_all("li") if nav_pagination else []
 
-    # Récupérer les textes non vides (['1', '…', '196', '197'])
-    textes = [li.get_text(strip=True) for li in li_elements if li.get_text(strip=True)]
+def lieu_evenement(location: dict | None) -> str | None:
+    """« Ville (département) », comme sur l'ancien site : « Vieilles-Maisons (45) »."""
+    if not location or not location.get("city"):
+        return None
+    departement = location.get("department") or location.get("zipCode")
+    return f"{location['city']} ({departement})" if departement else location["city"]
 
-    # Récupérer directement le numéro maximum de page (197)
-    pages = [int(t) for t in textes if t.isdigit()]
-    return max(pages) if pages else 1
 
-base_url = "https://protiming.fr"
+def liste_evenements(type_evenement: str) -> list[dict]:
+    """Tous les événements d'un type, toutes pages de la liste des résultats confondues."""
+    lignes = []
+    page = 1
+    while True:
+        data = get_route_data("/results", {"type": type_evenement, "page": page})["routes/results"]
+        print(f"{type_evenement} : page {page}/{data['totalPages']}")
+        for event in data["events"]:
+            debut = event["date"]["start"]
+            lignes.append({
+                "event_id": event["id"],
+                "slug": event["slug"],
+                "event_name": event["title"],
+                "type": event["eventType"]["type"],
+                "date": debut.date().isoformat() if debut else None,
+                "lieu": lieu_evenement(event.get("location")),
+                "url": f"https://protiming.fr/results/{event['slug']}",
+            })
+        if page >= data["totalPages"]:
+            return lignes
+        page += 1
 
-url = f"{base_url}/results?page=1"
-resp = requests.get(url, headers=headers)
-resp.raise_for_status()
-soup_page_ref = BeautifulSoup(resp.text, "html.parser")
 
-protiming = pd.DataFrame()
-for page in range(1, get_last_page(soup_page_ref)+1):
-    url = f"{base_url}/results?page={page}"
-    print(url)
-    resp = requests.get(url)
-    resp.raise_for_status()
-    soup = BeautifulSoup(resp.text, "html.parser")
+def main() -> None:
+    lignes = []
+    for type_evenement in TYPES_EVENEMENT:
+        lignes.extend(liste_evenements(type_evenement))
+    urls = pd.DataFrame(lignes).drop_duplicates(subset="event_id")
+    urls.to_csv(URLS_CSV, index=False)
+    print(f"{len(urls)} événements écrits dans {URLS_CSV}")
 
-    rows = []
-    for a_element in soup.find_all("a", href=True):
-        if '/results/' in a_element["href"].lower():
-            nom_epreuve_element = a_element.find("h3")
-            nom_epreuve = nom_epreuve_element.get_text(strip=True) if nom_epreuve_element else None
-            spans = [span.get_text(strip=True) for span in a_element.find_all("span")]
-            if nom_epreuve and len(spans) == 2:
-                rows.append({"name": nom_epreuve, "date":spans[0], "lieu": spans[1], "url": base_url+a_element["href"]})
 
-    
-    df = pd.DataFrame(rows).drop_duplicates()
-    protiming = pd.concat([protiming, df], ignore_index=True)
-
-protiming.to_csv("./sources/protiming/url/urls.csv", index=False)
+if __name__ == "__main__":
+    main()

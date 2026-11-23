@@ -1,60 +1,135 @@
-from pathlib import Path
-import pandas as pd
-import numpy as np
-import shutil
+"""Mise en forme des CSV protiming pour le chargement : ./sources/protiming/raw/ → protiming_0/.
+
+Les CSV de raw/ (écrits par protiming.py) ont les colonnes du site : « Pos. », « Temps »,
+« Nom - Prénom », « Catégorie », « Sexe »… puis les temps intermédiaires sous le nom choisi par
+chaque organisateur (« Natation », « Tps Natation », « Swim », « Nat. » ; « CaP1 », « Tps CaP 2 »…).
+Chaque fichier est ramené aux mêmes colonnes (COLONNES_FINALES), celles que lit
+transform/raw_data.sql dans raw_protiming_0 :
+
+- temps intermédiaires rangés dans swim, t1, bike, t2, run. En duathlon, la première course à pied
+  va dans swim et la seconde dans run, comme pour les autres sources. Les colonnes qui ne sont pas
+  un de ces segments (« Natation + T1 », « CaP Tour 1 », « VELO 3 », « Inter 2 », « Tps Canoe »…) ne
+  sont pas gardées ;
+- temps au format hh:mm:ss : la place collée par le site est retirée (« 00:13:21 (144.) »),
+  « 15:25 » devient « 00:15:25 », les valeurs qui ne sont pas un temps (« NC », « ---- », « () »)
+  sont vidées ;
+- catégorie sans le classement dans la catégorie (« SEM (1 / 155) » → « SEM », « S4M (1.) » →
+  « S4M ») ;
+- nom d'une équipe anonyme (nom vide, équipiers dans « Equipier 1 », « Athlete 2 »…) : ses
+  équipiers, « NOM1 & NOM2 ».
+
+Lancement depuis la racine du projet : `python sources/protiming_organize.py`.
+"""
 import os
+import re
+import shutil
+import unicodedata
+from pathlib import Path
 
-def list_files_folder(folder):
-    root = Path(f"./sources/{folder}/raw/")
-    all_files = []
-    for i in [f'./{p}' for p in root.rglob("*") if p.is_file()]:
-        if i not in [f"./sources/{folder}/url/urls.csv", f"./sources/{folder}/.DS_Store"] and len(i.split("/")) == 4:
-            all_files.append(i)
-    return all_files
+import pandas as pd
 
-def clean_col_name(col_name):
-    std_name = col_name.replace("/","_").replace(".", "_").replace("#", "_").replace(" ", "_").replace("-","_").replace("+","_").replace(" ","_").lower()
-    for c in matching_columns:
-        if std_name == c:
-            std_name = matching_columns[c]
-    return std_name
+TARGET = "protiming"
+RAW_DIR = Path(f"./sources/{TARGET}/raw")
+OUTPUT_DIR = Path(f"./sources/{TARGET}/{TARGET}_0")
 
-def simplify_df(df):
-    final_columns = ["clt", "temps", "nom", "club", "cat", "détails", "sexe", 
-                     "swim", "t1", "bike", "t2", "run", "date_epreuve", 
-                     "name_epreuve", "format_epreuve", "lieu_epreuve", 
-                     "distance_epreuve"]
-    for c in final_columns:
-        if c not in list(df.columns):
-            df[c] = np.nan
-    return df[final_columns]
+COLONNES_FINALES = ["clt", "temps", "nom", "club", "cat", "détails", "sexe",
+                    "swim", "t1", "bike", "t2", "run", "date_epreuve",
+                    "name_epreuve", "format_epreuve", "lieu_epreuve",
+                    "distance_epreuve", "type_evenement"]
 
-target = "protiming"
-list_files = list_files_folder(target)
+COLONNES_FIXES = {"Pos.": "clt", "Temps": "temps", "Nom - Prénom": "nom", "Club": "club",
+                  "Catégorie": "cat", "Sexe": "sexe", "url_epreuve": "détails"}
 
-matching_columns = {"pos_": "clt", "nom___prénom": "nom", "catégorie": "cat",
-                    "cap1": "swim", "velo": "bike", "cap2": "run", 
-                    "natation": "swim", "cap": "run", "tps_natation": "swim",
-                    "tps_velo": "bike", "tps_cap": "run",
-                    "url_epreuve": "détails"}
+# Nom de colonne simplifié (voir cle_colonne) → segment.
+SEGMENTS = {
+    "natation": "swim", "nat": "swim", "swim": "swim",
+    "t1": "t1",
+    "velo": "bike", "bike": "bike",
+    "t2": "t2",
+    "cap": "run", "run": "run",
+    # duathlon : première course à pied dans swim, seconde dans run
+    "cap1": "swim", "cap2": "run",
+}
 
-try:
-    shutil.rmtree(f"./sources/{target}/{target}_0")
-except Exception as e:
-    print(f"./sources/{target}/{target}_0 do not exist : {e}")
-# create new folder
-os.mkdir(f"./sources/{target}/{target}_0")
+# Colonnes des équipiers d'une équipe (« Equipier 1 », « Athlete 2 », « Athlète 1 »).
+EQUIPIER = re.compile(r"^(equipier|athlete)\d$")
+# Temps éventuellement suivi d'une place : « 00:13:21 (144.) », « 15:25 (13.) », « 8:49 ».
+TEMPS = re.compile(r"^(?:(\d{1,2}):)?(\d{1,2}):(\d{2})(?:\s*\(.*\))?$")
+# Classement dans la catégorie, à la fin de celle-ci : « SEM (1 / 155) », « S4M (1.) »,
+# « DUO HOMMES (2) ».
+RANG_CATEGORIE = re.compile(r"\s*\(\s*-?\d+\s*\.?\s*(?:/\s*-?\d+\s*)?\)\s*$")
 
-# for each file : replace forbidden caracters in column name, rename columns and only keep some of them
-# result is saved in a dedicated folder
-schema_list = []
-for local_path in list_files:
-    df = pd.read_csv(local_path)
-    unnamed_cols = list(df.columns[df.columns.str.contains("Unnamed")])
-    for index, u_c in enumerate(unnamed_cols):
-        df = df.rename(columns={u_c:"Unnamed_"+str(index)})
-    for c in list(df.columns):
-        df = df.rename(columns={c: clean_col_name(c)})
-    df = simplify_df(df)
-    final_path = local_path.replace(f"/{target}/raw/", f"/{target}/{target}_0/")
-    df.to_csv(final_path, index=False)
+
+def cle_colonne(nom: str) -> str:
+    """Nom de colonne sans accents, majuscules, préfixe « Tps », ponctuation ni espaces.
+
+    « Tps Vélo » → « velo », « Tps CaP 2 » → « cap2 », « Nat. » → « nat ».
+    """
+    texte = unicodedata.normalize("NFKD", nom).encode("ascii", "ignore").decode("ascii").lower()
+    texte = re.sub(r"^tps\b", "", texte.strip())
+    return re.sub(r"[^a-z0-9]", "", texte)
+
+
+def temps_hhmmss(valeur: object) -> str | None:
+    """Temps au format hh:mm:ss, ou None si la valeur n'est pas un temps."""
+    if not isinstance(valeur, str):
+        return None
+    m = TEMPS.match(valeur.strip())
+    if not m:
+        return None
+    heures, minutes, secondes = m.groups()
+    return f"{int(heures or 0):02d}:{int(minutes):02d}:{secondes}"
+
+
+def nom_equipe(ligne: pd.Series, colonnes_equipiers: list[str]) -> str | None:
+    """« NOM1 & NOM2 » à partir des colonnes d'équipiers (« - » et vides ignorés)."""
+    noms = [str(ligne[c]).strip() for c in colonnes_equipiers
+            if pd.notna(ligne[c]) and str(ligne[c]).strip() not in ("", "-")]
+    return " & ".join(noms) if noms else None
+
+
+def organise(df: pd.DataFrame) -> pd.DataFrame:
+    """Ramène un CSV de raw/ aux COLONNES_FINALES."""
+    sortie = pd.DataFrame(index=df.index)
+    for source, cible in COLONNES_FIXES.items():
+        sortie[cible] = df[source] if source in df.columns else None
+    for colonne in ["date_epreuve", "name_epreuve", "format_epreuve", "lieu_epreuve",
+                    "type_evenement"]:
+        sortie[colonne] = df[colonne] if colonne in df.columns else None
+
+    # Temps intermédiaires : si deux colonnes donnent le même segment, la première remplie gagne.
+    for colonne in df.columns:
+        segment = SEGMENTS.get(cle_colonne(colonne))
+        if segment is None:
+            continue
+        valeurs = df[colonne].map(temps_hhmmss)
+        sortie[segment] = sortie[segment].fillna(valeurs) if segment in sortie else valeurs
+
+    sortie["temps"] = sortie["temps"].map(temps_hhmmss)
+    sortie["cat"] = sortie["cat"].map(
+        lambda c: RANG_CATEGORIE.sub("", c).strip() or None if isinstance(c, str) else None)
+
+    colonnes_equipiers = [c for c in df.columns if EQUIPIER.match(cle_colonne(c))]
+    if colonnes_equipiers:
+        sans_nom = sortie["nom"].isna()
+        sortie.loc[sans_nom, "nom"] = df[sans_nom].apply(
+            nom_equipe, axis=1, colonnes_equipiers=colonnes_equipiers)
+
+    for colonne in COLONNES_FINALES:
+        if colonne not in sortie.columns:
+            sortie[colonne] = None
+    return sortie[COLONNES_FINALES]
+
+
+def main() -> None:
+    shutil.rmtree(OUTPUT_DIR, ignore_errors=True)
+    os.mkdir(OUTPUT_DIR)
+    fichiers = sorted(RAW_DIR.glob("*.csv"))
+    for chemin in fichiers:
+        df = pd.read_csv(chemin, dtype=str)
+        organise(df).to_csv(OUTPUT_DIR / chemin.name, index=False)
+    print(f"{len(fichiers)} fichiers écrits dans {OUTPUT_DIR}")
+
+
+if __name__ == "__main__":
+    main()

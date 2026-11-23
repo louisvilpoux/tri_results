@@ -64,10 +64,39 @@ nom_de_la_source :
        on l'appelle une fois par événement et on garde les lignes dont le champ `race` correspond.
        Colonnes ajoutées : `distance` (km), `categorieevent` et `categorievar` (catégorie de l'événement).
 
-- protiming : 
-    1. protiming_links.py : scrapping du site pour venir récupérer l'ensemble des liens vers les pages de résultats des épreuves.
-    2. protiming.py : pour chaque url, on vient scrapper la page et générer un csv avec les informations.
-    3. protiming_organize.py : pour chaque csv, on vient principalement appliquer les bons noms de colonnes.
+- protiming : le site a été refait en novembre 2026 (application React Router). Les anciennes adresses
+  (`/Results/running/16-Triathlon-de-Cepoy/63`) et le tableau HTML paginé (`/page:2`) n'existent plus :
+  les scripts lisent maintenant la version « données » des pages (même adresse suivie de `.data`), au
+  format turbo-stream, décodée par `protiming_api.py` (`decode_turbo_stream`, `get_route_data`).
+    1. protiming_links.py : liste des événements de la page Résultats filtrée par type
+       (`/results.data?type=triathlon&page=n` ; types triathlon, duathlon, swim_run, bike_and_run) →
+       url/urls.csv (event_id, slug, event_name, type, date AAAA-MM-JJ, lieu « Ville (dép.) », url).
+       143 événements le 23/11/2026 (2014 à 2026).
+    2. protiming.py : pour chaque événement, la liste de ses épreuves (`results.races`), puis le
+       classement de chaque épreuve page par page (`/results/{slug}.data?race={id}&page={n}`, 50 lignes
+       par page). Un CSV par épreuve dans `raw/` (`{slug}_{race_id}.csv`), colonnes de l'ancien site
+       (« Pos. », « Temps », « Nom - Prénom » écrit NOM Prénom, « Club », « Dossard », « Catégorie »,
+       « km/h », temps intermédiaires sous leur nom publié : « Natation », « T1 », « Velo », « CaP »…) plus
+       « Sexe » (M/F), « Temps réel » quand il existe et `type_evenement`. Une épreuve déjà téléchargée
+       n'est pas refaite ; une épreuve sans résultat n'est pas écrite ; un événement en erreur n'arrête
+       pas les autres (relancer le script le reprend). Les épreuves que protiming n'a pas chronométrées
+       (`timedByProtiming` faux, classement en PDF seulement : 126 le 23/11/2026) n'ont pas de CSV.
+       Le 23/11/2026 : 549 CSV, 50 508 lignes, 2015 à 2026.
+       Les id d'événement sont ceux de l'ancien site, pas les id d'épreuve (Triathlon de l'étang des
+       Bois 2015 : épreuves 62, 63, 65 avant, 632 à 635 maintenant) : les CSV de l'ancien site sont
+       gardés à part dans `raw_old/` et ne doivent pas être mélangés avec ceux de `raw/`.
+    3. protiming_organize.py : `raw/` → `protiming_0/`, mêmes colonnes pour tous les fichiers (clt, temps,
+       nom, club, cat, détails, sexe, swim, t1, bike, t2, run, date_epreuve, name_epreuve, format_epreuve,
+       lieu_epreuve, distance_epreuve, type_evenement).
+       Temps intermédiaires reconnus à leur nom sans accents, majuscules, « Tps » ni ponctuation
+       (« Natation », « Nat. », « Swim » → swim ; « Velo », « Tps Vélo », « Bike » → bike ; « CaP », « Run »
+       → run ; T1, T2) ; en duathlon « CaP1 » / « Cap 1 » → swim et « CaP2 » → run, comme les autres
+       sources. Les colonnes cumulées ou par tour (« Natation + T1 », « CaP Tour 1 », « VELO 3 »,
+       « Inter 2 ») ne sont pas gardées. Temps mis au format hh:mm:ss : place collée retirée
+       (« 00:13:21 (144.) »), « 15:25 » → « 00:15:25 », « NC », « ---- » vidés. Catégorie sans le
+       classement dans la catégorie (« SEM (1 / 155) » → « SEM »). Équipe anonyme (nom vide) : nom formé
+       de ses équipiers (« Equipier 1 », « Athlete 2 »…), « NOM1 & NOM2 ». 15 athlètes anonymisés par la
+       source restent sans nom.
 
 # Chargement de la donnée source dans la base de données
 Dossier : `load`
