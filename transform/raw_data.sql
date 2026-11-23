@@ -199,11 +199,31 @@ t1 as t1_time, null as rang_t1, null as rang_course_t1, null as indice_performan
 bike as bike_time, null as rang_bike, null as rang_course_bike, null as indice_performance_bike,
 t2 as t2_time, null as rang_t2, null as rang_course_t2, null as indice_performance_t2,
 run as run_time, null as rang_run, null as rang_course_run, null as indice_performance_run,
-name_epreuve, format_epreuve, EXTRACT(YEAR FROM to_date(date_epreuve, 'DD/MM/YYYY'))::text as year_epreuve, 
-date_epreuve, lieu_lisible(lieu_epreuve) as lieu_epreuve,
-scraped_at, 'protiming' as source, sexe_categorie(cat) as sexe,
-null as type_epreuve, null as format_normalise
+-- protiming (sources/protiming.py, nouveau site, 23/11/2026). Le nom de l'événement garde
+-- parfois l'année (« Triathlon du Brin d'Amour 2016 ») : retirée comme chez prolivesport.
+prolivesport_event_name(name_epreuve, to_char(to_date(date_epreuve, 'DD/MM/YYYY'), 'YYYY')) as name_epreuve,
+format_epreuve, to_char(to_date(date_epreuve, 'DD/MM/YYYY'), 'YYYY') as year_epreuve,
+-- date écrite JJ/MM/AAAA par le scraping, AAAA-MM-JJ comme les autres sources
+to_date(date_epreuve, 'DD/MM/YYYY')::text as date_epreuve,
+-- « Bordeaux (33) » : le numéro entre parenthèses est le département, pas le code postal ; il
+-- est retiré pour que la ville soit reconnue comme celle des autres sources (voir lieux.sql)
+lieu_lisible(regexp_replace(lieu_epreuve, '\s*\((\d{2,3}|2A|2B)\)$', '')) as lieu_epreuve,
+scraped_at, 'protiming' as source,
+-- protiming donne le sexe (M ou F) ; dans ses catégories (« S2M », « V1F », « SEM »), la
+-- lettre du sexe est à la fin et sexe_categorie ne la lirait pas.
+CASE WHEN sexe IN ('M', 'F') THEN sexe END as sexe,
+d.discipline as type_epreuve,
+epreuve_format(format_epreuve, d.discipline, null) as format_normalise
 from raw_protiming_0
+CROSS JOIN LATERAL (
+    SELECT protiming_discipline(format_epreuve, name_epreuve, type_evenement) AS discipline
+) d
+-- discipline NULL : épreuve d'un autre sport (marche, trail, natation seule…), exclue
+WHERE d.discipline IS NOT NULL
+-- athlètes anonymisés par la source (nom vide) : ils formeraient un seul profil sans nom
+AND btrim(coalesce(nom, '')) <> ''
+-- épreuves contre-la-montre exclues, comme pour toutes les sources (voir prolivesport)
+AND format_epreuve !~* '\mclm\M'
 ;
 
 -- Noms et clubs mal encodés (« ThÃ©o HANQUIEZ » pour « Théo HANQUIEZ ») : le texte UTF-8 a été

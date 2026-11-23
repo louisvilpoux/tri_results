@@ -264,3 +264,62 @@ BEGIN
     RETURN team;
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
+
+
+-- Discipline d'une épreuve protiming, ou NULL si l'épreuve est exclue.
+-- protiming donne le type de l'événement (type_evenement : triathlon, duathlon, swim_run,
+-- bike_and_run) et un nom d'épreuve libre (« Format M - Individuel », « Tri XS », « 3000m -
+-- Pupilles », « Parcours SRBA Duo - 15km500 »). Règles, la première qui répond l'emporte :
+--   1. épreuves d'un autre sport ou d'un seul sport proposées à côté de l'enchaînement :
+--      exclues (« Marche Nordique 10km », « Urban Trail », « 5km course nature », « Nage en eaux
+--      vives », « Distance Natation » du Triathlon Annette K., « Running 5-6ans », « VTT 7-9ans »,
+--      challenges d'entreprises canoë / obstacles) ;
+--   2. événement bike&run ou swimrun dont le nom d'épreuve ne cite aucune discipline : celle de
+--      l'événement (« 3000m », « Run&Bike 12km », « Format S - Solo ») ; sans cette règle,
+--      epreuve_discipline exclurait « 3000m » (une distance seule y est une course à pied) ;
+--   3. sinon epreuve_discipline, avec le type duathlon comme catégorie par défaut (« Course
+--      Enfants (6/9 ans) » d'un duathlon → duathlon ; « Cross Duathlon Pupilles » d'un bike&run
+--      → cross duathlon).
+CREATE OR REPLACE FUNCTION protiming_discipline(race text, event_name text, type_evenement text)
+RETURNS text AS $$
+DECLARE
+    t text := lower(unaccent(coalesce(race, '')));
+    race_words text[] := epreuve_named_disciplines(race);
+BEGIN
+    IF t ~ ('marche|trail|course nature|\mnage\M|eaux vives|^distance (natation|velo|course)'
+            || '|^running|^vtt|inter-?entreprises|defi des entreprises') THEN
+        RETURN NULL;
+    END IF;
+    IF cardinality(race_words) = 0 AND type_evenement = 'bike_and_run' THEN
+        RETURN 'bike&run';
+    END IF;
+    IF cardinality(race_words) = 0 AND type_evenement = 'swim_run' THEN
+        RETURN 'swimrun';
+    END IF;
+    RETURN epreuve_discipline(
+        race, event_name,
+        CASE WHEN type_evenement = 'duathlon' THEN 'Triathlon - Duathlon' END,
+        NULL
+    );
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+
+-- Nom affiché d'une équipe protiming, ou NULL si la ligne est celle d'une seule personne.
+-- Chez protiming, chaque ligne d'un relais, d'un bike&run ou d'un swimrun en duo est une
+-- équipe (vérifié le 23/11/2026) : la source met le nom d'équipe à la place du nom
+-- (« Les Gloutons Secs », « VENDOME 6 », « Timeo/Lucas ») ; pour une équipe anonymisée,
+-- sources/protiming_organize.py l'a remplacé par ses équipiers (« NOM1 & NOM2 »). Un swimrun
+-- se court en duo sauf mention « Solo » ou « Individuel » dans le nom de l'épreuve.
+-- Espaces en trop retirés ; la casse d'origine est gardée.
+CREATE OR REPLACE FUNCTION protiming_team_name(
+    nom text, discipline text, format text, race text
+)
+RETURNS text AS $$
+    SELECT CASE
+        WHEN discipline = 'bike&run'
+             OR format = 'RELAIS'
+             OR (discipline = 'swimrun' AND lower(unaccent(race)) !~ 'solo|individuel')
+        THEN nullif(btrim(regexp_replace(nom, '\s+', ' ', 'g')), '')
+    END
+$$ LANGUAGE sql IMMUTABLE;

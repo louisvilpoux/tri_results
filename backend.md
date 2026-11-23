@@ -125,14 +125,28 @@ Dossier : `transform`
       commentaire dans le fichier. `prolivesport_event_name` retire l'année (elle reste dans year_epreuve) et le
       numéro d'édition (« 38e ») du nom de l'événement pour relier les éditions d'une même course ;
       `prolivesport_team_name` et `chronoweb_team_name` donnent le nom des équipes (bike&run, relais).
+      protiming (23/11/2026) : `protiming_discipline` exclut les épreuves d'un autre sport ou d'un seul sport
+      proposées à côté de l'enchaînement (marche nordique, trail, « course nature », nage en eaux vives,
+      « Distance Natation », « Running 5-6ans », « VTT 7-9ans », challenges d'entreprises), donne la
+      discipline de l'événement (`type_evenement`) à une épreuve de bike&run ou de swimrun dont le nom n'en cite
+      aucune (« 3000m », « Format S - Solo »), sinon applique `epreuve_discipline` (type duathlon comme
+      catégorie par défaut) ; le format vient de `epreuve_format`. `protiming_team_name` : chaque ligne d'un
+      relais, d'un bike&run ou d'un swimrun en duo (sans « Solo » ni « Individuel » dans le nom de l'épreuve)
+      est une équipe, affichée sous le nom publié.
     - raw_data.sql : insertion dans la table raw_data des données en union all des différentes tables raw_ .
       Le sexe y est calculé une fois par ligne : colonne `sexe` de la source pour prolivesport (M ou F, vide pour
-      les équipes mixtes X), lettre M ou F qui ouvre `cat` pour les autres sources, après le rang que chronoweb
+      les équipes mixtes X) et protiming (dont les catégories « S2M », « V1F » finissent par le sexe), lettre M
+      ou F qui ouvre `cat` pour les autres sources, après le rang que chronoweb
       colle parfois devant (`sexe_categorie` : « 14/MV3 » → M ; « MIXT », « MASTERS », « MI »… → vide). Avant le
       22/11/2026, c'était le premier caractère de `cat` : « 14/MV3 » donnait « 1 » (62 % des lignes chronoweb).
       athletes_tmp et results le reprennent.
       Les épreuves contre-la-montre (`format_epreuve` contenant le mot « CLM ») sont exclues de toutes les
       sources : chez prolivesport, leurs colonnes de temps sont décalées.
+      protiming : date JJ/MM/AAAA mise en AAAA-MM-JJ, année retirée du nom de l'événement
+      (`prolivesport_event_name`), numéro de département retiré du lieu (« Bordeaux (33) » → « Bordeaux », pour
+      que lieux.sql reconnaisse la ville des autres sources de la course), athlètes anonymisés (nom vide)
+      écartés. Le 23/11/2026 : 47 264 lignes sur 50 508 (1 148 dans des épreuves d'autres sports, 2 081 en
+      contre-la-montre, 15 sans nom).
       Les noms et clubs mal encodés (« ThÃ©o » pour « Théo ») sont corrigés par `corrige_encodage` : texte réécrit
       en Windows-1252 (à défaut Latin-1) puis relu en UTF-8, seulement si le résultat est valide (« JOÃO »,
       « CHÂTEAU » restent intacts).
@@ -191,7 +205,8 @@ Dossier : `transform`
       absente des deux côtés, par l'année (NULL = NULL n'étant jamais vrai, ces résultats étaient
       écartés : c'était le cas de tout chronoweb avant que la date soit scrappée).
       La colonne `equipe` marque les lignes d'équipe (bike&run, relais) : prolivesport, repérées ligne par ligne par
-      `prolivesport_team_name` ; chronoweb, toutes les lignes de ces épreuves (`chronoweb_team_name`). Ces fonctions
+      `prolivesport_team_name` ; chronoweb, toutes les lignes de ces épreuves (`chronoweb_team_name`) ; protiming,
+      toutes les lignes des relais, bike&run et swimruns en duo (`protiming_team_name`). Ces fonctions
       donnent aussi le nom affiché ; nb_races.sql ne compte pas ces lignes.
       Un athlète garde une ligne par temps total dans une épreuve : même temps = doublon de la source (Ironman de
       Nice 2023 publié deux fois), une ligne sans temps à côté d'une ligne avec temps aussi.
@@ -214,10 +229,13 @@ Dossier : `transform`
       lignes d'une épreuve dont au moins la moitié des lignes vérifiables sont incohérentes (le décalage touche
       surtout une épreuve entière : 169 épreuves sous 10 % d'incohérentes, 98 au-dessus de 90 %). Total et
       classement gardés. Exécuté après temps_totaux.sql.
-    - doublons_sources.sql : retire les épreuves prolivesport ou chronoweb publiées aussi par fftri_t2_area (dates à
-      un jour près, au moins la moitié des athlètes en commun) ; la version fftri_t2_area est gardée et la table
-      doublons_sources garde la trace des paires retirées (colonne `source`). Les autres épreuves de la source dans
-      ces courses prennent le nom fftri_t2_area pour être regroupées avec elles. Exécuté avant nb_races.sql.
+    - doublons_sources.sql : retire les épreuves prolivesport, chronoweb ou protiming publiées aussi par
+      fftri_t2_area (dates à un jour près, au moins la moitié des athlètes en commun) ; la version fftri_t2_area
+      est gardée et la table doublons_sources garde la trace des paires retirées (colonne `source`). Les autres
+      épreuves de la source dans ces courses prennent le nom fftri_t2_area pour être regroupées avec elles.
+      protiming (23/11/2026) : 64 paires retirées, toutes à 93 % d'athlètes en commun ou plus, les autres paires à
+      10 % ou moins (Verdun, Vendôme, Cepoy, Enghien… : 18 316 lignes). Restent 28 962 résultats protiming
+      (455 épreuves, 38 courses). Exécuté avant nb_races.sql.
     - lieux.sql : lieux des épreuves, déjà mis au format « Ville (code postal) » par `lieu_lisible` (raw_data.sql,
       toutes sources). Dans une course, les écritures d'une même ville sont ramenées à la plus complète ; une
       épreuve sans lieu prend le lieu le plus fréquent de sa course ; puis les corrections écrites à la main dans

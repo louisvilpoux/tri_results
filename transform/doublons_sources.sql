@@ -36,7 +36,7 @@ communs AS (
     JOIN results f
       ON f.athlete_id = s.athlete_id
      AND abs(f.date_epreuve::date - s.date_epreuve::date) <= 1
-    WHERE s.source IN ('prolivesport', 'chronoweb') AND f.source = 'fftri_t2_area'
+    WHERE s.source IN ('prolivesport', 'chronoweb', 'protiming') AND f.source = 'fftri_t2_area'
     GROUP BY s.source, s.epreuve_id, f.epreuve_id
 )
 SELECT

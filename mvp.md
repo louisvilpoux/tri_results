@@ -70,4 +70,4 @@ Scripts Python + SQL
     - Chronoweb
     - FFtri_t2_area
     - Prolivesport
-    - Protiming (à corriger)
+    - Protiming (nouveau site depuis novembre 2026, voir backend.md)
