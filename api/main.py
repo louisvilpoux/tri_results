@@ -1759,14 +1759,16 @@ def list_courses(
     }
 
 
-SuggestType = Literal["all", "athletes", "courses"]
+SuggestType = Literal["all", "athletes", "courses", "clubs"]
 
 
 @app.get("/suggest")
 def suggest(
     q: str = Query(..., min_length=2, max_length=100, description="Texte saisi"),
     type: SuggestType = Query(
-        "all", description="all, athletes (page Athlètes) ou courses (page Courses)"
+        "all",
+        description="all, athletes (page Athlètes), courses (page Courses) ou clubs (champ "
+        "Club de la page Athlètes)",
     ),
     s: Literal["M", "F"] | None = Query(None, description="Sexe des athlètes (page Athlètes)"),
     year: str | None = Query(None, pattern=r"^\d{4}$", description="Année (page Courses)"),
@@ -1782,13 +1784,18 @@ def suggest(
     les suggestions aux athlètes ou aux courses (champs de filtre des listes) : l'autre liste
     est vide et sa requête n'est pas faite. Les autres filtres déjà appliqués sur la liste
     (sexe ; année, discipline, format) s'appliquent aussi aux suggestions, comme sur /athletes
-    et /courses. Dans la recherche globale (type=all), aussi 3 clubs au plus (voir /search)."""
+    et /courses. Dans la recherche globale (type=all), aussi 3 clubs au plus (voir /search) ;
+    type=clubs ne donne que des clubs (champ Club de la page Athlètes, tous sexes)."""
     words = search_words(q)
     if not words:
         raise HTTPException(status_code=422, detail="Recherche vide")
-    # clubs : 3 au plus, seulement dans la recherche globale (accueil, en-tête)
+    # clubs : 3 au plus dans la recherche globale, `limit` pour le champ Club de la page Athlètes
     clubs = (
-        search_clubs(db, words, min(limit, 3), with_total=False)["items"] if type == "all" else []
+        search_clubs(db, words, min(limit, 3) if type == "all" else limit, with_total=False)[
+            "items"
+        ]
+        if type in ("all", "clubs")
+        else []
     )
     athletes = (
         search_athletes_page(db, words, limit, 0, sexe=s, with_total=False)["items"]

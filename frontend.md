@@ -364,6 +364,11 @@ Réalisés
     - Suggestions pendant la saisie dans « Nom » (U4) : 5 athlètes seulement (`GET /suggest?type=athletes`), du
       sexe déjà filtré ; une suggestion ouvre le profil, Entrée sans suggestion choisie applique le filtre.
       `FilterField` prend alors `htmlFor` : la liste de suggestions ne peut pas être dans un `<label>`.
+    - Suggestions dans « Club » (24/11/2026), même logique : 5 clubs (`GET /suggest?type=clubs`, clubs d'au moins
+      3 athlètes, tous sexes, nombre d'athlètes) ; un club suggéré ouvre la liste de ce club au nom exact
+      (`club_exact=1`) en gardant le nom et le sexe déjà filtrés, Entrée sans suggestion choisie applique le
+      filtre « contient les mots ». `SuggestInput` prend pour cela `name` (`club`), `clubLinkFilters` et
+      `onValueChange` (utilisé par `club-input.tsx` pour quitter le mode exact quand le nom change).
     - URL : `/athletes?q=leroy&club=vendome&sexe=F&offset=20`.
 - header : le lien « Résultats » (`/results`) a été supprimé (doublon de « Courses » : un classement s'ouvre depuis sa course).
 - composants partagés : `components/shared/sortable-header.tsx`, `pagination-bar.tsx`, `filter-form.tsx`

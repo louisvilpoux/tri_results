@@ -17,8 +17,14 @@ const DEBOUNCE_MS = 250;
 const MIN_LENGTH = 2;
 
 interface SuggestInputProps {
-  /** Suggestions demandées : tout (recherche globale), athlètes ou courses (listes). */
+  /** Suggestions demandées : tout (recherche globale), athlètes, courses ou clubs (listes). */
   type: SuggestType;
+  /** Nom du paramètre envoyé par le formulaire (`q` par défaut, `club` pour le champ Club). */
+  name?: string;
+  /** Filtres de la page gardés dans le lien d'un club suggéré (page Athlètes). */
+  clubLinkFilters?: Record<string, string | null>;
+  /** Appelé à chaque frappe (le champ Club suit ainsi les modifications du nom). */
+  onValueChange?: (value: string) => void;
   /** Filtres déjà appliqués sur la liste, repris par les suggestions. */
   filters?: SuggestFilters;
   defaultValue?: string;
@@ -57,6 +63,9 @@ interface Option {
  */
 export function SuggestInput({
   type,
+  name = "q",
+  clubLinkFilters,
+  onValueChange,
   filters,
   defaultValue,
   autoFocus,
@@ -137,7 +146,7 @@ export function SuggestInput({
     })),
     ...clubs.map((club, index) => ({
       group: groupTitle("Clubs", index),
-      href: clubHref(club.club),
+      href: clubHref(club.club, clubLinkFilters),
       content: (
         <SuggestionRow
           icon={<Users size={15} aria-hidden />}
@@ -219,12 +228,13 @@ export function SuggestInput({
       <input
         id={id}
         type="search"
-        name="q"
+        name={name}
         required={required}
         minLength={MIN_LENGTH}
         value={value}
         onChange={(event) => {
           setValue(event.target.value);
+          onValueChange?.(event.target.value);
           setOpen(true);
           setActive(-1);
         }}
@@ -282,6 +292,8 @@ export function SuggestInput({
               ? "Aucun athlète ne correspond."
               : type === "courses"
                 ? "Aucune course ne correspond."
+                : type === "clubs"
+                ? "Aucun club ne correspond (clubs d’au moins 3 athlètes)."
                 : "Aucun athlète, club ni course ne correspond."}
           </p>
         )}

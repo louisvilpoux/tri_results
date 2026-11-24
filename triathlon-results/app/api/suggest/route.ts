@@ -4,7 +4,7 @@ import { ApiError, SUGGEST_FILTERS, suggest } from "@/lib/api";
 import type { SuggestFilters } from "@/lib/api";
 import type { SuggestType } from "@/types/search";
 
-const TYPES: SuggestType[] = ["all", "athletes", "courses"];
+const TYPES: SuggestType[] = ["all", "athletes", "courses", "clubs"];
 
 /**
  * GET /api/suggest?q=…&type=…(&s=…&year=…) : relaie GET /suggest de l'API au navigateur, qui ne connaît pas

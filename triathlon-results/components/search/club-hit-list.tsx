@@ -6,10 +6,16 @@ import type { ClubHit } from "@/types/search";
 /**
  * Liste des athlètes d'un club (filtre club de la page Athlètes), au nom exact : elle compte
  * le même nombre d'athlètes que le club trouvé (sinon « LILLE TRIATHLON » prendrait aussi
- * « US LILLE TRIATHLON »).
+ * « US LILLE TRIATHLON »). otherFilters : filtres de la page Athlètes déjà appliqués (sexe,
+ * nom), gardés quand on choisit un club dans son champ Club.
  */
-export function clubHref(club: string): string {
-  return `/athletes?${new URLSearchParams({ club, club_exact: "1" })}`;
+export function clubHref(club: string, otherFilters: Record<string, string | null> = {}): string {
+  const params = new URLSearchParams(
+    Object.entries(otherFilters).filter((entry): entry is [string, string] => !!entry[1])
+  );
+  params.set("club", club);
+  params.set("club_exact", "1");
+  return `/athletes?${params}`;
 }
 
 /** Clubs trouvés par la recherche globale ; chacun ouvre la liste de ses athlètes. */

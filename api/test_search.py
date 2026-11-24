@@ -201,6 +201,16 @@ def test_clubs_in_global_search() -> None:
     assert second["clubs"]["items"] == clubs["items"][2:4]
 
 
+def test_suggest_clubs_type() -> None:
+    """Champ Club de la page Athlètes : seulement des clubs, 5 par défaut, les mêmes et dans le
+    même ordre que l'onglet Clubs de /search."""
+    data = client.get("/suggest", params={"q": "triathlon", "type": "clubs"}).json()
+    assert data["athletes"] == [] and data["courses"] == []
+    assert len(data["clubs"]) == 5
+    tab = client.get("/search", params={"q": "triathlon", "type": "clubs", "limit": 5}).json()
+    assert data["clubs"] == tab["clubs"]["items"]
+
+
 def test_suggest_follows_list_filters() -> None:
     """Les suggestions des listes suivent les filtres déjà appliqués : mêmes premiers
     éléments que /athletes et /courses avec ces filtres."""

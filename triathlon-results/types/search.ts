@@ -90,13 +90,13 @@ export interface SearchResponse {
 }
 
 /** Suggestions demandées : tout (recherche globale), athlètes ou courses (listes). */
-export type SuggestType = "all" | "athletes" | "courses";
+export type SuggestType = "all" | "athletes" | "courses" | "clubs";
 
 /** GET /suggest : suggestions pendant la saisie (U4 du retour utilisateur du 23/11/2026). */
 export interface SuggestResponse {
   q: string;
   athletes: AthleteHit[];
-  /** Recherche globale seulement (type=all) : 3 clubs au plus. */
+  /** Recherche globale (type=all) : 3 clubs au plus ; champ Club (type=clubs) : 5. */
   clubs?: ClubHit[];
   courses: CourseHit[];
 }

@@ -108,12 +108,14 @@ export default async function AthletesPage({ searchParams }: PageProps) {
           />
         </FilterField>
 
-        <FilterField label="Club">
+        <FilterField label="Club" htmlFor="filtre-club">
           <ClubInput
             key={`${query.club ?? ""}|${query.clubExact}`}
+            id="filtre-club"
             defaultValue={query.club ?? ""}
             exact={query.clubExact}
-            className={`${FILTER_FIELD_CLASS} sm:w-64`}
+            otherFilters={{ q: query.q, sexe: query.sexe }}
+            inputClassName={FILTER_FIELD_CLASS}
           />
         </FilterField>
 
