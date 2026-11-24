@@ -82,12 +82,8 @@ export default async function AthletePage({ params, searchParams }: PageProps) {
 
       <AthleteHeader athlete={athlete} />
       <AthleteStats athlete={athlete} />
-      <AthleteBestTimes bestTimes={athlete.best_times} />
 
-      {progression && progression.series.length > 0 && (
-        <AthleteProgressionBlock progression={progression} />
-      )}
-
+      {/* Historique avant les analyses : c'est ce que l'on vient chercher sur un profil. */}
       <section className="space-y-4">
         <h2 className="text-2xl font-extrabold tracking-tight">Historique des résultats</h2>
 
@@ -105,6 +101,12 @@ export default async function AthletePage({ params, searchParams }: PageProps) {
           />
         </div>
       </section>
+
+      <AthleteBestTimes bestTimes={athlete.best_times} />
+
+      {progression && progression.series.length > 0 && (
+        <AthleteProgressionBlock progression={progression} />
+      )}
     </div>
   );
 }

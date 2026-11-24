@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Gauge } from "lucide-react";
+import { ChevronDown, Gauge } from "lucide-react";
 
 import { ChoiceGroup } from "@/components/shared/choice-group";
 import type { HistogramBar, RaceStats, SegmentBenchmarks } from "@/types/race";
@@ -25,6 +25,15 @@ export function RaceBenchmarks({
 }) {
   const [sexe, setSexe] = useState<SexeFilter>("tous");
   const [activeKey, setActiveKey] = useState(stats.segments[0]?.key);
+  // Répartition et 3ᵉ par catégorie repliés pour que le classement reste près du haut de page ;
+  // dépliés dès qu'un temps est saisi dans « Et moi ? », pour le voir dans l'histogramme.
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const hasMyTimes = Object.keys(myTimes).length > 0;
+  const [hadMyTimes, setHadMyTimes] = useState(hasMyTimes);
+  if (hasMyTimes !== hadMyTimes) {
+    setHadMyTimes(hasMyTimes);
+    if (hasMyTimes) setDetailsOpen(true);
+  }
 
   // Le choix hommes / femmes n'est proposé que si l'épreuve a des classés des deux sexes.
   const sexes: SexeFilter[] =
@@ -75,10 +84,32 @@ export function RaceBenchmarks({
 
       <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-5">
         <BenchmarkTiles segment={segment} />
-        {segment.histogramme && (
-          <Histogram bars={segment.histogramme.barres} myTime={myTimes[segment.key]} />
+        {(segment.histogramme || segment.categories.length > 0) && (
+          <>
+            <button
+              type="button"
+              onClick={() => setDetailsOpen(!detailsOpen)}
+              aria-expanded={detailsOpen}
+              aria-controls="reperes-details"
+              className="inline-flex items-center gap-1 text-sm font-semibold text-gray-500 hover:text-[#FC6B32]"
+            >
+              {detailsOpen ? "Masquer" : "Voir"} la répartition et le 3ᵉ de chaque catégorie
+              <ChevronDown
+                size={16}
+                aria-hidden
+                className={`transition-transform ${detailsOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+            {detailsOpen && (
+              <div id="reperes-details" className="space-y-4">
+                {segment.histogramme && (
+                  <Histogram bars={segment.histogramme.barres} myTime={myTimes[segment.key]} />
+                )}
+                <CategoryThirds segment={segment} />
+              </div>
+            )}
+          </>
         )}
-        <CategoryThirds segment={segment} />
       </div>
     </section>
   );
