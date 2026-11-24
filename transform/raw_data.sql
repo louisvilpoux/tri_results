@@ -295,3 +295,70 @@ $$ LANGUAGE plpgsql IMMUTABLE;
 UPDATE raw_data
 SET club = nettoie_club(club)
 WHERE club IS DISTINCT FROM nettoie_club(club);
+
+
+-- Noms protiming : protiming écrit tout en majuscules (« GARNIER JEAN FRANCOIS »), sans
+-- marquer où finit le nom de famille, et l'affichait ainsi dans les classements et parfois sur
+-- le profil (le nom le plus fréquent de l'athlète). On le réécrit « NOM Prénom » comme
+-- fftri_t2_area (« GARNIER Jean-François »).
+--   - Dictionnaire des prénoms : dans les noms des autres sources écrits « NOM Prénom », le
+--     prénom (« Jean-François », « Jean claude ») ; clé sans accent, tirets et apostrophes
+--     comptés comme des espaces ; on garde l'écriture la plus fréquente (accents compris),
+--     chaque partie avec une majuscule (« Jean claude » → « Jean Claude »).
+--   - Le prénom d'un nom protiming est la plus longue fin du nom (en laissant au moins un mot
+--     au nom de famille) qui est un prénom connu : « DE MEULDER XAVIER » → « DE MEULDER
+--     Xavier », « GARNIER JEAN FRANCOIS » → « GARNIER Jean-François ». Sans prénom connu, le
+--     dernier mot (« DUPONT ZYNEDINE » → « DUPONT Zynedine »).
+--   - Les noms déjà écrits en minuscules (« Bugeaud Lola ») et les équipes (« BIBI & DUDU »)
+--     ne changent pas.
+-- La clé de l'athlète (athletes.sql) trie les mots sans accent : elle ne change pas.
+CREATE OR REPLACE FUNCTION cle_prenom(prenom text)
+RETURNS text AS $$
+    SELECT btrim(regexp_replace(lower(unaccent(prenom)), '[-‐''’[:space:]]+', ' ', 'g'))
+$$ LANGUAGE sql IMMUTABLE;
+
+DROP TABLE IF EXISTS prenoms;
+CREATE TABLE prenoms AS
+SELECT cle, mode() WITHIN GROUP (ORDER BY initcap(prenom)) AS prenom
+FROM (
+    SELECT prenom, cle_prenom(prenom) AS cle
+    FROM (
+        SELECT substring(nom FROM '^[^[:lower:]]+ ([[:upper:]][[:lower:]].*)$') AS prenom
+        FROM raw_data
+        WHERE source <> 'protiming'
+    ) noms
+    WHERE prenom IS NOT NULL AND prenom !~ '[[:upper:]]{2}'
+) prenoms_vus
+GROUP BY cle
+HAVING COUNT(*) >= 2;
+CREATE UNIQUE INDEX ON prenoms (cle);
+
+CREATE OR REPLACE FUNCTION protiming_nom(nom text)
+RETURNS text AS $$
+DECLARE
+    mots text[] := regexp_split_to_array(btrim(regexp_replace(nom, '\s+', ' ', 'g')), ' ');
+    n int := array_length(mots, 1);
+    trouve text;
+BEGIN
+    IF nom ~ '[[:lower:]]' OR nom ~ '&' OR n IS NULL OR n < 2 THEN
+        RETURN nom;
+    END IF;
+    FOR i IN 2..n LOOP
+        SELECT p.prenom INTO trouve
+        FROM prenoms p
+        WHERE p.cle = cle_prenom(array_to_string(mots[i:n], ' '));
+        IF trouve IS NOT NULL THEN
+            RETURN array_to_string(mots[1:i - 1], ' ') || ' ' || trouve;
+        END IF;
+    END LOOP;
+    RETURN array_to_string(mots[1:n - 1], ' ') || ' ' || initcap(mots[n]);
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+UPDATE raw_data
+SET nom = protiming_nom(nom)
+WHERE source = 'protiming'
+  AND protiming_team_name(nom, type_epreuve, format_normalise, format_epreuve) IS NULL
+  AND nom IS DISTINCT FROM protiming_nom(nom);
+
+DROP TABLE prenoms;

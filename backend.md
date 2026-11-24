@@ -146,7 +146,12 @@ Dossier : `transform`
       (`prolivesport_event_name`), numéro de département retiré du lieu (« Bordeaux (33) » → « Bordeaux », pour
       que lieux.sql reconnaisse la ville des autres sources de la course), athlètes anonymisés (nom vide)
       écartés. Le 23/11/2026 : 47 264 lignes sur 50 508 (1 148 dans des épreuves d'autres sports, 2 081 en
-      contre-la-montre, 15 sans nom).
+      contre-la-montre, 15 sans nom). Ses noms, tout en majuscules (« GARNIER JEAN FRANCOIS »), sont réécrits
+      « NOM Prénom » par `protiming_nom` (« GARNIER Jean Francois ») : le prénom est la plus longue fin du nom
+      trouvée dans un dictionnaire des prénoms des autres sources écrits « NOM Prénom » (table `prenoms`,
+      supprimée ensuite), à défaut le dernier mot. Les équipes et les noms déjà en minuscules ne changent pas ;
+      la clé de l'athlète non plus. Le 24/11/2026 : 32 résultats individuels restent en majuscules (équipes
+      non reconnues comme telles, « CPTS BOOSTE 3 »).
       Les noms et clubs mal encodés (« ThÃ©o » pour « Théo ») sont corrigés par `corrige_encodage` : texte réécrit
       en Windows-1252 (à défaut Latin-1) puis relu en UTF-8, seulement si le résultat est valide (« JOÃO »,
       « CHÂTEAU » restent intacts).
