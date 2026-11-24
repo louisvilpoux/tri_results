@@ -13,6 +13,8 @@ transform/raw_data.sql dans raw_protiming_0 :
 - temps au format hh:mm:ss : la place collée par le site est retirée (« 00:13:21 (144.) »),
   « 15:25 » devient « 00:15:25 », les valeurs qui ne sont pas un temps (« NC », « ---- », « () »)
   sont vidées ;
+- temps total de moins d'une heure écrit « mm:ss:00 » par la source (« 31:18:00 » pour 31 min
+  18 s ; Cepoy 2015-2016, Chartres 2016) remis en « 00:31:18 », voir temps_en_minutes ;
 - catégorie sans le classement dans la catégorie (« SEM (1 / 155) » → « SEM », « S4M (1.) » →
   « S4M ») ;
 - nom d'une équipe anonyme (nom vide, équipiers dans « Equipier 1 », « Athlete 2 »…) : ses
@@ -20,6 +22,7 @@ transform/raw_data.sql dans raw_protiming_0 :
 
 Lancement depuis la racine du projet : `python sources/protiming_organize.py`.
 """
+import math
 import os
 import re
 import shutil
@@ -55,6 +58,9 @@ SEGMENTS = {
 EQUIPIER = re.compile(r"^(equipier|athlete)\d$")
 # Temps éventuellement suivi d'une place : « 00:13:21 (144.) », « 15:25 (13.) », « 8:49 ».
 TEMPS = re.compile(r"^(?:(\d{1,2}):)?(\d{1,2}):(\d{2})(?:\s*\(.*\))?$")
+# Temps total « 31:18:00 » : minutes et secondes suivies de 00, ou heures et minutes
+# (« 00:45:00 » n'est pas ambigu : 45 secondes n'est pas un temps de course).
+AMBIGU = re.compile(r"^(0[1-9]|[1-5]\d):([0-5]\d):00$")
 # Classement dans la catégorie, à la fin de celle-ci : « SEM (1 / 155) », « S4M (1.) »,
 # « DUO HOMMES (2) ».
 RANG_CATEGORIE = re.compile(r"\s*\(\s*-?\d+\s*\.?\s*(?:/\s*-?\d+\s*)?\)\s*$")
@@ -81,6 +87,52 @@ def temps_hhmmss(valeur: object) -> str | None:
     return f"{int(heures or 0):02d}:{int(minutes):02d}:{secondes}"
 
 
+def heures(temps: str) -> float:
+    """« 01:30:00 » → 1.5."""
+    h, m, s = (int(part) for part in temps.split(":"))
+    return h + m / 60 + s / 3600
+
+
+def temps_en_minutes(temps: pd.Series, vitesses: pd.Series) -> pd.Series:
+    """Temps totaux d'une épreuve, ceux de moins d'une heure écrits « mm:ss:00 » remis en hh:mm:ss.
+
+    Sur certaines épreuves, la source écrit « 31:18:00 » pour 31 min 18 s (vitesse publiée :
+    16,2 km/h, soit 8,4 km et non 507 km). Un tel temps se lit aussi 31 h 18 min : la vitesse
+    départage les deux lectures.
+    - Si tous les temps non nuls de l'épreuve (au moins deux) ont cette forme, ce sont des
+      minutes : sur de vrais temps à la seconde, la probabilité que tous finissent par 00 est
+      négligeable.
+    - Sinon, chaque temps ambigu est lu de la façon dont la distance (vitesse × temps) est la plus
+      proche de la distance médiane des autres classés. Sans vitesse, il est gardé tel quel.
+    """
+    valides = temps.map(temps_hhmmss)
+    ambigus = valides.map(lambda t: isinstance(t, str) and AMBIGU.match(t) is not None)
+    if not ambigus.any():
+        return valides
+    en_minutes = valides.where(~ambigus, valides.str.replace(AMBIGU, r"00:\1:\2", regex=True))
+    # 00:00:00 n'est pas un temps (vidé au chargement, voir results.sql) : il n'est pas compté.
+    non_nuls = valides.map(lambda t: isinstance(t, str) and heures(t) > 0)
+    if ambigus.sum() >= 2 and ambigus.sum() == non_nuls.sum():
+        return en_minutes
+
+    vitesse = pd.to_numeric(vitesses, errors="coerce")
+    references = [v * heures(t) for t, v, a in zip(valides, vitesse, ambigus)
+                  if isinstance(t, str) and not a and v > 0 and heures(t) > 0]
+    if not references:
+        return valides
+    distance = float(pd.Series(references).median())
+
+    def lecture(i: object) -> str | None:
+        t, v = valides[i], vitesse[i]
+        if not ambigus[i] or not v > 0:
+            return t
+        ecart_heures = abs(math.log(v * heures(t) / distance))
+        ecart_minutes = abs(math.log(v * heures(en_minutes[i]) / distance))
+        return en_minutes[i] if ecart_minutes < ecart_heures else t
+
+    return pd.Series([lecture(i) for i in valides.index], index=valides.index)
+
+
 def nom_equipe(ligne: pd.Series, colonnes_equipiers: list[str]) -> str | None:
     """« NOM1 & NOM2 » à partir des colonnes d'équipiers (« - » et vides ignorés)."""
     noms = [str(ligne[c]).strip() for c in colonnes_equipiers
@@ -105,7 +157,8 @@ def organise(df: pd.DataFrame) -> pd.DataFrame:
         valeurs = df[colonne].map(temps_hhmmss)
         sortie[segment] = sortie[segment].fillna(valeurs) if segment in sortie else valeurs
 
-    sortie["temps"] = sortie["temps"].map(temps_hhmmss)
+    vitesses = df["km/h"] if "km/h" in df.columns else pd.Series(None, index=df.index)
+    sortie["temps"] = temps_en_minutes(sortie["temps"], vitesses)
     sortie["cat"] = sortie["cat"].map(
         lambda c: RANG_CATEGORIE.sub("", c).strip() or None if isinstance(c, str) else None)
 

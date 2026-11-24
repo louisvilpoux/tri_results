@@ -3,8 +3,8 @@
 Audit du 22/11/2026 au commit `d38c0de`, refait le même jour au commit `ea15b02` avec les
 corrections de lieux de `transform/lieux_courses.csv` (43 lignes), base reconstruite avec
 `transform/run_sql.py`.
-Complété le 24/11/2026 (Q18 et Q19), base inchangée : constats faits pendant la refonte UX
-(voir [ux.md](ux.md), ligne « Toi » du classement).
+Complété le 24/11/2026 (Q18 et Q19) : constats faits pendant la refonte UX (voir [ux.md](ux.md),
+ligne « Toi » du classement). Q19 corrigé le même jour, base reconstruite : 868 141 résultats.
 Audit précédent : [etat_qualite_donnees_2026-11-20.md](etat_qualite_donnees_2026-11-20.md)
 (mêmes identifiants Q1 à Q14 ; D1 à D6 renvoient à [retour_utilisateur_2026-11-19.md](retour_utilisateur_2026-11-19.md)).
 
@@ -56,8 +56,8 @@ segments prolivesport : 100 % cohérents avec le total à 5 % près (fftri 98,1 
 | Q15 | Sexe chronoweb : premier caractère de la catégorie | — | 31 820 lignes chronoweb (62 %) ; 0 après correction | **Corrigé** le 22/11 |
 | Q16 | Identifiants instables | constat | 0 changement entre deux reconstructions | **Corrigé** |
 | Q17 | Noms de course sans ponctuation (tirés de l'adresse fftri) | — | 2 courses, corrigées par alias | **Corrigé** |
-| Q18 | Classement publié qui ne suit pas les temps totaux | — | 24/11 : 35 épreuves, dont 7 sur plus de 5 % des lignes | **Ouvert** |
-| Q19 | Temps protiming en minutes lus comme des heures | — | 24/11 : 84 totaux sur 6 épreuves (Cepoy 2015-2016, Chartres 2016) | **Ouvert** |
+| Q18 | Classement publié qui ne suit pas les temps totaux | — | 24/11 : 34 épreuves, dont 7 sur plus de 5 % des lignes | **Ouvert** |
+| Q19 | Temps protiming de moins d'une heure écrits « mm:ss:00 » | — | 24/11 : 99 totaux sur 10 épreuves (Cepoy 2015-2016, Chartres 2016) ; 0 après correction | **Corrigé** le 24/11 |
 
 ---
 
@@ -170,11 +170,13 @@ nom publié). D'autres noms peuvent avoir perdu leur ponctuation sans être auss
 ### Q18 — Classement publié qui ne suit pas les temps totaux (constat du 24/11/2026)
 
 Classés (rang entre 1 et 99 989, hors temps suspects et sous-classements) dont le total est plus
-court de plus de 30 secondes que celui du classé précédent. **35 épreuves sur 3 636** ont au
-moins une inversion : 31 fftri_t2_area, 2 protiming, 1 prolivesport, 1 chronoweb.
+court de plus de 30 secondes que celui du classé précédent. **34 épreuves sur 3 636** ont au
+moins une inversion : 31 fftri_t2_area, 1 protiming, 1 prolivesport, 1 chronoweb.
 
 > Un premier comptage, cité pendant la refonte UX, donnait 66 épreuves : il comptait les lignes
 > de statut prolivesport (rang 0 et 99991-99999, dont 268 ont un temps) comme des inversions.
+> Triathlon de Chartres 2016 S, 35ᵉ épreuve du constat initial, est sorti de la liste avec la
+> correction de Q19.
 
 Ce n'est pas le cas traité par Q1 (`transform/temps_totaux.sql`) : là, les totaux sont faux et
 les segments suivent le classement. Ici, les totaux sont cohérents avec les segments ; c'est le
@@ -209,7 +211,6 @@ Sur Ventouxman, T1 et T2 ne sont pas publiés (« — ») mais sont inclus dans 
 | Épreuve | Source | Classés | Inversions | Pire écart | Cause probable |
 |---------|--------|--------:|-----------:|-----------:|----------------|
 | Openlakes Champagne 2026, triathlon XXL | fftri_t2_area | 255 | 9 | 4:23:39 | derniers classés avec des temps courts (distance réduite ?) |
-| Triathlon de Chartres 2016, triathlon S | protiming | 29 | 1 | 58:38:51 | minutes lues comme des heures (Q19) |
 | Triathlon du Val de Gray 2013, triathlon L | fftri_t2_area | 94 | 3 | 13:49 | |
 | Ironman de Nice 2023, triathlon XXL | fftri_t2_area | 1 427 | 36 | 47:44 | petits écarts répartis (pénalités ?) |
 | Triathlon de Chantilly 2023, duathlon M | fftri_t2_area | 40 | 1 | 2:55 | |
@@ -249,27 +250,42 @@ Pistes :
   plus longs que le classé suivant de plus d'une heure ; aujourd'hui, seuls les totaux trop
   courts le sont.
 
-### Q19 — Temps protiming en minutes lus comme des heures (constat du 24/11/2026)
+### Q19 — Temps protiming de moins d'une heure écrits « mm:ss:00 » (corrigé le 24/11/2026)
 
-84 totaux protiming dépassent 24 heures, sur 6 épreuves XS et S : le temps est écrit en
-minutes:secondes dans la source et lu comme heures:minutes (« 28:21 » devient 28:21:00 au lieu
-de 00:28:21).
+Sur certaines épreuves, protiming écrit un temps de moins d'une heure en minutes, secondes et
+« 00 » : « 31:18:00 » pour 31 min 18 s (valeur `officialTime` de la source, vitesse publiée
+16,2 km/h, soit 8,4 km et non 507 km). Les temps d'une heure ou plus restent en hh:mm:ss.
 
-| Épreuve | Totaux au-dessus de 24 h | Vainqueur lu |
-|---------|-------------------------:|-------------:|
-| Triathlon de Cepoy 2015, XS | 7 sur 7 | 31:18:00 |
-| Triathlon de Cepoy 2015, XS | 21 sur 21 | 29:44:00 |
-| Triathlon de Cepoy 2016, XS | 27 sur 27 | 28:21:00 |
-| Triathlon de Cepoy 2016, XS | 6 sur 6 | 26:06:00 |
-| Triathlon de Chartres 2016, S | 2 sur 29 | 59:30:00 (3ᵉ en 01:02:09) |
-| Triathlon de Chartres 2016, XS | 21 sur 21 | 35:17:00 |
+Le constat initial (84 totaux au-dessus de 24 heures sur 6 épreuves) en manquait : les épreuves
+Jeunes ont des temps « 07:23:00 » ou « 14:48:00 », sous 24 heures mais tout aussi faux. Au total,
+**99 totaux sur 10 épreuves** :
 
-Ces totaux faussent les Repères, « Et moi ? » et les meilleurs temps XS et S des profils.
-Les 8 totaux fftri au-dessus de 24 heures (Evergreen 2016 XXL, de 24:01:23 à 24:24:08) sont
-plausibles.
+| Épreuve | Totaux corrigés | Vainqueur avant | Vainqueur après |
+|---------|----------------:|----------------:|----------------:|
+| Triathlon de Cepoy 2015, XS (cross duathlon) | 7 sur 7 | 31:18:00 | 00:31:18 |
+| Triathlon de Cepoy 2015, XS (cross triathlon) | 21 sur 21 | 29:44:00 | 00:29:44 |
+| Triathlon de Cepoy 2015, Jeunes (2004-2005) | 5 sur 5 | 14:48:00 | 00:14:48 |
+| Triathlon de Cepoy 2015, Jeunes (2006-2009) | 4 sur 4 | 07:23:00 | 00:07:23 |
+| Triathlon de Cepoy 2016, XS (cross duathlon) | 27 sur 28 | 28:21:00 | 00:28:21 |
+| Triathlon de Cepoy 2016, XS (cross triathlon) | 6 sur 7 | 26:06:00 | 00:26:06 |
+| Triathlon de Cepoy 2016, Jeunes (pupilles) | 2 sur 2 | 14:32:00 | 00:14:32 |
+| Triathlon de Cepoy 2016, Jeunes (poussins) | 4 sur 4 | 06:42:00 | 00:06:42 |
+| Triathlon de Chartres 2016, S | 2 sur 29 | 59:30:00 | 00:59:30 (3ᵉ en 01:02:09) |
+| Triathlon de Chartres 2016, XS | 21 sur 21 | 35:17:00 | 00:35:17 |
 
-Piste : dans la lecture protiming (`sources/protiming.py`), lire « mm:ss » comme des minutes
-quand le format est XS ou S, ou quand la valeur dépasse 24 heures.
+Correction dans `sources/protiming_organize.py` (`temps_en_minutes`), par épreuve :
+- si tous les temps non nuls (au moins deux) ont la forme « mm:ss:00 », ce sont des minutes ;
+- sinon, un temps de cette forme est lu de la façon dont la distance (vitesse × temps) est la
+  plus proche de celle des autres classés (Chartres 2016 S : 59:30:00 à 25,7 km/h fait 1 529 km
+  lu en heures, 25,5 km lu en minutes, pour 25,4 km chez les autres).
+
+Vérifié sur les 549 fichiers protiming : seules ces 99 lignes changent. Les deux derniers de
+Cepoy 2016 XS sont à 00:00:00 dans la source (probablement des temps d'une heure ou plus mal
+écrits) : ils restent vidés au chargement, comme tout 00:00:00.
+
+Après correction, il reste 9 totaux au-dessus de 24 heures, tous fftri_t2_area : 8 à Evergreen
+2016 XXL (de 24:01:23 à 24:24:08), plausibles, et 1 non classé du Triathlon de la Baule 2022 M
+(42:23:00).
 
 ### Q12 — Athlètes avec résultats des deux sexes
 668 athlètes (634 le 20/11, 636 avant la correction de Q15) : homonymes réunis ou sexe mal
@@ -294,9 +310,9 @@ invisibles. Le profil et le filtre affichent le sexe le plus fréquent.
 1. **Q1** : seuil par épreuve (médiane des classés trop basse pour le format), pour les 7
    épreuves prolivesport S/XS, et temps négatifs vidés. C'est ce qui fausse encore des meilleurs
    temps de profil.
-2. **Q19** (ajouté le 24/11) : temps protiming en minutes, 6 épreuves dont tous les temps sont
-   faux ; correction simple à la lecture de la source.
-3. **Q18** (ajouté le 24/11) : drapeau d'épreuve « classement publié différent de l'ordre des
+2. **Q18** (ajouté le 24/11) : drapeau d'épreuve « classement publié différent de l'ordre des
    temps », totaux aberrants trop longs marqués suspects.
-4. Q13.
-5. Q5 (catégories), mis de côté.
+3. Q13.
+4. Q5 (catégories), mis de côté.
+
+Q19 (ajouté et corrigé le 24/11) ne figure plus dans cette liste.
