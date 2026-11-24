@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, Info, MapPin, TriangleAlert, Trophy } from "lucide-react";
 
-import { RaceBenchmarks } from "@/components/results/race-benchmarks";
-import { RaceSimulator } from "@/components/results/race-simulator";
+import { RaceInsights } from "@/components/results/race-insights";
 import { ResultsFilters } from "@/components/results/results-filters";
 import { ResultsTable } from "@/components/results/results-table";
 import { PaginationBar } from "@/components/shared/pagination-bar";
@@ -151,15 +150,13 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
       </section>
 
       {stats && stats.segments.length > 0 && (
-        <>
-          <RaceBenchmarks stats={stats} />
-          <RaceSimulator
-            raceId={id}
-            initialTimes={simulatorTimes}
-            initialSexe={simulatorSexe}
-            initialCategorie={simulatorCategorie}
-          />
-        </>
+        <RaceInsights
+          stats={stats}
+          raceId={id}
+          initialTimes={simulatorTimes}
+          initialSexe={simulatorSexe}
+          initialCategorie={simulatorCategorie}
+        />
       )}
 
       {/* Classement */}

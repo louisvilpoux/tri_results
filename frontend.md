@@ -234,7 +234,11 @@ Réalisés
       le total calculé peut donc être trop optimiste. » ; selon le cas, le total ne peut pas être calculé (segment
       manquant) ou le total saisi est utilisé tel quel (pas de classement pour les segments manquants). Bouton « Réinitialiser » (affiché dès qu'un temps, le
       sexe ou la catégorie est rempli) : vide les temps, le sexe, la catégorie et les paramètres `moi_…` de
-      l'adresse. Mêmes classés que les repères. Les temps des classés
+      l'adresse. Mêmes classés que les repères. Les temps saisis valides (segments et total, saisi ou calculé)
+      sont placés dans l'histogramme des repères (U16, 24/11/2026) : trait et étiquette « Toi · 4h52 » sur l'onglet
+      du même temps, barre du temps en bleu nuit, au bord quand le temps est hors de la répartition. Les deux
+      blocs sont réunis dans `components/results/race-insights.tsx` (composant client qui partage ces temps) ;
+      le trait n'apparaît qu'une fois les temps des classés chargés (bloc ouvert). Les temps des classés
       (`GET /races/{id}/times`, jusqu'à environ 900 Ko pour un Ironman de 5 800 classés) ne sont chargés qu'à
       l'ouverture du bloc, par la route Next `app/api/races/[id]/times` qui relaie l'API au navigateur (qui ne
       connaît pas `API_BASE_URL`) ; le calcul se fait ensuite dans le navigateur, à chaque frappe. Les temps

@@ -13,9 +13,16 @@ const SEXE_LABELS: Record<SexeFilter, string> = { tous: "Tous", M: "Hommes", F: 
 /**
  * Bloc « Repères » de la page classement : niveau de l'épreuve pour le temps total et chaque
  * segment (onglets), pour tous les classés ou par sexe. Calculé par GET /races/{id}/stats sur les
- * classés avec un temps valide.
+ * classés avec un temps valide. myTimes : temps saisis dans « Et moi ? » (secondes, par clé de
+ * segment et « total »), placés dans l'histogramme.
  */
-export function RaceBenchmarks({ stats }: { stats: RaceStats }) {
+export function RaceBenchmarks({
+  stats,
+  myTimes = {},
+}: {
+  stats: RaceStats;
+  myTimes?: Record<string, number>;
+}) {
   const [sexe, setSexe] = useState<SexeFilter>("tous");
   const [activeKey, setActiveKey] = useState(stats.segments[0]?.key);
 
@@ -68,7 +75,9 @@ export function RaceBenchmarks({ stats }: { stats: RaceStats }) {
 
       <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-5">
         <BenchmarkTiles segment={segment} />
-        {segment.histogramme && <Histogram bars={segment.histogramme.barres} />}
+        {segment.histogramme && (
+          <Histogram bars={segment.histogramme.barres} myTime={myTimes[segment.key]} />
+        )}
         <CategoryThirds segment={segment} />
       </div>
     </section>
@@ -108,29 +117,78 @@ function shortTime(value: string): string {
   return hours > 0 ? `${hours}h${String(minutes).padStart(2, "0")}` : `${minutes} min`;
 }
 
-function Histogram({ bars }: { bars: HistogramBar[] }) {
+function toSeconds(value: string): number {
+  const [hours, minutes, seconds] = value.split(":").map(Number);
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+/** 9 060 → « 2h31 » ; 1 500 → « 25 min ». */
+function shortSeconds(value: number): string {
+  const hours = Math.floor(value / 3600);
+  const minutes = Math.floor((value % 3600) / 60);
+  return hours > 0 ? `${hours}h${String(minutes).padStart(2, "0")}` : `${minutes} min`;
+}
+
+/**
+ * Position d'un temps dans l'histogramme, en % de la largeur (barres de même largeur) ;
+ * ramenée au bord quand le temps est hors de la répartition.
+ */
+function positionInBars(bars: HistogramBar[], value: number): { percent: number; index: number } {
+  // index -1 : hors de toutes les barres, aucune n'est mise en évidence
+  if (value < toSeconds(bars[0].debut)) return { percent: 0, index: -1 };
+  if (value >= toSeconds(bars[bars.length - 1].fin)) return { percent: 100, index: -1 };
+  const index = bars.findIndex((bar) => value < toSeconds(bar.fin));
+  const start = toSeconds(bars[index].debut);
+  const width = toSeconds(bars[index].fin) - start;
+  const inside = Math.min(Math.max((value - start) / width, 0), 1);
+  return { percent: ((index + inside) / bars.length) * 100, index };
+}
+
+function Histogram({ bars, myTime }: { bars: HistogramBar[]; myTime?: number }) {
   const max = Math.max(...bars.map((bar) => bar.count));
   const first = bars[0];
   const last = bars[bars.length - 1];
+  const mine = myTime === undefined ? null : positionInBars(bars, myTime);
+  // étiquette alignée vers l'intérieur près des bords, pour ne pas sortir du cadre
+  const labelAlign =
+    mine === null ? "" : mine.percent < 15 ? "left-0" : mine.percent > 85 ? "right-0" : "-translate-x-1/2";
 
   return (
     <figure className="space-y-1.5">
       <figcaption className="text-xs font-semibold text-gray-500">Répartition des temps</figcaption>
       <div
-        className="flex h-28 items-end gap-px"
+        className={`relative flex h-28 items-end gap-px ${mine ? "mt-6" : ""}`}
         role="img"
-        aria-label={`Répartition des temps de ${shortTime(first.debut)} à ${shortTime(last.fin)}`}
+        aria-label={`Répartition des temps de ${shortTime(first.debut)} à ${shortTime(last.fin)}${
+          myTime === undefined ? "" : `, ton temps : ${shortSeconds(myTime)}`
+        }`}
       >
-        {bars.map((bar) => (
+        {bars.map((bar, index) => (
           <div
             key={bar.debut}
-            className="flex-1 rounded-t-sm bg-[#FC6B32]/80 hover:bg-[#FC6B32]"
+            className={`flex-1 rounded-t-sm ${
+              mine?.index === index ? "bg-[#17202E]" : "bg-[#FC6B32]/80 hover:bg-[#FC6B32]"
+            }`}
             style={{ height: `${max ? (bar.count / max) * 100 : 0}%`, minHeight: bar.count ? 2 : 0 }}
             title={`${shortTime(bar.debut)} – ${shortTime(bar.fin)} : ${bar.count} classé${
               bar.count > 1 ? "s" : ""
             }`}
           />
         ))}
+        {mine && myTime !== undefined && (
+          <div
+            className="pointer-events-none absolute -top-6 bottom-0"
+            style={{ left: `${mine.percent}%` }}
+            aria-hidden
+          >
+            <div className="absolute bottom-0 top-5 w-0.5 -translate-x-1/2 bg-[#17202E]" />
+            <span
+              className={`absolute top-0 whitespace-nowrap rounded bg-[#17202E] px-1.5 py-0.5 text-xs font-bold text-white ${labelAlign}`}
+            >
+              Toi · {shortSeconds(myTime)}
+            </span>
+          </div>
+        )}
       </div>
       <div className="flex justify-between text-xs tabular-nums text-gray-400">
         <span>{shortTime(first.debut)}</span>

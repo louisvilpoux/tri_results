@@ -130,18 +130,21 @@ function placement(label: string, sorted: number[], value: number): Placement | 
  * catégorie. Les temps des classés (GET /api/races/{id}/times) ne sont chargés qu'à l'ouverture ;
  * le calcul se fait ensuite dans le navigateur, à chaque frappe. Les temps saisis, le sexe et
  * la catégorie sont gardés dans l'adresse (moi_swim=…, moi_sexe=…, moi_categorie=…) pour
- * pouvoir partager la simulation.
+ * pouvoir partager la simulation. Les temps valides (segments et total, en secondes) sont
+ * remontés par onTimesChange pour être placés dans l'histogramme des Repères (U16).
  */
 export function RaceSimulator({
   raceId,
   initialTimes,
   initialSexe,
   initialCategorie,
+  onTimesChange,
 }: {
   raceId: string;
   initialTimes: Record<string, string>;
   initialSexe: SexeFilter;
   initialCategorie: string;
+  onTimesChange?: (times: Record<string, number>) => void;
 }) {
   const [open, setOpen] = useState(
     Object.keys(initialTimes).length > 0 || initialSexe !== "" || initialCategorie !== ""
@@ -159,6 +162,11 @@ export function RaceSimulator({
       .then((times: RaceTimes) => setData(times))
       .catch(() => setFailed(true));
   }, [open, data, failed, raceId]);
+
+  // simulateur fermé (ou temps pas encore chargés) : plus aucun temps à montrer dans les Repères
+  useEffect(() => {
+    if (!open || !data) onTimesChange?.({});
+  }, [open, data, onTimesChange]);
 
   // Temps saisis, sexe et catégorie gardés dans l'adresse, sans recharger la page.
   useEffect(() => {
@@ -214,6 +222,7 @@ export function RaceSimulator({
               setSexe={setSexe}
               categorie={categorie}
               setCategorie={setCategorie}
+              onTimesChange={onTimesChange}
             />
           )}
         </div>
@@ -230,6 +239,7 @@ function SimulatorBody({
   setSexe,
   categorie,
   setCategorie,
+  onTimesChange,
 }: {
   data: RaceTimes;
   inputs: Record<string, string>;
@@ -238,6 +248,7 @@ function SimulatorBody({
   setSexe: (sexe: SexeFilter) => void;
   categorie: string;
   setCategorie: (categorie: string) => void;
+  onTimesChange?: (times: Record<string, number>) => void;
 }) {
   // temps triés de chaque segment et du total, calculés une fois
   const sorted = useMemo(() => {
@@ -277,6 +288,18 @@ function SimulatorBody({
       : null;
   const totalTyped = (inputs.total ?? "").trim() !== "";
   const total = totalTyped ? parsed.total : computedTotal;
+
+  // temps valides remontés aux Repères ; la clé texte évite de les renvoyer à chaque rendu
+  const validTimes: Record<string, number> = Object.fromEntries(
+    data.segments
+      .map((segment): [string, unknown] => [segment.key, parsed[segment.key]])
+      .concat([["total", total]])
+      .filter((entry): entry is [string, number] => typeof entry[1] === "number")
+  );
+  const validTimesKey = JSON.stringify(validTimes);
+  useEffect(() => {
+    onTimesChange?.(JSON.parse(validTimesKey));
+  }, [validTimesKey, onTimesChange]);
 
   const setInput = (key: string, value: string) => setInputs({ ...inputs, [key]: value });
   const hasInput = Object.values(inputs).some((value) => value.trim() !== "");
