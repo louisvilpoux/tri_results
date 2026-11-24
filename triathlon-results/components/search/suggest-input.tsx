@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Flag, User } from "lucide-react";
+import { Flag, User, Users } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 
+import { clubHref } from "@/components/search/club-hit-list";
 import { capitalize } from "@/lib/format";
 import type { SuggestFilters } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -41,12 +42,15 @@ interface SuggestInputProps {
 interface Option {
   href: string;
   content: ReactNode;
+  /** Titre du groupe (« Athlètes », « Clubs », « Courses ») sur sa première suggestion. */
+  group?: string;
 }
 
 /**
  * Champ `q` avec suggestions pendant la saisie (U4 du retour utilisateur du 23/11/2026), pour
  * un formulaire GET : à partir de 2 caractères et 250 ms sans frappe, 5 athlètes et/ou 5
- * courses (GET /api/suggest, relais de GET /suggest). Clavier : ↑ ↓ parcourent les
+ * courses, et dans la recherche globale 3 clubs au plus (GET /api/suggest, relais de
+ * GET /suggest) ; un club ouvre la liste de ses athlètes. Clavier : ↑ ↓ parcourent les
  * suggestions, Entrée ouvre celle choisie (sinon envoie le formulaire, avec ses autres
  * filtres), Échap ferme. Modèle « combobox » d'ARIA. Sans JavaScript, le formulaire fonctionne
  * comme un champ ordinaire.
@@ -109,9 +113,14 @@ export function SuggestInput({
   const current = enabled && suggestions !== null ? suggestions : null;
   const words = searchWords(query);
   const athletes = current?.athletes ?? [];
+  const clubs = current?.clubs ?? [];
   const courses = current?.courses ?? [];
+  // titre de groupe seulement quand plusieurs sortes de suggestions sont possibles
+  const groupTitle = (title: string, index: number) =>
+    type === "all" && index === 0 ? title : undefined;
   const options: Option[] = [
-    ...athletes.map((athlete) => ({
+    ...athletes.map((athlete, index) => ({
+      group: groupTitle("Athlètes", index),
       href: `/athletes/${athlete.id}`,
       content: (
         <SuggestionRow
@@ -126,7 +135,19 @@ export function SuggestInput({
         />
       ),
     })),
-    ...courses.map((course) => ({
+    ...clubs.map((club, index) => ({
+      group: groupTitle("Clubs", index),
+      href: clubHref(club.club),
+      content: (
+        <SuggestionRow
+          icon={<Users size={15} aria-hidden />}
+          title={<Highlight text={club.club} words={words} />}
+          detail={`${club.nb_athletes.toLocaleString("fr-FR")} athlètes`}
+        />
+      ),
+    })),
+    ...courses.map((course, index) => ({
+      group: groupTitle("Courses", index),
       href: `/races/${course.edition.id}`,
       content: (
         <SuggestionRow
@@ -156,7 +177,7 @@ export function SuggestInput({
         ]
       : []),
   ];
-  const empty = athletes.length === 0 && courses.length === 0;
+  const empty = athletes.length === 0 && clubs.length === 0 && courses.length === 0;
   const expanded = open && current !== null;
   const optionId = (index: number) => `${listId}-option-${index}`;
 
@@ -237,17 +258,12 @@ export function SuggestInput({
               role="option"
               aria-selected={index === active}
               className={cn(
-                index > 0 && index === athletes.length && courses.length > 0 && "border-t border-gray-100",
+                index > 0 && option.group && "border-t border-gray-100",
                 showSearchLink && index === options.length - 1 && "border-t border-gray-100",
                 index === active && "bg-orange-50"
               )}
             >
-              {index === 0 && athletes.length > 0 && type === "all" && (
-                <GroupLabel>Athlètes</GroupLabel>
-              )}
-              {index === athletes.length && courses.length > 0 && type === "all" && (
-                <GroupLabel>Courses</GroupLabel>
-              )}
+              {option.group && <GroupLabel>{option.group}</GroupLabel>}
               <Link
                 href={option.href}
                 tabIndex={-1}
@@ -266,7 +282,7 @@ export function SuggestInput({
               ? "Aucun athlète ne correspond."
               : type === "courses"
                 ? "Aucune course ne correspond."
-                : "Aucun athlète ni course ne correspond."}
+                : "Aucun athlète, club ni course ne correspond."}
           </p>
         )}
       </div>

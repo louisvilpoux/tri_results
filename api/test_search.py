@@ -162,6 +162,45 @@ def test_suggest_type() -> None:
     assert client.get("/suggest", params={"q": "ma", "type": "teams"}).status_code == 422
 
 
+def test_clubs_in_global_search() -> None:
+    """Clubs de la recherche globale : le nom contient tous les mots (sans accents, casse ni
+    apostrophes), au moins 3 athlètes, les plus grands d'abord ; 3 au plus en suggestions, et
+    seulement pour la recherche globale ; leur nombre d'athlètes est celui de la liste du club au
+    nom exact (/athletes?club=…&club_exact=true, lien de chaque club), toujours, quels que soient
+    les clubs au nom plus long que le filtre `club` seul prend aussi."""
+    data = client.get("/search", params={"q": "d'hazebrouck", "limit": 6}).json()
+    clubs = data["clubs"]
+    if clubs["total"] == 0:
+        pytest.skip("Aucun club d'Hazebrouck dans la base")
+    assert all("hazebrouck" in club["club"].lower() for club in clubs["items"])
+    counts = [club["nb_athletes"] for club in clubs["items"]]
+    assert counts == sorted(counts, reverse=True) and min(counts) >= 3
+
+    top = clubs["items"][0]
+    for club in clubs["items"]:
+        listed = client.get("/athletes", params={"club": club["club"], "club_exact": True}).json()
+        assert listed["pagination"]["total"] == club["nb_athletes"], club
+        assert all(item["club"] == club["club"] for item in listed["items"])
+    fuzzy = client.get("/athletes", params={"club": top["club"]}).json()["pagination"]["total"]
+    assert fuzzy >= top["nb_athletes"]
+
+    suggested = client.get("/suggest", params={"q": "hazebrouck"}).json()["clubs"]
+    assert 0 < len(suggested) <= 3 and suggested[0] == top
+    assert client.get("/suggest", params={"q": "hazebrouck", "type": "athletes"}).json()[
+        "clubs"
+    ] == []
+    assert "clubs" not in client.get("/search", params={"q": "hazebrouck", "type": "races"}).json()
+
+    # onglet « Clubs » : tous les clubs, paginés
+    tab = client.get("/search", params={"q": "d'hazebrouck", "type": "clubs", "limit": 2}).json()
+    assert "athletes" not in tab and "races" not in tab
+    assert tab["clubs"]["total"] == clubs["total"] and tab["clubs"]["items"] == clubs["items"][:2]
+    second = client.get(
+        "/search", params={"q": "d'hazebrouck", "type": "clubs", "limit": 2, "offset": 2}
+    ).json()
+    assert second["clubs"]["items"] == clubs["items"][2:4]
+
+
 def test_suggest_follows_list_filters() -> None:
     """Les suggestions des listes suivent les filtres déjà appliqués : mêmes premiers
     éléments que /athletes et /courses avec ces filtres."""

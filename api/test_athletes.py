@@ -456,6 +456,27 @@ def test_list_and_profile_show_the_same_club() -> None:
     assert same and same[0]["club"] == latest_club
 
 
+def test_athletes_club_filter() -> None:
+    """Filtre par club de GET /athletes : chaque athlète listé a un club qui contient les mots
+    cherchés, sans tenir compte des accents, de la casse ni des apostrophes ; combinable avec le
+    nom et le sexe ; au moins 2 caractères."""
+    response = client.get("/athletes", params={"club": "d'hazebrouck", "limit": 50})
+    if response.json()["pagination"]["total"] == 0:
+        pytest.skip("Aucun athlète du TC Hazebrouck dans la base")
+    items = response.json()["items"]
+    assert items and all("hazebrouck" in item["club"].lower() for item in items)
+
+    women = client.get("/athletes", params={"club": "HAZEBROUCK", "s": "F"}).json()
+    assert women["pagination"]["total"] < response.json()["pagination"]["total"]
+
+    name = items[0]["nom"].split()[0]
+    by_name = client.get("/athletes", params={"club": "hazebrouck", "q": name}).json()["items"]
+    assert any(item["id"] == items[0]["id"] for item in by_name)
+    assert all("hazebrouck" in item["club"].lower() for item in by_name)
+
+    assert client.get("/athletes", params={"club": "h"}).status_code == 422
+
+
 def test_athlete_progression() -> None:
     """Progression (GET /athletes/{id}/progression) : séries d'au moins deux courses classées par
     discipline et format, dans l'ordre chronologique ; place / classés et écart à la médiane

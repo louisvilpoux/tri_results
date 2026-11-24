@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AthleteHitList } from "@/components/search/athlete-hit-list";
+import { ClubHitList } from "@/components/search/club-hit-list";
 import { RaceHitList } from "@/components/search/race-hit-list";
 import { SearchForm } from "@/components/search/search-form";
 import { PaginationBar } from "@/components/shared/pagination-bar";
@@ -10,7 +11,7 @@ import { cn } from "@/lib/utils";
 import type { SearchResponse, SearchType } from "@/types/search";
 
 const PREVIEW_SIZE = 6; // résultats par groupe dans l'onglet « Tout »
-const PAGE_SIZE = 20; // résultats par page dans les onglets « Athlètes » et « Courses »
+const PAGE_SIZE = 20; // résultats par page dans les onglets « Athlètes », « Clubs » et « Courses »
 
 interface SearchParams {
   q?: string;
@@ -26,7 +27,9 @@ function parseQuery(params: SearchParams) {
   const offset = Number(params.offset);
   return {
     q: (params.q ?? "").trim(),
-    type: (params.type === "athletes" || params.type === "races" ? params.type : "all") as SearchType,
+    type: (params.type === "athletes" || params.type === "races" || params.type === "clubs"
+      ? params.type
+      : "all") as SearchType,
     offset: Number.isInteger(offset) && offset > 0 ? offset : 0,
   };
 }
@@ -102,7 +105,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
     return (
       <div className="space-y-8">
         {header}
-        <EmptyState>Saisis au moins 2 caractères : nom d’un athlète ou d’une course.</EmptyState>
+        <EmptyState>Saisis au moins 2 caractères : nom d’un athlète, d’un club ou d’une course.</EmptyState>
       </div>
     );
   }
@@ -132,6 +135,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
   const athleteTotal = overview.athletes?.total ?? 0;
   const raceTotal = overview.races?.total ?? 0;
+  const clubTotal = overview.clubs?.total ?? 0;
+  const clubs = page.clubs;
   const athletes = page.athletes;
   const races = page.races;
 
@@ -148,6 +153,12 @@ export default async function SearchPage({ searchParams }: PageProps) {
           active={type === "athletes"}
         />
         <Tab
+          href={buildSearchUrl(q, "clubs")}
+          label="Clubs"
+          count={clubTotal}
+          active={type === "clubs"}
+        />
+        <Tab
           href={buildSearchUrl(q, "races")}
           label="Courses"
           count={raceTotal}
@@ -155,8 +166,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
         />
       </nav>
 
-      {athleteTotal + raceTotal === 0 && (
-        <EmptyState>Aucun athlète ni aucune course ne correspond à « {q} ».</EmptyState>
+      {athleteTotal + raceTotal + clubTotal === 0 && (
+        <EmptyState>Aucun athlète, aucun club ni aucune course ne correspond à « {q} ».</EmptyState>
       )}
 
       {athletes && athletes.total > 0 && (
@@ -182,6 +193,32 @@ export default async function SearchPage({ searchParams }: PageProps) {
               shownCount={athletes.items.length}
               previousHref={buildSearchUrl(q, "athletes", Math.max(offset - PAGE_SIZE, 0))}
               nextHref={buildSearchUrl(q, "athletes", offset + PAGE_SIZE)}
+            />
+          )}
+        </section>
+      )}
+
+      {clubs && clubs.total > 0 && (
+        <section className="space-y-4">
+          <GroupHeader
+            title="Clubs"
+            total={clubs.total}
+            moreHref={
+              type === "all" && clubs.total > PREVIEW_SIZE ? buildSearchUrl(q, "clubs") : undefined
+            }
+          />
+          <ClubHitList clubs={clubs.items} />
+          {type === "clubs" && (
+            <PaginationBar
+              pagination={{
+                total: clubs.total,
+                limit: PAGE_SIZE,
+                offset,
+                has_next: offset + PAGE_SIZE < clubs.total,
+              }}
+              shownCount={clubs.items.length}
+              previousHref={buildSearchUrl(q, "clubs", Math.max(offset - PAGE_SIZE, 0))}
+              nextHref={buildSearchUrl(q, "clubs", offset + PAGE_SIZE)}
             />
           )}
         </section>

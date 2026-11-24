@@ -162,6 +162,8 @@ export function suggest(
 export function listAthletes(filters: {
   q: string | null;
   sexe: "M" | "F" | null;
+  club: string | null;
+  clubExact: boolean;
   limit: number;
   offset: number;
 }): Promise<AthleteListResponse> {
@@ -171,6 +173,8 @@ export function listAthletes(filters: {
   });
   if (filters.q) params.set("q", filters.q);
   if (filters.sexe) params.set("s", filters.sexe);
+  if (filters.club) params.set("club", filters.club);
+  if (filters.club && filters.clubExact) params.set("club_exact", "true");
   return apiGet<AthleteListResponse>("/athletes", params);
 }
 

@@ -863,14 +863,30 @@ def get_race_event(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any
 def list_athletes(
     q: str | None = Query(None, min_length=2, max_length=100, description="Filtre sur le nom"),
     s: str | None = Query(None, description="Sexe : M ou F"),
+    club: str | None = Query(
+        None, min_length=2, max_length=100, description="Filtre sur le club actuel"
+    ),
+    club_exact: bool = Query(
+        False, description="Club exactement égal à `club` (lien d'un club de /search)"
+    ),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Athlètes (un par unified_id), les plus actifs d'abord, filtrables par nom (mêmes règles
-    que /search) et par sexe. Les fonctions utilisées sont définies plus bas (Recherche)."""
+    que /search), par sexe et par club : le club contient les mots saisis, ou avec club_exact
+    est exactement `club` (un club trouvé par /search ou /suggest, qui annonce ce nombre
+    d'athlètes). Les fonctions utilisées sont définies plus bas (Recherche)."""
     words = search_words(q) if q else []
-    page = search_athletes_page(db, words, limit, offset, sexe=s.upper() if s else None)
+    page = search_athletes_page(
+        db,
+        words,
+        limit,
+        offset,
+        sexe=s.upper() if s else None,
+        club_words=search_words(club) if club and not club_exact else None,
+        exact_club=club if club_exact else None,
+    )
     return {"items": page["items"], "pagination": pagination(page["total"], limit, offset)}
 
 # ----------------------
@@ -1242,7 +1258,7 @@ def get_athlete_races(
 # ----------------------
 # Recherche globale
 # ----------------------
-SearchType = Literal["all", "athletes", "races"]
+SearchType = Literal["all", "athletes", "races", "clubs"]
 MAX_SEARCH_WORDS = 6
 
 
@@ -1260,6 +1276,48 @@ def contains_word(column: ColumnElement, word: str) -> ColumnElement:
     return column.like("%" + func.unaccent(escaped) + "%", escape="\\")
 
 
+MIN_CLUB_ATHLETES = 3
+
+
+def club_key() -> ColumnElement:
+    """Club d'un athlète comparé aux mots cherchés, comme la clé des athlètes : minuscules, sans
+    accents, tirets et apostrophes comme des espaces (« d'hazebrouck » trouve « D`HAZEBROUCK »)."""
+    return func.regexp_replace(
+        func.lower(func.unaccent(Athlete.club)), "[-‐‑‒–—−'‘’`_,[:space:]]+", " ", "g"
+    )
+
+
+def search_clubs(
+    db: Session, words: list[str], limit: int, offset: int = 0, with_total: bool = True
+) -> dict[str, Any]:
+    """Clubs dont le nom contient tous les mots, ceux qui ont le plus d'athlètes d'abord. Un club
+    compte les athlètes dont c'est le club actuel (transform/athletes_club.sql), comme le filtre
+    `club` de /athletes vers lequel mène chaque club. Utilisé par /search et /suggest."""
+    clubs = (
+        select(Athlete.club, func.count().label("nb_athletes"))
+        .where(
+            Athlete.id == Athlete.unified_id,  # une ligne par athlète
+            Athlete.nb_races.isnot(None),  # athlètes avec des résultats, comme /athletes
+            Athlete.club.isnot(None),
+            *(contains_word(club_key(), word) for word in words),
+        )
+        .group_by(Athlete.club)
+        # moins de 3 athlètes : surtout des fautes de frappe ou des noms d'équipiers écrits dans
+        # la case club (« BASGURBOGA Rose / MARTIN Marie christine / »)
+        .having(func.count() >= MIN_CLUB_ATHLETES)
+        .subquery()
+    )
+    total = (db.scalar(select(func.count()).select_from(clubs)) or 0) if with_total else None
+    rows = db.execute(
+        select(clubs)
+        .order_by(clubs.c.nb_athletes.desc(), clubs.c.club)
+        .offset(offset)
+        .limit(limit)
+    ).all()
+    items = [{"club": row.club, "nb_athletes": row.nb_athletes} for row in rows]
+    return {"items": items, "total": total}
+
+
 def search_athletes_page(
     db: Session,
     words: list[str],
@@ -1267,18 +1325,45 @@ def search_athletes_page(
     offset: int,
     sexe: str | None = None,
     with_total: bool = True,
+    club_words: list[str] | None = None,
+    exact_club: str | None = None,
 ) -> dict[str, Any]:
     """Athlètes (un par unified_id) dont le nom contient tous les mots — tous les athlètes si
     `words` est vide —, les plus actifs d'abord. Utilisé par /search, /athletes et /suggest
-    (sans `total`, `with_total=False`, pour éviter la requête de comptage)."""
+    (sans `total`, `with_total=False`, pour éviter la requête de comptage).
+
+    `club_words` : le club contient aussi tous ces mots (« vendome tri » trouve « VENDOME
+    TRIATHLON »). C'est le club actuel, celui affiché dans la liste et sur le profil :
+    transform/athletes_club.sql l'écrit sur toutes les lignes de l'athlète. Il est lu sur la
+    ligne de référence de l'athlète (id = unified_id), comme dans search_clubs.
+
+    `exact_club` : le club est exactement celui-ci. Un club trouvé par search_clubs mène à
+    cette liste, qui compte le même nombre d'athlètes (« LILLE TRIATHLON » : 469 ; avec
+    `club_words`, 475, car « US LILLE TRIATHLON »… contiennent aussi les mots)."""
     # nb_races n'est renseigné que pour les athlètes ayant des résultats
     # (transform/nb_races.sql) : on écarte les autres (souvent des équipes de relais).
     sexe_filter = [Athlete.sexe == sexe] if sexe else []
-    if words:
+    club_conditions = [contains_word(club_key(), word) for word in club_words or []]
+    if exact_club is not None:
+        club_conditions.append(Athlete.club == exact_club)
+    club_filter = (
+        [
+            Athlete.unified_id.in_(
+                select(Athlete.id).where(Athlete.id == Athlete.unified_id, *club_conditions)
+            )
+        ]
+        if club_conditions
+        else []
+    )
+    if words or club_filter:
         # Un même athlète a plusieurs lignes (variantes du nom) : on cherche dans toutes.
         matching = (
             select(Athlete.unified_id, func.max(Athlete.nb_races).label("nb_races"))
-            .where(*sexe_filter, *(contains_word(Athlete.athlete_key, word) for word in words))
+            .where(
+                *sexe_filter,
+                *club_filter,
+                *(contains_word(Athlete.athlete_key, word) for word in words),
+            )
             .group_by(Athlete.unified_id)
             .having(func.max(Athlete.nb_races).isnot(None))
             .subquery()
@@ -1454,13 +1539,14 @@ def search_races_page(
 @app.get("/search")
 def search(
     q: str = Query(..., min_length=2, max_length=100, description="Texte recherché"),
-    type: SearchType = Query("all", description="all, athletes ou races"),
+    type: SearchType = Query("all", description="all, athletes, races ou clubs"),
     limit: int = Query(6, ge=1, le=50),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Recherche d'athlètes et de courses par nom : tous les mots doivent apparaître, dans
-    n'importe quel ordre, sans tenir compte des majuscules ni des accents."""
+    n'importe quel ordre, sans tenir compte des majuscules ni des accents. Aussi les clubs dont
+    le nom contient les mots (type=all ou clubs), ceux qui ont le plus d'athlètes d'abord."""
     words = search_words(q)
     if not words:
         raise HTTPException(status_code=422, detail="Recherche vide")
@@ -1470,6 +1556,8 @@ def search(
         response["athletes"] = search_athletes_page(db, words, limit, offset)
     if type in ("all", "races"):
         response["races"] = search_races_page(db, words, limit, offset)
+    if type in ("all", "clubs"):
+        response["clubs"] = search_clubs(db, words, limit, offset)
     return response
 
 
@@ -1694,10 +1782,14 @@ def suggest(
     les suggestions aux athlètes ou aux courses (champs de filtre des listes) : l'autre liste
     est vide et sa requête n'est pas faite. Les autres filtres déjà appliqués sur la liste
     (sexe ; année, discipline, format) s'appliquent aussi aux suggestions, comme sur /athletes
-    et /courses."""
+    et /courses. Dans la recherche globale (type=all), aussi 3 clubs au plus (voir /search)."""
     words = search_words(q)
     if not words:
         raise HTTPException(status_code=422, detail="Recherche vide")
+    # clubs : 3 au plus, seulement dans la recherche globale (accueil, en-tête)
+    clubs = (
+        search_clubs(db, words, min(limit, 3), with_total=False)["items"] if type == "all" else []
+    )
     athletes = (
         search_athletes_page(db, words, limit, 0, sexe=s, with_total=False)["items"]
         if type in ("all", "athletes")
@@ -1710,7 +1802,7 @@ def suggest(
         if type in ("all", "courses")
         else []
     )
-    return {"q": q, "athletes": athletes, "courses": courses}
+    return {"q": q, "athletes": athletes, "clubs": clubs, "courses": courses}
 
 
 # ----------------------

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { ClubInput } from "@/components/athletes/club-input";
 import { AthleteHitList } from "@/components/search/athlete-hit-list";
 import { SuggestInput } from "@/components/search/suggest-input";
 import { FILTER_FIELD_CLASS, FilterField, FilterForm } from "@/components/shared/filter-form";
@@ -7,33 +8,45 @@ import { PaginationBar } from "@/components/shared/pagination-bar";
 import { listAthletes } from "@/lib/api";
 import { pageMetadata } from "@/lib/seo";
 
-// URL canonique /athletes : les variantes filtrées (?q=…, ?sexe=…) ne sont pas des doublons.
+// URL canonique /athletes : les variantes filtrées (?q=…, ?sexe=…, ?club=…) ne sont pas des doublons.
 export const metadata: Metadata = pageMetadata(
   "Athlètes",
   "Les athlètes de triathlon et duathlon : nombre de courses, club et dernière saison, " +
-    "avec recherche par nom.",
+    "avec recherche par nom et par club.",
   "/athletes"
 );
 
 const PAGE_SIZE = 20;
 
 interface PageProps {
-  searchParams: Promise<{ q?: string; sexe?: string; offset?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    sexe?: string;
+    club?: string;
+    club_exact?: string;
+    offset?: string;
+  }>;
 }
 
 interface AthletesQuery {
   q: string | null;
   sexe: "M" | "F" | null;
+  club: string | null;
+  /** Club au nom exact (lien d'un club de la recherche), sinon le club contient les mots. */
+  clubExact: boolean;
   offset: number;
 }
 
 function parseQuery(params: Awaited<PageProps["searchParams"]>): AthletesQuery {
   const offset = Number(params.offset);
   const q = params.q?.trim() ?? "";
+  const club = params.club?.trim() ?? "";
   return {
-    // L'API exige au moins 2 caractères pour filtrer par nom.
+    // L'API exige au moins 2 caractères pour filtrer par nom ou par club.
     q: q.length >= 2 ? q : null,
     sexe: params.sexe === "M" || params.sexe === "F" ? params.sexe : null,
+    club: club.length >= 2 ? club : null,
+    clubExact: club.length >= 2 && params.club_exact === "1",
     offset: Number.isInteger(offset) && offset > 0 ? offset : 0,
   };
 }
@@ -42,6 +55,8 @@ function buildAthletesUrl(query: AthletesQuery): string {
   const params = new URLSearchParams();
   if (query.q) params.set("q", query.q);
   if (query.sexe) params.set("sexe", query.sexe);
+  if (query.club) params.set("club", query.club);
+  if (query.club && query.clubExact) params.set("club_exact", "1");
   if (query.offset > 0) params.set("offset", String(query.offset));
   const search = params.toString();
   return `/athletes${search ? `?${search}` : ""}`;
@@ -65,7 +80,7 @@ export default async function AthletesPage({ searchParams }: PageProps) {
   }
 
   const { items, pagination } = data;
-  const hasFilters = query.q !== null || query.sexe !== null;
+  const hasFilters = query.q !== null || query.sexe !== null || query.club !== null;
 
   return (
     <div className="space-y-6">
@@ -90,6 +105,15 @@ export default async function AthletesPage({ searchParams }: PageProps) {
             className="sm:w-72"
             inputClassName={`${FILTER_FIELD_CLASS} w-full`}
             panelClassName="left-0 w-full sm:w-96"
+          />
+        </FilterField>
+
+        <FilterField label="Club">
+          <ClubInput
+            key={`${query.club ?? ""}|${query.clubExact}`}
+            defaultValue={query.club ?? ""}
+            exact={query.clubExact}
+            className={`${FILTER_FIELD_CLASS} sm:w-64`}
           />
         </FilterField>
 

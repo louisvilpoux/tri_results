@@ -1,7 +1,7 @@
 // Types alignés sur GET /search, GET /events, GET /courses et GET /athletes (api/main.py).
 import type { Pagination } from "@/types/result";
 
-export type SearchType = "all" | "athletes" | "races";
+export type SearchType = "all" | "athletes" | "races" | "clubs";
 
 export interface AthleteHit {
   id: number;
@@ -72,6 +72,12 @@ export interface AthleteListResponse {
   pagination: Pagination;
 }
 
+/** Club trouvé par la recherche globale : son nombre d'athlètes (club actuel). */
+export interface ClubHit {
+  club: string;
+  nb_athletes: number;
+}
+
 export interface SearchResponse {
   q: string;
   type: SearchType;
@@ -79,6 +85,8 @@ export interface SearchResponse {
   offset: number;
   athletes?: SearchGroup<AthleteHit>;
   races?: SearchGroup<RaceHit>;
+  /** Avec type=all ou clubs : les clubs qui répondent à la recherche, les plus grands d'abord. */
+  clubs?: SearchGroup<ClubHit>;
 }
 
 /** Suggestions demandées : tout (recherche globale), athlètes ou courses (listes). */
@@ -88,5 +96,7 @@ export type SuggestType = "all" | "athletes" | "courses";
 export interface SuggestResponse {
   q: string;
   athletes: AthleteHit[];
+  /** Recherche globale seulement (type=all) : 3 clubs au plus. */
+  clubs?: ClubHit[];
   courses: CourseHit[];
 }
