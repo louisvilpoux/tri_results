@@ -61,7 +61,7 @@ const disciplines: Discipline[] = [
   },
   {
     name: "Cross Duathlon",
-    description: "Trail, VTT et trail",
+    description: "Trail et VTT",
     icon: TreePine,
     href: "/races?discipline=cross%20duathlon",
   },
