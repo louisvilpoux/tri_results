@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
@@ -8,6 +9,12 @@ import { AthleteHeader } from "@/components/athletes/athlete-header";
 import { AthleteResultsFilters } from "@/components/athletes/athlete-results-filters";
 import { AthleteResultsTable } from "@/components/athletes/athlete-results-table";
 import { AthleteStats } from "@/components/athletes/athlete-stats";
+import {
+  ATHLETE_TAB_PARAM,
+  AthleteTabs,
+  parseAthleteTab,
+  type AthleteTab,
+} from "@/components/athletes/athlete-tabs";
 import { PaginationBar } from "@/components/shared/pagination-bar";
 import { ApiError, getAthlete, getAthleteProgression, getAthleteResults } from "@/lib/api";
 import {
@@ -20,7 +27,8 @@ import { redirectOrNotFound } from "@/lib/redirections";
 
 interface PageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<AthleteResultsSearchParams>;
+  // + onglet affiché (?vue=records, ?vue=progression)
+  searchParams: Promise<AthleteResultsSearchParams & { [ATHLETE_TAB_PARAM]?: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -37,16 +45,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function AthletePage({ params, searchParams }: PageProps) {
   const { id } = await params;
-  const query = parseAthleteResultsQuery(await searchParams);
+  const urlParams = await searchParams;
+  const query = parseAthleteResultsQuery(urlParams);
+  const tab = parseAthleteTab(urlParams[ATHLETE_TAB_PARAM]);
 
   let data;
 
   try {
+    // Seules les données de l'onglet affiché sont chargées.
     const [athlete, results, progression] = await Promise.all([
       getAthlete(id),
-      getAthleteResults(id, query),
+      tab === "resultats" ? getAthleteResults(id, query) : null,
       // La progression est un plus : son échec n'empêche pas d'afficher le profil.
-      getAthleteProgression(id).catch(() => null),
+      tab === "progression" ? getAthleteProgression(id).catch(() => null) : null,
     ]);
     data = { athlete, results, progression };
   } catch (error) {
@@ -68,7 +79,12 @@ export default async function AthletePage({ params, searchParams }: PageProps) {
   }
 
   const { athlete, results, progression } = data;
-  const { items, pagination } = results;
+  // L'onglet Résultats garde les filtres, le tri et la page de l'historique.
+  const tabHrefs: Record<AthleteTab, string> = {
+    resultats: buildAthleteUrl(id, query),
+    records: `/athletes/${id}?${ATHLETE_TAB_PARAM}=records`,
+    progression: `/athletes/${id}?${ATHLETE_TAB_PARAM}=progression`,
+  };
 
   return (
     <div className="space-y-8">
@@ -83,30 +99,56 @@ export default async function AthletePage({ params, searchParams }: PageProps) {
       <AthleteHeader athlete={athlete} />
       <AthleteStats athlete={athlete} />
 
-      {/* Historique avant les analyses : c'est ce que l'on vient chercher sur un profil. */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-extrabold tracking-tight">Historique des résultats</h2>
+      <div className="space-y-6">
+        <AthleteTabs
+          active={tab}
+          hrefs={tabHrefs}
+          counts={{ resultats: athlete.nb_races, records: athlete.best_times.length }}
+        />
 
-        <AthleteResultsFilters athlete={athlete} query={query} />
+        {results && (
+          <section className="space-y-4" aria-label="Historique des résultats">
+            <AthleteResultsFilters athlete={athlete} query={query} />
 
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-          <AthleteResultsTable athleteId={id} query={query} results={items} />
-          <PaginationBar
-            pagination={pagination}
-            shownCount={items.length}
-            previousHref={buildAthleteUrl(id, query, {
-              offset: Math.max(query.offset - query.limit, 0),
-            })}
-            nextHref={buildAthleteUrl(id, query, { offset: query.offset + query.limit })}
-          />
-        </div>
-      </section>
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+              <AthleteResultsTable athleteId={id} query={query} results={results.items} />
+              <PaginationBar
+                pagination={results.pagination}
+                shownCount={results.items.length}
+                previousHref={buildAthleteUrl(id, query, {
+                  offset: Math.max(query.offset - query.limit, 0),
+                })}
+                nextHref={buildAthleteUrl(id, query, { offset: query.offset + query.limit })}
+              />
+            </div>
+          </section>
+        )}
 
-      <AthleteBestTimes bestTimes={athlete.best_times} />
+        {tab === "records" &&
+          (athlete.best_times.length > 0 ? (
+            <AthleteBestTimes bestTimes={athlete.best_times} />
+          ) : (
+            <EmptyTab>Aucun temps total publié pour cet athlète.</EmptyTab>
+          ))}
 
-      {progression && progression.series.length > 0 && (
-        <AthleteProgressionBlock progression={progression} />
-      )}
+        {tab === "progression" &&
+          (progression && progression.series.length > 0 ? (
+            <AthleteProgressionBlock progression={progression} />
+          ) : (
+            <EmptyTab>
+              La progression apparaît dès que l’athlète a couru au moins deux fois le même format
+              (par exemple deux triathlons M) avec un temps publié.
+            </EmptyTab>
+          ))}
+      </div>
     </div>
+  );
+}
+
+function EmptyTab({ children }: { children: ReactNode }) {
+  return (
+    <p className="rounded-xl border border-dashed border-gray-300 bg-white/60 px-6 py-10 text-center text-sm text-gray-500">
+      {children}
+    </p>
   );
 }

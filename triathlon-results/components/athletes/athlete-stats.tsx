@@ -3,17 +3,22 @@ import type { AthleteProfile } from "@/types/athlete";
 
 function StatTile({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5">
+    <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-5">
       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
-      <p className="mt-2 text-3xl font-black tabular-nums text-[#17202E]">{value}</p>
+      <p className="mt-1 text-2xl font-black tabular-nums text-[#17202E] sm:mt-2 sm:text-3xl">
+        {value}
+      </p>
     </div>
   );
 }
 
-/** Chiffres clés, calculés par l'API sur les résultats dédoublonnés. */
+/**
+ * Chiffres clés, calculés par l'API sur les résultats dédoublonnés. Tuiles compactes sur mobile
+ * (3 par ligne) pour que les onglets du profil restent dans le premier écran.
+ */
 export function AthleteStats({ athlete }: { athlete: AthleteProfile }) {
   return (
-    <section aria-label="Chiffres clés" className="grid grid-cols-2 gap-3 md:grid-cols-5">
+    <section aria-label="Chiffres clés" className="grid grid-cols-3 gap-2 sm:gap-3 md:grid-cols-5">
       <StatTile label="Courses" value={athlete.nb_races} />
       <StatTile label="Podiums" value={athlete.nb_podiums} />
       <StatTile label="Top 10" value={athlete.nb_top10} />
