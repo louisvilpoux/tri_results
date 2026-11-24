@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
-
 import { RaceBenchmarks } from "@/components/results/race-benchmarks";
+import { useMySimulation } from "@/components/results/my-simulation";
 import { RaceSimulator } from "@/components/results/race-simulator";
 import type { RaceStats } from "@/types/race";
 
 /**
  * « Repères » et « Et moi ? » de la page classement. Les temps saisis dans « Et moi ? » sont
  * placés dans l'histogramme des Repères, juste au-dessus (U16, retour utilisateur du
- * 23/11/2026) : la page étant un composant serveur, ce composant client partage ces temps.
+ * 23/11/2026) et dans le classement (ligne « Toi ») : la simulation passe par le contexte
+ * MySimulationProvider, qui entoure ces blocs dans la page.
  */
 export function RaceInsights({
   stats,
@@ -24,17 +24,17 @@ export function RaceInsights({
   initialSexe: "" | "M" | "F";
   initialCategorie: string;
 }) {
-  const [myTimes, setMyTimes] = useState<Record<string, number>>({});
+  const { mine, setMine } = useMySimulation();
 
   return (
     <>
-      <RaceBenchmarks stats={stats} myTimes={myTimes} />
+      <RaceBenchmarks stats={stats} myTimes={mine?.times} />
       <RaceSimulator
         raceId={raceId}
         initialTimes={initialTimes}
         initialSexe={initialSexe}
         initialCategorie={initialCategorie}
-        onTimesChange={setMyTimes}
+        onChange={setMine}
       />
     </>
   );

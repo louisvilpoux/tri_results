@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, Info, MapPin, TriangleAlert, Trophy } from "lucide-react";
 
+import { MyPlaceBanner } from "@/components/results/my-place";
+import { MySimulationProvider } from "@/components/results/my-simulation";
 import { RaceInsights } from "@/components/results/race-insights";
 import { ResultsFilters } from "@/components/results/results-filters";
 import { ResultsTable } from "@/components/results/results-table";
@@ -149,63 +151,75 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
         </div>
       </section>
 
-      {stats && stats.segments.length > 0 && (
-        <RaceInsights
-          stats={stats}
-          raceId={id}
-          initialTimes={simulatorTimes}
-          initialSexe={simulatorSexe}
-          initialCategorie={simulatorCategorie}
-        />
-      )}
-
-      {/* Classement */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-extrabold tracking-tight">
-          {sansTemps ? "Participants" : "Classement général"}
-        </h2>
-
-        {sansTemps && (
-          <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            <Info size={18} aria-hidden className="mt-0.5 shrink-0" />
-            Temps et classement non publiés par la source : les participants sont listés par ordre
-            alphabétique.
-          </p>
-        )}
-
-        {race.temps_suspects > 0 && (
-          <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            <TriangleAlert size={18} aria-hidden className="mt-0.5 shrink-0" />
-            Certains temps de cette épreuve semblent erronés dans la source. Ils sont signalés dans
-            le classement.
-          </p>
-        )}
-
-        <ResultsFilters raceId={id} query={query} categories={categories} />
-
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-          <ResultsTable
+      {/* « Et moi ? », Repères et classement partagent la simulation (ligne « Toi ») */}
+      <MySimulationProvider>
+        {stats && stats.segments.length > 0 && (
+          <RaceInsights
+            stats={stats}
             raceId={id}
+            initialTimes={simulatorTimes}
+            initialSexe={simulatorSexe}
+            initialCategorie={simulatorCategorie}
+          />
+        )}
+
+        {/* Classement */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-extrabold tracking-tight">
+            {sansTemps ? "Participants" : "Classement général"}
+          </h2>
+
+          {sansTemps && (
+            <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <Info size={18} aria-hidden className="mt-0.5 shrink-0" />
+              Temps et classement non publiés par la source : les participants sont listés par ordre
+              alphabétique.
+            </p>
+          )}
+
+          {race.temps_suspects > 0 && (
+            <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <TriangleAlert size={18} aria-hidden className="mt-0.5 shrink-0" />
+              Certains temps de cette épreuve semblent erronés dans la source. Ils sont signalés
+              dans le classement.
+            </p>
+          )}
+
+          <MyPlaceBanner
             query={query}
             results={items}
-            // Colonnes natation / T1 / vélo / T2 / course seulement quand la discipline s'y prête
-            // et que la source a publié au moins un temps intermédiaire.
-            showSplits={
-              race.avec_segments && !DISCIPLINES_WITHOUT_SPLITS.includes(race.type_epreuve ?? "")
-            }
-            discipline={race.type_epreuve}
+            hasNext={pagination.has_next}
             sansTemps={sansTemps}
+            filtered={filtered}
           />
-          <PaginationBar
-            pagination={pagination}
-            shownCount={items.length}
-            previousHref={buildRaceResultsUrl(id, query, {
-              offset: Math.max(query.offset - query.limit, 0),
-            })}
-            nextHref={buildRaceResultsUrl(id, query, { offset: query.offset + query.limit })}
-          />
-        </div>
-      </section>
+
+          <ResultsFilters raceId={id} query={query} categories={categories} />
+
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+            <ResultsTable
+              raceId={id}
+              query={query}
+              results={items}
+              hasNext={pagination.has_next}
+              // Colonnes natation / T1 / vélo / T2 / course seulement quand la discipline s'y prête
+              // et que la source a publié au moins un temps intermédiaire.
+              showSplits={
+                race.avec_segments && !DISCIPLINES_WITHOUT_SPLITS.includes(race.type_epreuve ?? "")
+              }
+              discipline={race.type_epreuve}
+              sansTemps={sansTemps}
+            />
+            <PaginationBar
+              pagination={pagination}
+              shownCount={items.length}
+              previousHref={buildRaceResultsUrl(id, query, {
+                offset: Math.max(query.offset - query.limit, 0),
+              })}
+              nextHref={buildRaceResultsUrl(id, query, { offset: query.offset + query.limit })}
+            />
+          </div>
+        </section>
+      </MySimulationProvider>
     </div>
   );
 }

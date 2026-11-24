@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Calculator, ChevronDown, RotateCcw, TriangleAlert } from "lucide-react";
 
@@ -10,6 +11,7 @@ import {
   SIMULATOR_SEXE_PARAM,
 } from "@/lib/simulator";
 import { formatGap } from "@/lib/time";
+import type { MySimulation } from "@/components/results/my-simulation";
 import type { RaceTimes, TimedAthlete } from "@/types/race";
 
 
@@ -130,21 +132,22 @@ function placement(label: string, sorted: number[], value: number): Placement | 
  * catégorie. Les temps des classés (GET /api/races/{id}/times) ne sont chargés qu'à l'ouverture ;
  * le calcul se fait ensuite dans le navigateur, à chaque frappe. Les temps saisis, le sexe et
  * la catégorie sont gardés dans l'adresse (moi_swim=…, moi_sexe=…, moi_categorie=…) pour
- * pouvoir partager la simulation. Les temps valides (segments et total, en secondes) sont
- * remontés par onTimesChange pour être placés dans l'histogramme des Repères (U16).
+ * pouvoir partager la simulation. La simulation (temps valides en secondes, sexe, catégorie,
+ * place au général) est remontée par onChange : les Repères la placent dans l'histogramme (U16)
+ * et le classement l'insère comme une ligne « Toi ».
  */
 export function RaceSimulator({
   raceId,
   initialTimes,
   initialSexe,
   initialCategorie,
-  onTimesChange,
+  onChange,
 }: {
   raceId: string;
   initialTimes: Record<string, string>;
   initialSexe: SexeFilter;
   initialCategorie: string;
-  onTimesChange?: (times: Record<string, number>) => void;
+  onChange?: (mine: MySimulation | null) => void;
 }) {
   const [open, setOpen] = useState(
     Object.keys(initialTimes).length > 0 || initialSexe !== "" || initialCategorie !== ""
@@ -163,12 +166,14 @@ export function RaceSimulator({
       .catch(() => setFailed(true));
   }, [open, data, failed, raceId]);
 
-  // simulateur fermé (ou temps pas encore chargés) : plus aucun temps à montrer dans les Repères
+  // simulateur fermé (ou temps pas encore chargés) : plus de simulation à montrer ailleurs
   useEffect(() => {
-    if (!open || !data) onTimesChange?.({});
-  }, [open, data, onTimesChange]);
+    if (!open || !data) onChange?.(null);
+  }, [open, data, onChange]);
 
-  // Temps saisis, sexe et catégorie gardés dans l'adresse, sans recharger la page.
+  // Temps saisis, sexe et catégorie gardés dans l'adresse, sans recharger la page. Remis après
+  // chaque navigation du classement (pages, tri, filtres), dont les liens ne les portent pas.
+  const search = useSearchParams().toString();
   useEffect(() => {
     const url = new URL(window.location.href);
     [...url.searchParams.keys()]
@@ -179,8 +184,8 @@ export function RaceSimulator({
     });
     if (sexe) url.searchParams.set(SIMULATOR_SEXE_PARAM, sexe);
     if (categorie) url.searchParams.set(SIMULATOR_CATEGORIE_PARAM, categorie);
-    window.history.replaceState(null, "", url);
-  }, [inputs, sexe, categorie]);
+    if (url.href !== window.location.href) window.history.replaceState(null, "", url);
+  }, [inputs, sexe, categorie, search]);
 
   return (
     <section className="space-y-4" aria-labelledby="simulateur-titre">
@@ -222,7 +227,7 @@ export function RaceSimulator({
               setSexe={setSexe}
               categorie={categorie}
               setCategorie={setCategorie}
-              onTimesChange={onTimesChange}
+              onChange={onChange}
             />
           )}
         </div>
@@ -239,7 +244,7 @@ function SimulatorBody({
   setSexe,
   categorie,
   setCategorie,
-  onTimesChange,
+  onChange,
 }: {
   data: RaceTimes;
   inputs: Record<string, string>;
@@ -248,7 +253,7 @@ function SimulatorBody({
   setSexe: (sexe: SexeFilter) => void;
   categorie: string;
   setCategorie: (categorie: string) => void;
-  onTimesChange?: (times: Record<string, number>) => void;
+  onChange?: (mine: MySimulation | null) => void;
 }) {
   // temps triés de chaque segment et du total, calculés une fois
   const sorted = useMemo(() => {
@@ -289,17 +294,26 @@ function SimulatorBody({
   const totalTyped = (inputs.total ?? "").trim() !== "";
   const total = totalTyped ? parsed.total : computedTotal;
 
-  // temps valides remontés aux Repères ; la clé texte évite de les renvoyer à chaque rendu
+  // Simulation remontée aux Repères et au classement (segments, transitions et total valides) ;
+  // la clé texte évite de la renvoyer à chaque rendu.
   const validTimes: Record<string, number> = Object.fromEntries(
-    data.segments
-      .map((segment): [string, unknown] => [segment.key, parsed[segment.key]])
+    fields
+      .map((field): [string, unknown] => [field.key, parsed[field.key]])
       .concat([["total", total]])
       .filter((entry): entry is [string, number] => typeof entry[1] === "number")
   );
-  const validTimesKey = JSON.stringify(validTimes);
+  const general = typeof total === "number" ? placement("Général", sorted.total, total) : null;
+  const simulation: MySimulation = {
+    times: validTimes,
+    sexe,
+    categorie,
+    place: general?.place ?? null,
+    count: sorted.total.length,
+  };
+  const simulationKey = JSON.stringify(simulation);
   useEffect(() => {
-    onTimesChange?.(JSON.parse(validTimesKey));
-  }, [validTimesKey, onTimesChange]);
+    onChange?.(JSON.parse(simulationKey));
+  }, [simulationKey, onChange]);
 
   const setInput = (key: string, value: string) => setInputs({ ...inputs, [key]: value });
   const hasInput = Object.values(inputs).some((value) => value.trim() !== "");
@@ -318,7 +332,6 @@ function SimulatorBody({
 
   const rows: Placement[] = [];
   if (typeof total === "number") {
-    const general = placement("Général", sorted.total, total);
     if (general) rows.push(general);
     if (sexe) {
       const subset = timesOf(
