@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-import { RaceEditions } from "@/components/races/race-editions";
 import { RaceEventHeader } from "@/components/races/race-event-header";
 import { RaceFormatCard } from "@/components/races/race-format-card";
 import { RaceTrendsBlock } from "@/components/races/race-trends";
@@ -96,8 +95,6 @@ export default async function RacePage({ params }: PageProps) {
             )}
         />
       )}
-
-      <RaceEditions editions={event.editions} currentYear={event.year_epreuve} />
     </div>
   );
 }

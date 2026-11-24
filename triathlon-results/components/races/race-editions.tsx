@@ -8,15 +8,17 @@ interface RaceEditionsProps {
   currentYear: string | null;
 }
 
-/** Liens vers les autres années de la même course (même nom). */
+/**
+ * Liens vers les autres années de la même course (même nom), affichés dans l'en-tête sombre de
+ * la page course : on change d'édition sans faire défiler la page.
+ */
 export function RaceEditions({ editions, currentYear }: RaceEditionsProps) {
   if (editions.length < 2) return null;
 
   return (
-    <section className="space-y-4">
-      <h2 className="text-2xl font-extrabold tracking-tight">Autres éditions</h2>
-
-      <ul className="flex flex-wrap gap-2">
+    <nav aria-label="Autres éditions">
+      {/* mobile : une seule ligne qui défile, pour ne pas allonger l'en-tête */}
+      <ul className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
         {editions.map((edition) => {
           const isCurrent = edition.year_epreuve === currentYear;
 
@@ -26,10 +28,10 @@ export function RaceEditions({ editions, currentYear }: RaceEditionsProps) {
                 href={`/races/${edition.race_id}`}
                 aria-current={isCurrent ? "page" : undefined}
                 className={cn(
-                  "inline-block rounded-lg border px-4 py-2 text-sm font-bold tabular-nums transition-colors",
+                  "inline-block rounded-lg border px-3 py-1.5 text-sm font-bold tabular-nums transition-colors",
                   isCurrent
                     ? "border-[#FC6B32] bg-[#FC6B32] text-white"
-                    : "border-gray-200 bg-white text-gray-700 hover:border-[#FC6B32] hover:text-[#FC6B32]"
+                    : "border-white/15 bg-white/5 text-gray-300 hover:border-[#FC6B32] hover:text-white"
                 )}
               >
                 {edition.year_epreuve}
@@ -38,6 +40,6 @@ export function RaceEditions({ editions, currentYear }: RaceEditionsProps) {
           );
         })}
       </ul>
-    </section>
+    </nav>
   );
 }

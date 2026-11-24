@@ -1,5 +1,6 @@
 import { CalendarDays, Layers, MapPin } from "lucide-react";
 
+import { RaceEditions } from "@/components/races/race-editions";
 import { formatDateRange } from "@/lib/format";
 import type { RaceEvent } from "@/types/race";
 
@@ -37,6 +38,10 @@ export function RaceEventHeader({ event }: { event: RaceEvent }) {
               <Layers size={16} aria-hidden />
               {formatCount} format{formatCount > 1 && "s"}
             </span>
+          </div>
+
+          <div className="mt-5">
+            <RaceEditions editions={event.editions} currentYear={event.year_epreuve} />
           </div>
         </div>
 
