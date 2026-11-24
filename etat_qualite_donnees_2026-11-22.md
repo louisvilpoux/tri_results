@@ -3,6 +3,8 @@
 Audit du 22/11/2026 au commit `d38c0de`, refait le même jour au commit `ea15b02` avec les
 corrections de lieux de `transform/lieux_courses.csv` (43 lignes), base reconstruite avec
 `transform/run_sql.py`.
+Complété le 24/11/2026 (Q18 et Q19), base inchangée : constats faits pendant la refonte UX
+(voir [ux.md](ux.md), ligne « Toi » du classement).
 Audit précédent : [etat_qualite_donnees_2026-11-20.md](etat_qualite_donnees_2026-11-20.md)
 (mêmes identifiants Q1 à Q14 ; D1 à D6 renvoient à [retour_utilisateur_2026-11-19.md](retour_utilisateur_2026-11-19.md)).
 
@@ -54,6 +56,8 @@ segments prolivesport : 100 % cohérents avec le total à 5 % près (fftri 98,1 
 | Q15 | Sexe chronoweb : premier caractère de la catégorie | — | 31 820 lignes chronoweb (62 %) ; 0 après correction | **Corrigé** le 22/11 |
 | Q16 | Identifiants instables | constat | 0 changement entre deux reconstructions | **Corrigé** |
 | Q17 | Noms de course sans ponctuation (tirés de l'adresse fftri) | — | 2 courses, corrigées par alias | **Corrigé** |
+| Q18 | Classement publié qui ne suit pas les temps totaux | — | 24/11 : 35 épreuves, dont 7 sur plus de 5 % des lignes | **Ouvert** |
+| Q19 | Temps protiming en minutes lus comme des heures | — | 24/11 : 84 totaux sur 6 épreuves (Cepoy 2015-2016, Chartres 2016) | **Ouvert** |
 
 ---
 
@@ -163,6 +167,110 @@ et « T974 » ; leurs résultats étaient justes. Vrais noms lus sur fftri.t2are
 `transform/noms_epreuves.sql` les corrigent ; leurs id ne changent pas (la clé de l'id garde le
 nom publié). D'autres noms peuvent avoir perdu leur ponctuation sans être aussi visibles.
 
+### Q18 — Classement publié qui ne suit pas les temps totaux (constat du 24/11/2026)
+
+Classés (rang entre 1 et 99 989, hors temps suspects et sous-classements) dont le total est plus
+court de plus de 30 secondes que celui du classé précédent. **35 épreuves sur 3 636** ont au
+moins une inversion : 31 fftri_t2_area, 2 protiming, 1 prolivesport, 1 chronoweb.
+
+> Un premier comptage, cité pendant la refonte UX, donnait 66 épreuves : il comptait les lignes
+> de statut prolivesport (rang 0 et 99991-99999, dont 268 ont un temps) comme des inversions.
+
+Ce n'est pas le cas traité par Q1 (`transform/temps_totaux.sql`) : là, les totaux sont faux et
+les segments suivent le classement. Ici, les totaux sont cohérents avec les segments ; c'est le
+**classement** qui suit un autre temps, ou quelques lignes qui sont à part.
+
+Conséquences dans l'application :
+- le classement paraît dans le désordre (Ventouxman 2026 L : 23ᵉ en 06:05:21, 25ᵉ en 05:59:47) ;
+- « Et moi ? » place un temps par rapport aux temps, pas aux rangs : « juste devant : 25ᵉ »,
+  « juste derrière : 31ᵉ » ;
+- la ligne « Toi » n'est pas insérée sur une page dont les temps ne se suivent pas : le bandeau
+  propose de trier par temps total (`components/results/my-place.tsx`).
+
+**Classements sur un autre temps** : plus de 5 % des lignes inversées, par petits écarts.
+Totaux et segments concordent : la source classe probablement sur un autre temps (départs par
+vagues, temps officiel au lieu du temps réel, pénalités).
+
+| Épreuve | Source | Classés | Inversions | Pire écart |
+|---------|--------|--------:|-----------:|-----------:|
+| Tours N Man 2024, triathlon L | fftri_t2_area | 537 | 229 (42,6 %) | 28:15 |
+| Triathlon de Chamouille 2022, triathlon M | fftri_t2_area | 566 | 229 (40,5 %) | 59:27 |
+| Bayman 2024, triathlon L | fftri_t2_area | 847 | 342 (40,4 %) | 11:15 |
+| Ventouxman 2026, triathlon L | fftri_t2_area | 338 | 125 (37,0 %) | 13:26 |
+| Ventouxman 2026, duathlon L | fftri_t2_area | 77 | 17 (22,1 %) | 16:29 |
+| Triathlon en Provence Verte 2022, triathlon M | fftri_t2_area | 91 | 8 (8,8 %) | 1:54 |
+| Bike & Run de l'Hippodrome de Marcq 2024 | prolivesport | 79 | 5 (6,3 %) | 8:58 |
+
+Sur Ventouxman, T1 et T2 ne sont pas publiés (« — ») mais sont inclus dans le total : environ
+5 minutes d'écart entre la somme natation + vélo + course et le total.
+
+**Inversions isolées** : 1 à 36 lignes, souvent avec un gros écart.
+
+| Épreuve | Source | Classés | Inversions | Pire écart | Cause probable |
+|---------|--------|--------:|-----------:|-----------:|----------------|
+| Openlakes Champagne 2026, triathlon XXL | fftri_t2_area | 255 | 9 | 4:23:39 | derniers classés avec des temps courts (distance réduite ?) |
+| Triathlon de Chartres 2016, triathlon S | protiming | 29 | 1 | 58:38:51 | minutes lues comme des heures (Q19) |
+| Triathlon du Val de Gray 2013, triathlon L | fftri_t2_area | 94 | 3 | 13:49 | |
+| Ironman de Nice 2023, triathlon XXL | fftri_t2_area | 1 427 | 36 | 47:44 | petits écarts répartis (pénalités ?) |
+| Triathlon de Chantilly 2023, duathlon M | fftri_t2_area | 40 | 1 | 2:55 | |
+| Triathlon de Cepoy 2026, triathlon M | protiming | 127 | 3 | 1:04:30 | 2ᵉ à 4ᵉ en 3:01-3:13, 5ᵉ en 2:09 |
+| Triathlon de la Combe de Savoie 2024, triathlon L | fftri_t2_area | 43 | 1 | 4:28 | |
+| Aquathlon de la Verrerie 2023, aquathlon XS | chronoweb | 54 | 1 | 13:32 | dernier classé avec un temps court |
+| Triathlon Pont A Mousson 2019, cross triathlon M | fftri_t2_area | 56 | 1 | 7:29 | |
+| Duathlon de Grasse 2022, duathlon M | fftri_t2_area | 119 | 2 | 50:45 | derniers classés avec des temps courts |
+| Vercorsman 2021, triathlon XL | fftri_t2_area | 217 | 3 | 3:53:44 | derniers classés avec des temps courts |
+| Altriman 2011, triathlon XXL | fftri_t2_area | 74 | 1 | 7:56 | |
+| Triathlon de la Fleche 2025, cross triathlon M | fftri_t2_area | 86 | 1 | 1:14:43 | dernier classé avec un temps court |
+| Triathlon de Saint Remy sur Durolle 2005, triathlon L | fftri_t2_area | 87 | 1 | 3:31 | |
+| Triathlon de Saint Remy sur Durolle 2006, triathlon L | fftri_t2_area | 93 | 1 | 1:19 | |
+| Openlakes Champagne 2026, triathlon L | fftri_t2_area | 750 | 7 | 3:32:20 | classés en fin de liste avec des temps courts |
+| Champ Man 2024, triathlon L | fftri_t2_area | 120 | 1 | 0:47 | |
+| Triathlon de Carnac 2016, triathlon M | fftri_t2_area | 256 | 2 | 8:33:00 | 228ᵉ et 252ᵉ au même total aberrant, 11:23:46 |
+| Trigames de Mandelieu 2021, triathlon L | fftri_t2_area | 146 | 1 | 2:16:35 | dernier classé avec un temps court |
+| Triathlon des Moines 2019, triathlon M | fftri_t2_area | 159 | 1 | 1:35:39 | dernier classé avec un temps court |
+| Triathlon Saint Raphael 2022, triathlon M | fftri_t2_area | 490 | 3 | 3:17:26 | derniers classés avec des temps courts |
+| Triathlon Jura Vouglans 2012, triathlon L | fftri_t2_area | 169 | 1 | 0:46 | |
+| Trialong 2016, triathlon L | fftri_t2_area | 318 | 1 | 2:03 | |
+| Triathlon des Gorges de l'Ardeche 2022, triathlon L | fftri_t2_area | 449 | 1 | 2:25:39 | dernier classé avec un temps court |
+| Champ Man 2025, triathlon L | fftri_t2_area | 460 | 1 | 57:34 | 231ᵉ en 6:50:59 entre deux 5:53 |
+| Trialong 2021, triathlon M | fftri_t2_area | 541 | 1 | 4:19 | |
+| Triathlon des Gorges de l'Ardeche 2022, triathlon M | fftri_t2_area | 577 | 1 | 1:22:34 | dernier classé avec un temps court |
+| Triathlon de Gerardmer 2011, triathlon L | fftri_t2_area | 1 042 | 1 | 0:45 | |
+
+Pistes :
+- **Classements sur un autre temps** : garder le rang de la source, qui est le classement
+  officiel, et signaler l'épreuve à l'affichage (« classement publié différent de l'ordre des
+  temps »). Un drapeau d'épreuve calculé dans `transform/` (part de lignes inversées au-dessus de
+  5 %) servirait au classement, à « Et moi ? » et aux Repères.
+- **Derniers classés avec des temps courts** : vérifier sur la source s'il s'agit d'une distance
+  réduite (hors délai, abandon d'un segment). Si c'est le cas, les sortir des Repères et des
+  meilleurs temps, comme les temps suspects.
+- **Totaux aberrants isolés** (Carnac 2016, Champ Man 2025) : marquer `temps_suspect` les totaux
+  plus longs que le classé suivant de plus d'une heure ; aujourd'hui, seuls les totaux trop
+  courts le sont.
+
+### Q19 — Temps protiming en minutes lus comme des heures (constat du 24/11/2026)
+
+84 totaux protiming dépassent 24 heures, sur 6 épreuves XS et S : le temps est écrit en
+minutes:secondes dans la source et lu comme heures:minutes (« 28:21 » devient 28:21:00 au lieu
+de 00:28:21).
+
+| Épreuve | Totaux au-dessus de 24 h | Vainqueur lu |
+|---------|-------------------------:|-------------:|
+| Triathlon de Cepoy 2015, XS | 7 sur 7 | 31:18:00 |
+| Triathlon de Cepoy 2015, XS | 21 sur 21 | 29:44:00 |
+| Triathlon de Cepoy 2016, XS | 27 sur 27 | 28:21:00 |
+| Triathlon de Cepoy 2016, XS | 6 sur 6 | 26:06:00 |
+| Triathlon de Chartres 2016, S | 2 sur 29 | 59:30:00 (3ᵉ en 01:02:09) |
+| Triathlon de Chartres 2016, XS | 21 sur 21 | 35:17:00 |
+
+Ces totaux faussent les Repères, « Et moi ? » et les meilleurs temps XS et S des profils.
+Les 8 totaux fftri au-dessus de 24 heures (Evergreen 2016 XXL, de 24:01:23 à 24:24:08) sont
+plausibles.
+
+Piste : dans la lecture protiming (`sources/protiming.py`), lire « mm:ss » comme des minutes
+quand le format est XS ou S, ou quand la valeur dépasse 24 heures.
+
 ### Q12 — Athlètes avec résultats des deux sexes
 668 athlètes (634 le 20/11, 636 avant la correction de Q15) : homonymes réunis ou sexe mal
 renseigné. La hausse vient du sexe chronoweb désormais connu, qui révèle des conflits jusque-là
@@ -186,5 +294,9 @@ invisibles. Le profil et le filtre affichent le sexe le plus fréquent.
 1. **Q1** : seuil par épreuve (médiane des classés trop basse pour le format), pour les 7
    épreuves prolivesport S/XS, et temps négatifs vidés. C'est ce qui fausse encore des meilleurs
    temps de profil.
-2. Q13.
-3. Q5 (catégories), mis de côté.
+2. **Q19** (ajouté le 24/11) : temps protiming en minutes, 6 épreuves dont tous les temps sont
+   faux ; correction simple à la lecture de la source.
+3. **Q18** (ajouté le 24/11) : drapeau d'épreuve « classement publié différent de l'ordre des
+   temps », totaux aberrants trop longs marqués suspects.
+4. Q13.
+5. Q5 (catégories), mis de côté.

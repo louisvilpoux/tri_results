@@ -63,12 +63,14 @@ temps par segment et le total.
 - **Pas de ligne** quand le tri porte sur une autre colonne ou est inversé, en recherche par nom,
   ou sur une épreuve sans temps.
 - **Classement de la source dans le désordre** : quelques sources classent autrement que par le
-  temps total publié (pénalités, autre temps de référence). C'est le cas de **66 épreuves sur
-  3 636** avec au moins une inversion de plus de 30 s (31 chez fftri t2area, 32 chez
-  prolivesport, 2 chez protiming, 1 chez chronoweb), dont 7 où les inversions touchent plus de
-  5 % des lignes. Exemple : Ventouxman 2026, où le 23ᵉ a 06:05:21 et le 25ᵉ 05:59:47. Quand les
-  temps de la page affichée ne se suivent pas, la ligne n'est pas insérée : le bandeau l'explique
-  et propose « Trier par temps total ».
+  temps total publié (pénalités, autre temps de référence). C'est le cas de **35 épreuves sur
+  3 636** avec au moins une inversion de plus de 30 s (31 chez fftri t2area, 2 chez protiming,
+  1 chez prolivesport, 1 chez chronoweb), dont 7 où les inversions touchent plus de 5 % des
+  lignes ; détail dans Q18 de [etat_qualite_donnees_2026-11-22.md](etat_qualite_donnees_2026-11-22.md).
+  Exemple : Ventouxman 2026, où le 23ᵉ a 06:05:21 et le 25ᵉ 05:59:47. Quand les temps de la page
+  affichée ne se suivent pas, la ligne n'est pas insérée : le bandeau l'explique et propose
+  « Trier par temps total ». Les lignes non classées (statuts prolivesport 0 et 99991-99999,
+  dont 268 ont un temps) sont ignorées, comme dans « Et moi ? ».
 - **Simulation gardée dans l'adresse** : jusqu'ici, changer de page, de tri ou de filtre effaçait
   les paramètres `moi_…`. Le simulateur les remet maintenant après chaque navigation, donc une
   simulation reste partageable.
@@ -142,7 +144,7 @@ Tous les chemins sont relatifs à `triathlon-results/`.
 
 | # | Point | Piste |
 |---|---|---|
-| 1 | 66 épreuves ont un classement publié qui ne suit pas les temps totaux | Les signaler dans le prochain audit de qualité des données |
+| 1 | 35 épreuves ont un classement publié qui ne suit pas les temps totaux | Ajoutées à l'audit (Q18, ainsi que Q19 : temps protiming en minutes lus comme des heures) |
 | 2 | T1 et T2 non publiés par certaines sources (Ventouxman) mais inclus dans leurs totaux : une simulation par segments sans transitions paraît plus rapide | Déjà signalé dans « Et moi ? » quand T1 et T2 sont vides |
 | 3 | Onglet Meilleurs temps : le titre du bloc répète le nom de l'onglet | Masquer le titre dans l'onglet |
 | 4 | Le panneau de filtres mobile reste ouvert après « Appliquer » | À trancher : le refermer et ne garder que le badge |

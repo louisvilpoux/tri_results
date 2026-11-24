@@ -28,7 +28,7 @@ export function formatShortDate(date: string): string {
 // (même règle que STATUS_RANK_MIN dans api/main.py).
 const STATUS_RANK_MIN = 99990;
 
-function isValidRank(rank: number): boolean {
+export function isValidRank(rank: number): boolean {
   return rank > 0 && rank < STATUS_RANK_MIN;
 }
 

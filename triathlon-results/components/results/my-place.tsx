@@ -9,12 +9,18 @@ import {
   useMySimulation,
   type MySimulation,
 } from "@/components/results/my-simulation";
+import { isValidRank } from "@/lib/format";
 import { toSeconds } from "@/lib/time";
 import type { RaceResult, RaceResultsQuery } from "@/types/result";
 
-/** Temps total en secondes, null s'il manque ou s'il est suspect (hors de l'ordre des temps). */
+/**
+ * Temps total en secondes d'un classé, null s'il manque, s'il est suspect ou si la ligne n'est
+ * pas classée (statuts prolivesport 0 et 99991-99999, qui ont parfois un temps) : ces lignes ne
+ * suivent pas l'ordre des temps.
+ */
 function totalSeconds(result: RaceResult): number | null {
-  return result.temps_suspect ? null : toSeconds(result.total_time);
+  if (result.temps_suspect || result.clt === null || !isValidRank(result.clt)) return null;
+  return toSeconds(result.total_time);
 }
 
 /**
