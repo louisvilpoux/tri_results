@@ -38,3 +38,4 @@ cd triathlon-results && npm run dev # application web de développement
   d'interface et fonctionnalités manquantes, avec une priorisation.
 - `etat_qualite_donnees_<date>.md` - audits datés de la qualité des données ; le plus récent décrit la
   situation actuelle.
+- `ux.md` - refonte UX des pages course, classement et athlète : constat, choix faits, limites.
