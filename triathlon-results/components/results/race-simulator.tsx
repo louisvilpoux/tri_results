@@ -87,7 +87,7 @@ function missingFieldsWarning({
 
   if (totalTyped && missingSegments.length > 0) {
     return (
-      `${subject} Pas de place pour ${joinLabels(missingSegments)} ; ` +
+      `${subject} Pas de classement pour ${joinLabels(missingSegments)} ; ` +
       "ton total saisi est utilisé tel quel."
     );
   }

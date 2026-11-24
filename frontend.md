@@ -232,7 +232,7 @@ Réalisés
       juste derrière lui au général (liens vers leur profil). Avertissement (U10 du retour utilisateur du 23/11/2026)
       dès qu'un champ reste vide alors que la saisie a commencé : « Champs non remplis : T1 et T2. Ils comptent pour 0 :
       le total calculé peut donc être trop optimiste. » ; selon le cas, le total ne peut pas être calculé (segment
-      manquant) ou le total saisi est utilisé tel quel (pas de place pour les segments manquants). Bouton « Réinitialiser » (affiché dès qu'un temps, le
+      manquant) ou le total saisi est utilisé tel quel (pas de classement pour les segments manquants). Bouton « Réinitialiser » (affiché dès qu'un temps, le
       sexe ou la catégorie est rempli) : vide les temps, le sexe, la catégorie et les paramètres `moi_…` de
       l'adresse. Mêmes classés que les repères. Les temps des classés
       (`GET /races/{id}/times`, jusqu'à environ 900 Ko pour un Ironman de 5 800 classés) ne sont chargés qu'à
