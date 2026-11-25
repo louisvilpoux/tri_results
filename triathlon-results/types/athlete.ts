@@ -13,6 +13,8 @@ export interface AthleteBestTime {
   epreuve_id: number;
   name_epreuve: string | null;
   date_epreuve: string | null;
+  /** Duathlon couru à la place du triathlon habituel (natation probablement annulée, D14). */
+  natation_annulee: boolean;
 }
 
 export interface AthleteProfile {
@@ -33,6 +35,8 @@ export interface AthleteResult extends RaceResult {
   participants: number;
   /** Classés de l'épreuve (rang valide) : dénominateur de la place, comme dans la progression. */
   classes: number;
+  /** Duathlon couru à la place du triathlon habituel (natation probablement annulée, D14). */
+  natation_annulee: boolean;
 }
 
 export interface AthleteResultsResponse {

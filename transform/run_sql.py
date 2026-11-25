@@ -8,7 +8,7 @@ conn = psycopg2.connect(
     host="localhost"
 )
 
-action_list = ["drop_tables", "create_tables", "ids_stables", "disciplines", "raw_data", "noms_epreuves", "epreuves_sexe", "races", "ids_epreuves", "athletes_tmp", "athletes", "athletes_tronques", "ids_athletes", "results", "homonymes", "temps_totaux", "segments_prolivesport", "doublons_sources", "lieux", "sous_classements", "athletes_sexe", "athletes_club", "nb_races", "noms_affiches", "pg_index"]
+action_list = ["drop_tables", "create_tables", "ids_stables", "disciplines", "raw_data", "noms_epreuves", "epreuves_sexe", "races", "ids_epreuves", "athletes_tmp", "athletes", "athletes_tronques", "ids_athletes", "results", "homonymes", "temps_totaux", "segments_prolivesport", "doublons_sources", "natation_annulee", "lieux", "sous_classements", "athletes_sexe", "athletes_club", "nb_races", "noms_affiches", "pg_index"]
 #action_list = ["drop_tables"]
 
 # Fichiers CSV écrits à la main, chargés dans une table temporaire juste avant le script SQL

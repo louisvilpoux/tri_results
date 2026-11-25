@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Timer } from "lucide-react";
 
+import { SwimCancelledBadge } from "@/components/shared/swim-cancelled-badge";
 import { capitalize, formatShortDate } from "@/lib/format";
 import type { AthleteBestTime } from "@/types/athlete";
 
@@ -23,6 +24,11 @@ export function AthleteBestTimes({ bestTimes }: { bestTimes: AthleteBestTime[] }
               {best.type_epreuve ? capitalize(best.type_epreuve) : "Épreuve"}
               {best.format_epreuve && ` · ${best.format_epreuve}`}
             </p>
+            {best.natation_annulee && (
+              <p className="mt-1">
+                <SwimCancelledBadge className="" />
+              </p>
+            )}
 
             <p className="mt-2 font-mono text-2xl font-bold tabular-nums text-[#17202E]">
               {best.total_time}

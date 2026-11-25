@@ -30,7 +30,10 @@ CREATE TABLE races (
     format_epreuve TEXT,
     year_epreuve TEXT,
     date_epreuve TEXT,
-    lieu_epreuve TEXT
+    lieu_epreuve TEXT,
+    -- duathlon qui remplace probablement un triathlon dont la natation a été annulée (voir
+    -- natation_annulee.sql)
+    natation_annulee BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE athletes_tmp (

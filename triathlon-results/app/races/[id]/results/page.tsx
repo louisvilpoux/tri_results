@@ -17,6 +17,7 @@ import {
   SIMULATOR_SEXE_PARAM,
 } from "@/lib/simulator";
 import { raceResultsMetadata } from "@/lib/seo";
+import { SWIM_CANCELLED_MESSAGE } from "@/lib/swim-cancelled";
 import { redirectOrNotFound } from "@/lib/redirections";
 import { DISCIPLINES_WITHOUT_SPLITS } from "@/types/result";
 import {
@@ -186,6 +187,13 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
                   "tels quels, sans repères."
                 : "Certains temps de cette épreuve semblent erronés dans la source. Ils sont " +
                   "signalés dans le classement."}
+            </p>
+          )}
+
+          {race.natation_annulee && (
+            <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <TriangleAlert size={18} aria-hidden className="mt-0.5 shrink-0" />
+              {SWIM_CANCELLED_MESSAGE}
             </p>
           )}
 

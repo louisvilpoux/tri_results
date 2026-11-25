@@ -844,3 +844,50 @@ def test_simulator_skips_unpublished_transitions() -> None:
     times = client.get(f"/races/{rows[0].id}/times").json()
     assert [t["key"] for t in times["transitions"]] == ["t2"]
     assert times["transitions_non_publiees"] == ["T1"]
+
+
+def test_swim_cancelled_duathlon_is_flagged() -> None:
+    """D14 (retour du 25/11/2026) : « Triathlon de Ardres » 2022 M est un duathlon couru à la
+    place du triathlon (natation probablement annulée) ; Pontivy, qui propose un duathlon L
+    chaque année à côté du triathlon, ne l'est pas. L'API le signale sur l'épreuve, la course,
+    l'historique et les meilleurs temps."""
+    ardres = query_rows(
+        """
+        SELECT id FROM races
+        WHERE name_epreuve = 'Triathlon de Ardres' AND year_epreuve = '2022'
+          AND type_epreuve = 'duathlon' AND format_epreuve = 'M'
+        """
+    )
+    if not ardres:
+        pytest.skip("Triathlon de Ardres 2022 absent de la base")
+    race_id = ardres[0].id
+    assert client.get(f"/races/{race_id}").json()["natation_annulee"] is True
+    formats = client.get(f"/races/{race_id}/event").json()["formats"]
+    assert any(item["id"] == race_id and item["natation_annulee"] for item in formats)
+
+    athlete = query_rows(
+        f"SELECT athlete_id FROM results WHERE epreuve_id = {race_id} AND clt = 1"
+    )[0].athlete_id
+    history = client.get(f"/athletes/{athlete}/results", params={"limit": 100}).json()["items"]
+    assert any(item["epreuve_id"] == race_id and item["natation_annulee"] for item in history)
+
+    pontivy = query_rows(
+        """
+        SELECT bool_or(natation_annulee) AS flagged FROM races
+        WHERE name_epreuve = 'Triathlon de Pontivy'
+        """
+    )
+    assert pontivy[0].flagged is False
+
+    # jamais sur un triathlon, ni sur un duathlon qui a son triathlon la même année
+    wrong = query_rows(
+        """
+        SELECT d.id FROM races d
+        WHERE d.natation_annulee
+          AND (d.type_epreuve <> 'duathlon' OR EXISTS (
+              SELECT 1 FROM races t
+              WHERE t.name_epreuve = d.name_epreuve AND t.year_epreuve = d.year_epreuve
+                AND t.format_epreuve = d.format_epreuve AND t.type_epreuve = 'triathlon'))
+        """
+    )
+    assert wrong == []

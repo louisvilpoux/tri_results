@@ -28,15 +28,6 @@ BEGIN
         RETURN nom;
     END IF;
 
-    -- prolivesport « JEAN FRANCOIS  BELLET » : prénom, deux espaces, nom
-    IF prenom_puis_nom AND position('  ' in btrim(nom)) > 0 THEN
-        RETURN upper(regexp_replace(
-                btrim(substring(btrim(nom) from position('  ' in btrim(nom)) + 2)), '\s+', ' ', 'g'
-            ))
-            || ' '
-            || initcap(regexp_replace(btrim(split_part(btrim(nom), '  ', 1)), '\s+', ' ', 'g'));
-    END IF;
-
     mots := regexp_split_to_array(btrim(nom), '\s+');
     n := cardinality(mots);
     -- mot du nom de famille : au moins deux lettres, aucune minuscule (« BELLET », « D'ALMEIDA »)
@@ -50,6 +41,16 @@ BEGIN
         fin := fin + 1;
     END LOOP;
 
+    -- tout en majuscules : chez prolivesport, « JEAN FRANCOIS  BELLET » (prénom, deux espaces,
+    -- nom). Le reste du temps, les mots en majuscules disent où est le nom de famille, même chez
+    -- prolivesport, qui écrit parfois « ROCHAT  Alexis ».
+    IF debut = n AND prenom_puis_nom AND position('  ' in btrim(nom)) > 0 THEN
+        RETURN regexp_replace(
+                btrim(substring(btrim(nom) from position('  ' in btrim(nom)) + 2)), '\s+', ' ', 'g'
+            )
+            || ' '
+            || initcap(regexp_replace(btrim(split_part(btrim(nom), '  ', 1)), '\s+', ' ', 'g'));
+    END IF;
     IF debut = n OR (debut = 0 AND fin = 0) THEN
         RETURN array_to_string(mots, ' ');          -- tout en majuscules, ou aucun nom repéré
     END IF;

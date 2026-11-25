@@ -219,9 +219,15 @@ Dossier : `transform`
       Courbevoie en 2022, 3 lignes Wasquehal en 2024-2025, un club différent sur chaque page). Exécuté après
       doublons_sources.sql.
     - nb_races.sql : table pour obtenir le nombre de courses différentes auquel un athlète a participé.
+    - natation_annulee.sql (D14, 25/11/2026) : `races.natation_annulee`, duathlon couru probablement à la place
+      d'un triathlon dont la natation a été annulée. Un duathlon d'un format (XS à XXL) sans triathlon de ce format
+      la même année, quand l'édition précédente et la suivante de ce format, dans la même course, ont un triathlon
+      (15 épreuves : Ardres 2022 M, Deauville 2020 L et M, Sardines Titus 2021 M…). Déduction, la source ne le dit
+      pas. Exécuté après doublons_sources.sql. L'API le renvoie sur l'épreuve (GET /races/{id}), ses formats
+      (GET /races/{id}/event), l'historique et les meilleurs temps d'un athlète.
     - noms_affiches.sql (D18, 25/11/2026) : noms d'athlètes affichés « NOM Prénom » quelle que soit la source
-      (`nom_affiche` : le nom de famille est la suite de mots en majuscules au début ou à la fin ; chez
-      prolivesport, deux espaces séparent le prénom du nom ; espaces doubles retirés ; prénom avec une majuscule à
+      (`nom_affiche` : le nom de famille est la suite de mots en majuscules au début ou à la fin ; un nom tout en
+      majuscules de prolivesport est lu « prénom, deux espaces, nom » ; espaces doubles retirés ; prénom avec une majuscule à
       chaque mot). Met à jour results.nom_athlete (hors équipes) et athletes.nom. Exécuté en fin de chaîne, avant
       pg_index.sql, après les scripts qui retrouvent une ligne brute par son nom (homonymes.sql).
     - athletes_tmp.sql : table pour isoler les informations sur l'athlète

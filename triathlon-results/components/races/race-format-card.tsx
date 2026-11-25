@@ -3,6 +3,7 @@ import { ArrowRight, Medal, Users } from "lucide-react";
 
 import { TotalTime } from "@/components/shared/total-time";
 import { capitalize, formatShortDate } from "@/lib/format";
+import { SWIM_CANCELLED_MESSAGE } from "@/lib/swim-cancelled";
 import type { PodiumLeader, RaceFormat } from "@/types/race";
 
 function LeaderLine({ label, leader }: { label: string; leader: PodiumLeader }) {
@@ -52,6 +53,10 @@ export function RaceFormatCard({ raceFormat }: { raceFormat: RaceFormat }) {
           {raceFormat.participants}
         </span>
       </div>
+
+      {raceFormat.natation_annulee && (
+        <p className="mt-3 text-xs text-amber-800">{SWIM_CANCELLED_MESSAGE}</p>
+      )}
 
       {raceFormat.sous_classement && (
         <p className="mt-3 text-xs text-gray-400">

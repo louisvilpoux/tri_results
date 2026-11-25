@@ -47,6 +47,9 @@ class Race(Base):
     year_epreuve = Column(String(25))
     date_epreuve = Column(String(25))
     lieu_epreuve = Column(String(25))
+    # Duathlon qui remplace probablement un triathlon dont la natation a été annulée (D14,
+    # transform/natation_annulee.sql) : déduit des éditions voisines, la source ne le dit pas.
+    natation_annulee = Column(Boolean)
     results = relationship("Result", back_populates="race")
 
 
@@ -962,6 +965,7 @@ def get_race_event(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any
                 "first_woman": first_women.get(race_format.id),
                 "sans_temps": race_format.id in without_time,
                 "sous_classement": race_format.id in sub_rankings,
+                "natation_annulee": bool(race_format.natation_annulee),
             }
             for race_format in formats
         ],
@@ -1059,6 +1063,8 @@ def get_best_times(results: list[Result]) -> list[dict[str, Any]]:
             "epreuve_id": result.epreuve_id,
             "name_epreuve": result.name_epreuve,
             "date_epreuve": result.date_epreuve,
+            # record de duathlon couru à la place d'un triathlon (natation annulée, D14)
+            "natation_annulee": bool(result.race and result.race.natation_annulee),
         }
         for result in sorted(
             best.values(),
@@ -1320,7 +1326,15 @@ def get_athlete_results(
     direction = desc if order == "desc" else asc
 
     rows = db.execute(
-        select(athlete_result, participants, classes)
+        select(
+            athlete_result,
+            participants,
+            classes,
+            # natation probablement annulée (D14) : l'historique le dit à côté du format
+            select(Race.natation_annulee)
+            .where(Race.id == athlete_result.epreuve_id)
+            .scalar_subquery(),
+        )
         .where(*filters)
         .order_by(direction(sort_column).nulls_last(), athlete_result.id.desc())
         .offset(offset)
@@ -1329,8 +1343,13 @@ def get_athlete_results(
 
     return {
         "items": [
-            {**result_to_dict(result), "participants": count, "classes": ranked}
-            for result, count, ranked in rows
+            {
+                **result_to_dict(result),
+                "participants": count,
+                "classes": ranked,
+                "natation_annulee": bool(swim_cancelled),
+            }
+            for result, count, ranked, swim_cancelled in rows
         ],
         "pagination": {
             "total": total,

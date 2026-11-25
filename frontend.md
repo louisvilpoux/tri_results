@@ -503,6 +503,12 @@ Points connus (données) :
   « Temps anormal pour cette épreuve (moins de la moitié du temps médian, plus court que celui d'athlètes mieux
   classés, ou bien plus long que celui des classés voisins) : probablement une erreur de la source ou un athlète
   arrêté avant l'arrivée. »
+- Natation probablement annulée (D14, 25/11/2026) : un duathlon couru à la place du triathlon habituel
+  (`natation_annulee` de l'API, voir backend.md) porte l'étiquette « Natation annulée ? » dans l'historique et les
+  meilleurs temps du profil (`components/shared/swim-cancelled-badge.tsx`, explication au survol), une phrase sur
+  sa carte de la page course et un bandeau sur son classement (`lib/swim-cancelled.ts`) : « Natation probablement
+  annulée : cette épreuve est publiée comme un duathlon, alors que l'édition précédente et la suivante de ce
+  format sont des triathlons […] ». Elle reste rangée en duathlon.
 - Temps intermédiaires retirés (D12, 25/11/2026) : quand la source publie des segments incohérents (colonnes
   décalées : transitions plus longues que le vélo au Duathlon Lomme 2025 et 2026 S, ou segments qui ne donnent pas
   le total), `transform/` les retire et GET /races/{id} renvoie `segments_retires`. La page de classement affiche

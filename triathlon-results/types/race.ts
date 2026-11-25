@@ -21,6 +21,8 @@ export interface Race {
   /** Temps intermédiaires publiés par la source mais incohérents, retirés : seul le total est
    * affiché (transitions plus longues que le vélo, somme différente du total). */
   segments_retires: boolean;
+  /** Duathlon couru à la place du triathlon habituel (natation probablement annulée, D14). */
+  natation_annulee: boolean;
 }
 
 // Types alignés sur GET /races/{id}/event : la course (nom + année) et ses formats.
@@ -50,6 +52,8 @@ export interface RaceFormat {
    * n'y sont pas comptés une seconde fois dans les profils.
    */
   sous_classement: boolean;
+  /** Duathlon couru à la place du triathlon habituel (natation probablement annulée, D14). */
+  natation_annulee: boolean;
 }
 
 export interface RaceEdition {
