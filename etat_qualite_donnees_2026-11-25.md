@@ -3,6 +3,7 @@
 Audit du 25/11/2026 au commit `f064619`. La base est celle reconstruite avec
 `transform/run_sql.py` après le dernier changement de `transform/` (`294ca84`, Q1) : 868 141
 résultats. Elle n'a pas été reconstruite pendant l'audit.
+Q20 corrigé le même jour (base reconstruite : 867 812 résultats, voir plus bas).
 Audit précédent : [etat_qualite_donnees_2026-11-22.md](etat_qualite_donnees_2026-11-22.md),
 complété jusqu'au 25/11 (mêmes identifiants Q1 à Q19). D2, D9, D10 et D11 renvoient à
 [retour_utilisateur_2026-11-23_2.md](retour_utilisateur_2026-11-23_2.md).
@@ -67,7 +68,7 @@ fftri_t2_area 98,1 %, protiming 97,9 %, chronoweb 97,5 %. Classement dans l'ordr
 | Q17 | Noms de course sans ponctuation | 2 courses corrigées | inchangé | Corrigé |
 | Q18 | Classement publié qui ne suit pas les temps | 34 épreuves (24/11) | 32 épreuves, dont 7 sur plus de 5 % des lignes ; Openlakes 2026 : 83 classés plus rapides que le vainqueur (arrêtés avant l'arrivée) | **Ouvert, priorité 1** |
 | Q19 | Temps protiming « mm:ss:00 » | 0 après correction | 0 ; 9 totaux au-dessus de 24 h, tous fftri, plausibles | Corrigé |
-| Q20 | **Épreuve natation + vélo classée triathlon L** | — | Chtriman 2023 et 2024 « SWIMBIKE », 329 résultats | **Nouveau** |
+| Q20 | Épreuve natation + vélo classée triathlon L | — | Chtriman 2023 et 2024 « SWIMBIKE », 329 résultats ; 0 après correction | **Corrigé** le 25/11 |
 | Q21 | **Duos comptés comme des athlètes** | — | Triath'Elles Gravelines 2017, 3 épreuves « Duo », 68 lignes | **Nouveau** |
 
 ---
@@ -82,6 +83,7 @@ fftri_t2_area 98,1 %, protiming 97,9 %, chronoweb 97,5 %. Classement dans l'ordr
 | D11 / Q7 | `7946ca1`, `a47a0b4` | Lieux corrigés à la main dans `transform/lieux_courses.csv` : toutes les épreuves protiming ont un code postal, « La Longueville (59570) », « Bordeaux (33000) » partout. |
 | Q19 | `2b66c24` | 99 totaux protiming écrits « mm:ss:00 » relus en minutes (Cepoy 2015-2016, Chartres 2016). |
 | Q1 | `294ca84` | Totaux prolivesport non fiables marqués suspects en bloc (35 épreuves, 4 481 totaux) ; temps négatifs vidés. |
+| Q20 | 25/11 | Épreuves « SWIMBIKE » (natation + vélo) exclues de la base : −2 épreuves, −329 résultats, −81 athlètes. |
 
 ---
 
@@ -141,7 +143,7 @@ Pistes :
 - **Totaux aberrants trop longs** (Carnac 2016, Champ Man 2025) : les marquer suspects quand ils
   dépassent le classé suivant de plus d'une heure.
 
-### Q20 — Épreuve natation + vélo classée triathlon L (nouveau)
+### Q20 — Épreuve natation + vélo classée triathlon L (corrigé le 25/11/2026)
 
 Le Chtriman de Gravelines (prolivesport) publie en 2023 et 2024 une épreuve « SWIMBIKE » :
 natation et vélo, sans course à pied. `transform/disciplines.sql` ne reconnaît pas ce libellé et
@@ -156,8 +158,21 @@ Conséquences : 301 athlètes ont un « triathlon L » en 2:40 à 3:30 dans leur
 meilleurs temps et leur progression ; le filtre « triathlon + L » de la liste des courses et les
 statistiques de l'épreuve sont faux. C'est le seul libellé de ce type en base (aucun « aquabike »).
 
-Piste : dans `epreuve_discipline`, exclure « swimbike » / « aquabike » comme les autres sports
-(ou en faire une discipline à part s'il y en a d'autres un jour).
+Correction (`transform/disciplines.sql`, `epreuve_discipline`) : une épreuve dont le libellé
+contient « swimbike » ou « aquabike » (avec ou sans espace ou tiret) n'est **pas intégrée**,
+comme les épreuves d'autres sports ; « Swim Bike Run » n'est pas concerné. La règle vaut aussi
+pour protiming, dont la discipline passe par la même fonction. Base reconstruite :
+
+| | Avant | Après |
+|---|------:|------:|
+| results | 868 141 | 867 812 (−329, prolivesport) |
+| races | 3 927 | 3 925 |
+| athlètes (`unified_id`) | 280 890 | 280 809 (−81 qui n'avaient couru que ce SWIMBIKE) |
+
+Les triathlons L du Chtriman 2023 et 2024 ne contiennent plus que le vrai triathlon (890 et 390
+résultats). Les anciennes pages des deux épreuves (`/races/508`, `/races/510`) répondent 404 :
+elles n'ont pas d'équivalent vers lequel rediriger, et elles sortent du sitemap. Le reste de
+l'audit garde les chiffres d'avant la correction.
 
 ### Q21 — Duos comptés comme des athlètes (nouveau)
 
@@ -226,8 +241,8 @@ existants. Le profil et le filtre affichent le sexe le plus fréquent.
 ### Q1 — Vainqueurs encore rapides
 
 Hors temps suspects, le plus court total classé est sous 3 heures dans 9 triathlons L et sous
-7 heures dans 1 triathlon XXL. 4 de ces 10 viennent de Q20 (Chtriman SWIMBIKE) et Q18 (Openlakes
-2026) ; les autres sont des
+7 heures dans 1 triathlon XXL. 4 de ces 10 viennent de Q20 (Chtriman SWIMBIKE, retiré depuis) et Q18
+(Openlakes 2026) ; les autres sont des
 parcours courts ou réduits, avec des segments cohérents : Pop Triathlon de Guiche 2024-2025,
 Triathlon de Revel 2026, Gorges de l'Ardèche 2022, Dijon 2015, Elsassman 2026 (natation en 10 min,
 probablement raccourcie). Les duathlons L entre 2 h et 3 h sont normaux pour ce format.
@@ -263,8 +278,7 @@ Reste aussi le relais CHTRIMAN 2017 relevé le 25/11 (4 équipes, vainqueur en 0
 1. **Q18** : classés plus rapides que le vainqueur marqués suspects (Openlakes 2026 : 83 temps qui
    faussent les Repères), puis drapeau d'épreuve « classement publié différent de l'ordre des
    temps ».
-2. **Q20** : exclure « SWIMBIKE » des triathlons (correction rapide, 301 profils touchés).
-3. **Q21** : duos de Triath'Elles 2017 marqués équipe (correction rapide, 68 faux athlètes).
-4. Q7 (3 lignes de `lieux_courses.csv`, Volcanik Tri à vérifier) et Extrememan 2020 (D9).
-5. Q13 : format des bike & run décrits par leur distance.
-6. Q5 / D2 / D10 : table de correspondance des catégories, protiming compris.
+2. **Q21** : duos de Triath'Elles 2017 marqués équipe (correction rapide, 68 faux athlètes).
+3. Q7 (3 lignes de `lieux_courses.csv`, Volcanik Tri à vérifier) et Extrememan 2020 (D9).
+4. Q13 : format des bike & run décrits par leur distance.
+5. Q5 / D2 / D10 : table de correspondance des catégories, protiming compris.

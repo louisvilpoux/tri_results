@@ -120,7 +120,9 @@ Dossier : `transform`
       épreuve prolivesport, ou du nom de l'onglet Excel chronoweb, sa discipline (nom de l'épreuve, puis catégorie,
       puis nom de l'événement, sinon triathlon ; « cross » ou XTERRA → cross) et son format (relais, jeunes, lettre
       XS…XXL, mots connus comme Sprint, Short, Medium, Half, Full ou Altriman, puis distance en km). Sont exclues les
-      épreuves d'autres sports (course à pied, natation seule, SUPP, distance ≥ 998) et les onglets chronoweb qui ne
+      épreuves d'autres sports (course à pied, natation seule, SUPP, distance ≥ 998), les
+      enchaînements natation + vélo sans course à pied (« SWIMBIKE », « aquabike » : Chtriman 2023 et 2024,
+      329 résultats, rangés jusqu'au 25/11/2026 en triathlon L ; leurs anciennes pages répondent 404) et les onglets chronoweb qui ne
       sont pas des classements (« Détails CàP / Vélo », manches et séries intermédiaires). Détail des règles en
       commentaire dans le fichier. `prolivesport_event_name` retire l'année (elle reste dans year_epreuve) et le
       numéro d'édition (« 38e ») du nom de l'événement pour relier les éditions d'une même course ;

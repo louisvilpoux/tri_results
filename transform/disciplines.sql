@@ -29,6 +29,9 @@ $$ LANGUAGE plpgsql IMMUTABLE;
 -- Discipline d'une épreuve, ou NULL si l'épreuve est exclue :
 --   - ce n'est pas un enchaînement (course à pied, natation seule, randonnée, épreuves « SUPP »
 --     ou de distance 998 / 999) ;
+--   - c'est un enchaînement natation + vélo sans course à pied (« SWIMBIKE », « aquabike ») :
+--     rangé en triathlon, il faussait les temps du format (Chtriman 2023 et 2024, Q20 de
+--     l'audit du 25/11/2026) ; « Swim Bike Run » n'est pas concerné ;
 --   - ce n'est pas un classement (chronoweb : onglets « Détails CàP / Vélo… », qui reprennent
 --     les athlètes d'un autre onglet ; manches et séries intermédiaires « Manche 1 »,
 --     « Speed Race Serie 2 », « Qualif Speed », dont le classement final est dans un autre
@@ -55,6 +58,10 @@ DECLARE
     result text;
 BEGIN
     IF race_text ~ ('\mdetails?\M|\mma+nche \d\M(?! ?\+)|speed race serie|\mqualif') THEN
+        RETURN NULL;
+    END IF;
+
+    IF race_text ~ '\m(swim|aqua) ?-?bike(?! ?[-&/+]? ?(and )?run)' THEN
         RETURN NULL;
     END IF;
 
