@@ -1,5 +1,5 @@
 -- Épreuves présentes à la fois chez fftri_t2_area et chez une autre source (prolivesport,
--- chronoweb).
+-- chronoweb, protiming, timingzone).
 --
 -- Une même épreuve peut être chronométrée par prolivesport ou chronoweb et publiée par
 -- fftri_t2_area, sous deux noms différents (« Triathlon Etaples » / « triathlon d etaples sur
@@ -36,7 +36,8 @@ communs AS (
     JOIN results f
       ON f.athlete_id = s.athlete_id
      AND abs(f.date_epreuve::date - s.date_epreuve::date) <= 1
-    WHERE s.source IN ('prolivesport', 'chronoweb', 'protiming') AND f.source = 'fftri_t2_area'
+    WHERE s.source IN ('prolivesport', 'chronoweb', 'protiming', 'timingzone')
+      AND f.source = 'fftri_t2_area'
     GROUP BY s.source, s.epreuve_id, f.epreuve_id
 )
 SELECT

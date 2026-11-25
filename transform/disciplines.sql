@@ -379,15 +379,51 @@ RETURNS text AS $$
 $$ LANGUAGE sql IMMUTABLE;
 
 
+-- Discipline d'une épreuve timingzone, ou NULL si l'épreuve est exclue.
+-- timingzone range ses événements par sport (type_evenement : triathlon_duathlon_aquathlon ou
+-- swimrun, voir sources/timingzone_links.py) et nomme librement ses épreuves (« TRI M
+-- INDIVIDUEL », « AQUATHLON S », « SWIMRUN S DUO », « COURTE », « 6-9 ans »).
+--   1. événement swimrun : swimrun, quel que soit le nom de l'épreuve (« COURTE », « ULTRA
+--      Ötillö » du « SWIM RUN CÔTE VERMEILLE », dont le nom en deux mots se lisait triathlon) ;
+--   2. sinon epreuve_discipline : « SWIM BIKE » (Réunion Tri Tour) et les courses à pied
+--      (« CAP 10 KM » du Funny Day) sont exclues.
+CREATE OR REPLACE FUNCTION timingzone_discipline(race text, event_name text, type_evenement text)
+RETURNS text AS $$
+    SELECT CASE
+        WHEN type_evenement = 'swimrun' THEN 'swimrun'
+        ELSE epreuve_discipline(race, event_name, NULL, NULL)
+    END
+$$ LANGUAGE sql IMMUTABLE;
+
+
+-- Nom affiché d'une équipe timingzone, ou NULL si la ligne est celle d'une seule personne.
+-- Mêmes règles que protiming (relais, bike&run, swimrun sauf « Solo »), plus les noms faits
+-- de plusieurs équipiers (« FOY Romain & HIRTZ Mathieu ») : sources/timingzone_organize.py
+-- les forme ainsi quand l'épreuve ne donne pas de nom d'équipe, notamment au Top de
+-- Porquerolles, un triathlon en duo dont le nom d'épreuve (« TOP », « HALF TOP ») ne dit pas
+-- qu'il se court à deux.
+CREATE OR REPLACE FUNCTION timingzone_team_name(
+    nom text, discipline text, format text, race text
+)
+RETURNS text AS $$
+    SELECT CASE
+        WHEN nom ~ ' & ' THEN nullif(btrim(regexp_replace(nom, '\s+', ' ', 'g')), '')
+        ELSE protiming_team_name(nom, discipline, format, race)
+    END
+$$ LANGUAGE sql IMMUTABLE;
+
+
 -- Catégorie d'âge FFTRI d'un résultat, quelle que soit la source (Q5, D2 et D10 de l'audit du
 -- 25/11/2026). Chaque source a son système : FFTRI « MS3 », « FV1 », « MSE » (sexe devant, avec
 -- parfois le rang collé par chronoweb : « 1/MJU ») ; tranches d'âge Ironman « M30-34 », « M40 » ;
 -- prolivesport « S2 », « M1 » (masters FFA), « SE », « MA », « 4044 » ; protiming « S3M », « V2F »,
--- « M1M », « MAH » (sexe à la fin). Codes rendus, sans le sexe (il est dans la colonne sexe) :
+-- « M1M », « MAH » (sexe à la fin), comme timingzone (« S2M », « M2M », « PUF », mais aussi
+-- « PO », « 25-29 », « SEN » et « MAS » des swimruns). Codes rendus, sans le sexe (il est dans
+-- la colonne sexe) :
 --   MP, PO, PU, BE, MI, CA, JU : jeunes (mini-poussins à juniors) ;
 --   S1 à S4 : seniors par tranche de 5 ans (20-24 à 35-39) ;
 --   V1 à V10 : masters (vétérans) par tranche de 5 ans (40-44 à 85-89) ; les masters FFA « M1 »
---   (40-44) de prolivesport et protiming deviennent V1, « M0 » (35-39) S4 ;
+--   (40-44) de prolivesport, protiming et timingzone deviennent V1, « M0 » (35-39) S4 ;
 --   SE, VE : senior ou master sans niveau publié (« MSE », « SE », « MA », tranche de 10 ans ou
 --   ouverte comme « 18-24 », « V5+ », « 50+ », « V40 »). Le niveau n'est pas deviné.
 -- NULL pour le reste (élite, PRO, open, handisport, relais, « HOM »/« FEM », espoirs, codes
@@ -401,8 +437,12 @@ DECLARE
     tranche text[];
     age int;
 BEGIN
-    IF source = 'protiming' THEN
+    IF source IN ('protiming', 'timingzone') THEN
         c := regexp_replace(c, '[MFH]$', '');           -- sexe à la fin : « S3M », « PUH »
+        IF source = 'timingzone' THEN
+            -- swimruns timingzone : « SEN » (senior), « MAS » (master)
+            c := CASE c WHEN 'SEN' THEN 'SE' WHEN 'MAS' THEN 'VE' ELSE c END;
+        END IF;
     ELSIF source <> 'prolivesport' THEN
         c := regexp_replace(c, '^[MF](?=.)', '');       -- sexe devant : « MS3 », « F40-44 »
     END IF;
@@ -414,7 +454,7 @@ BEGIN
     IF c = 'MA' OR c ~ '^V\d+\+$' OR c ~ '^V[4-9]0$' THEN
         RETURN 'VE';                                    -- master sans niveau
     END IF;
-    IF source IN ('prolivesport', 'protiming') AND c ~ '^M([0-9]|10)$' THEN
+    IF source IN ('prolivesport', 'protiming', 'timingzone') AND c ~ '^M([0-9]|10)$' THEN
         RETURN CASE WHEN c = 'M0' THEN 'S4' ELSE 'V' || substr(c, 2) END;
     END IF;
 

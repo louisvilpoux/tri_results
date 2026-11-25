@@ -224,6 +224,40 @@ WHERE d.discipline IS NOT NULL
 AND btrim(coalesce(nom, '')) <> ''
 -- épreuves contre-la-montre exclues, comme pour toutes les sources (voir prolivesport)
 AND format_epreuve !~* '\mclm\M'
+UNION ALL
+SELECT
+CASE WHEN pg_input_is_valid(clt, 'integer') THEN clt::integer ELSE NULL END AS clt,
+null as clt_f, temps, nom, club, cat, null as clt_cat,
+null as id_league, null as league, "détails", clt as rang_global, null as rang_sexe,
+null as rang_categorie, cat as categorie, null as indice_performance, null as indice_performance_reference,
+temps as total_time, swim as swim_time, null as rang_swim, null as rang_course_swim, null as indice_performance_swim,
+t1 as t1_time, null as rang_t1, null as rang_course_t1, null as indice_performance_t1,
+bike as bike_time, null as rang_bike, null as rang_course_bike, null as indice_performance_bike,
+t2 as t2_time, null as rang_t2, null as rang_course_t2, null as indice_performance_t2,
+run as run_time, null as rang_run, null as rang_course_run, null as indice_performance_run,
+-- timingzone (sources/timingzone.py, 25/11/2026), chronométreur de la Côte d'Azur et du Var :
+-- l'année est dans le nom de l'événement (« TRIATHLON DE HYERES 2026 ») et retirée comme chez
+-- prolivesport ; le nom, tout en majuscules, est mis en forme par noms_epreuves.sql.
+-- L'apostrophe typographique (« CAP D’AIL ») devient « ' », comme dans les autres sources : sinon
+-- noms_epreuves.sql la prend pour un accent et préfère ce nom à « Triathlon de Cap d'Ail ».
+prolivesport_event_name(replace(name_epreuve, '’', ''''), to_char(to_date(date_epreuve, 'DD/MM/YYYY'), 'YYYY')) as name_epreuve,
+format_epreuve, to_char(to_date(date_epreuve, 'DD/MM/YYYY'), 'YYYY') as year_epreuve,
+to_date(date_epreuve, 'DD/MM/YYYY')::text as date_epreuve,
+-- « HYERES (83400) », ville tirée de l'adresse de l'événement (sources/timingzone_organize.py)
+lieu_lisible(lieu_epreuve) as lieu_epreuve,
+scraped_at, 'timingzone' as source,
+-- sexe lu par sources/timingzone_organize.py (colonne H/F, rang par sexe, catégorie…)
+CASE WHEN sexe IN ('M', 'F') THEN sexe END as sexe,
+d.discipline as type_epreuve,
+epreuve_format(format_epreuve, d.discipline, null) as format_normalise
+from raw_timingzone_0
+CROSS JOIN LATERAL (
+    SELECT timingzone_discipline(format_epreuve, name_epreuve, type_evenement) AS discipline
+) d
+-- discipline NULL : épreuve d'un autre sport (course à pied, swim & bike), exclue
+WHERE d.discipline IS NOT NULL
+AND btrim(coalesce(nom, '')) <> ''
+AND format_epreuve !~* '\mclm\M'
 ;
 
 -- Bike & run dont tous les classés sont jeunes (Q13 de l'audit du 25/11/2026) : leur format

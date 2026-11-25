@@ -98,8 +98,8 @@ nom_de_la_source :
        de ses équipiers (« Equipier 1 », « Athlete 2 »…), « NOM1 & NOM2 ». 15 athlètes anonymisés par la
        source restent sans nom.
 
-- timingzone (chronométreur de la Côte d'Azur et du Var) : pas encore d'étape organize, de chargement ni
-  de transformation. Dépendances : requests, beautifulsoup4, pandas, pdfplumber.
+- timingzone (chronométreur de la Côte d'Azur et du Var), chargé dans `raw_timingzone_0` (voir raw_data.sql).
+  Dépendances : requests, beautifulsoup4, pandas, pdfplumber (installées dans le venv `chrono`).
     1. timingzone_links.py : événements de l'API WordPress du site (`/wp-json/wp/v2/tz_event`), sports
        Triathlon / Duathlon / Aquathlon (268) et Swimrun (273), puis la page `?publication=results` de
        chacun → url/urls.csv, une ligne par lien de résultats : widget RACE RESULT (`raceresult_id`,
@@ -122,6 +122,44 @@ nom_de_la_source :
          de cyclisme et de course à pied ignorés (Lucky Luc 2023, Cap d'Ail 2021).
        Le 25/11/2026 : 285 CSV, 37 082 lignes (33 860 RACE RESULT, 3 222 PDF), 67 événements, 2020 à 2026.
        Duathlon de Grasse 2024 : classements publiés mais vides sur RACE RESULT.
+    3. timingzone_organize.py : `raw/` → `timingzone_0/`, mêmes colonnes que protiming_0 (clt, temps, nom,
+       club, cat, détails, sexe, swim, t1, bike, t2, run, date_epreuve, name_epreuve, format_epreuve,
+       lieu_epreuve, distance_epreuve vide, type_evenement : triathlon_duathlon_aquathlon ou swimrun).
+       Les colonnes publiées (84 mises en page le 25/11/2026) sont reconnues à leur libellé sans accents
+       ni ponctuation :
+       - clt : premier nombre du rang (« 1 (1M) », « 2. ») ; statut gardé sans le rang par sexe
+         (« DNF (-1M) » → DNF) ; rang négatif d'un non-classé (« -1 (-1F) ») vidé ;
+       - temps (« Corrigé » avec pénalités s'il existe, sinon Temps, Total, Time) et segments en
+         hh:mm:ss, rang collé et dixièmes retirés ; minutes au-delà de 59 sans heures reportées en heures
+         (« 61:59 » → 01:01:59), temps impossibles vidés. Segments : Swim, Nat., Natation → swim ; T1, Trs1,
+         Trs, Tras → t1 ; Bike, Vélo → bike ; T2, Trs2 → t2 ; Run, Course, Cap, CAP → run ; duathlon
+         « Run 1 » / « Cap 1 » → swim et « Run 2 » / « Cap 2 » → run. Aquathlon en boucles
+         (« Nat 1 »… « Cap 3 », St Laurent du Var) et segments de swimrun (lieux : « D.Niven »,
+         « Grasseuil ») : pas de segments ;
+       - nom « NOM Prénom » : « MERLAND, Mathieu (1187) » et « Axel BAUMANS » (derniers mots en
+         majuscules = nom de famille) ; dossard collé retiré. Équipe : son nom (Nom relais, Team name,
+         Équipe / Noms, Nom d'équipe, « Team » quand le fichier liste aussi des équipiers), sinon ses
+         équipiers « NOM1 Prénom1 & NOM2 Prénom2 » (Top de Porquerolles, Triathlon de la St Sylvestre
+         2022) ;
+       - club sans numéro de club (« 30770 (TEAM NISSA TRIATHLON) ») ; en RACE RESULT individuel,
+         « Team » est le club ;
+       - cat sans les rangs (« 1-S2M », « 1) 40-44 », « HOM (2) », non-classé « ) 25-29 » ou
+         « -1) 25-29 ») ; « M/F | Cat » de Cannes 2023 coupé en sexe et catégorie ;
+       - lieu_epreuve « Ville (code postal) » tiré de l'adresse de l'événement (url/urls.csv) : le lieu
+         publié est souvent un site (« PLAGE BEAURIVAGE ») ;
+       - sexe M/F : colonne H/F, M/F, Genre (« 1F », « (2) M », « HOM » ; quand la colonne ne donne que
+         le rang des femmes, « 3F », « 19F », une case vide est un homme : Hyères, Natureman,
+         St Raphaël, Carqueiranne…), sinon rang par sexe
+         (« 1 (1M) »), mots de la catégorie (« HOMMES »), sexe en fin de catégorie (« S2M »), groupe
+         de la liste (« FEMMES ») ou texte collé au temps d'un PDF (« 2:56:59 Hommes ») ; une lettre seule
+         n'est lue que dans une colonne de sexe ou de rang (« TRI M Relais » : M est le format) ;
+         vide pour une équipe mixte (« MIX », « MIXTE »).
+       Le 25/11/2026 : 285 fichiers, 37 082 lignes ; sexe connu pour 92 % des lignes (M 26 516, F 7 591 ;
+       le reste surtout des équipes mixtes, Hyères 2022 et Octobre Rose 2023 sans colonne de sexe).
+       Données abîmées à la source : une partie des lignes RACE RESULT a des caractères remplacés par
+       « _ » (« DURAND, M_tteo (7_) », temps « 0_:4_ ») — identique à chaque téléchargement, donc
+       enregistré ainsi chez RACE RESULT. Triathlon des jeunes d'Antibes 2024 presque entier, quelques
+       lignes ailleurs (Funny Day, Carqueiranne, swimruns). Les temps abîmés sont vidés ; les noms restent.
 
 # Chargement de la donnée source dans la base de données
 Dossier : `load`
@@ -176,6 +214,14 @@ Dossier : `transform`
       n'est pas un relais est retirée quand la même équipe, avec le même temps, figure dans un relais du même
       événement (Cepoy 2026 M, 5 lignes) ; une épreuve dont toutes les lignes ont une catégorie relais passe en
       RELAIS (Bordeaux 2026 « Format S - Entreprises », 28 équipes), hors bike & run et swimrun.
+      timingzone (25/11/2026) : comme protiming (date, année retirée du nom, sexe de la colonne `sexe`),
+      apostrophe typographique du nom remplacée par « ' » ; discipline par `timingzone_discipline`
+      (disciplines.sql) : un événement de la catégorie Swimrun du site est toujours un swimrun (« COURTE »,
+      « ULTRA Ötillö » du Swim Run Côte Vermeille, qui se lisait triathlon), sinon `epreuve_discipline`
+      (« SWIM BIKE » du Réunion Tri Tour et « CAP 10 KM » du Funny Day exclus). Équipes :
+      `timingzone_team_name` (results.sql), règles de protiming plus les noms « A & B » formés par
+      timingzone_organize.py (Top de Porquerolles, triathlon en duo). Catégories « S2M », « M2M » lues
+      comme protiming (`categorie_fftri`), « SEN » → SE et « MAS » → VE.
       protiming : date JJ/MM/AAAA mise en AAAA-MM-JJ, année retirée du nom de l'événement
       (`prolivesport_event_name`), numéro de département retiré du lieu (« Bordeaux (33) » → « Bordeaux », pour
       que lieux.sql reconnaisse la ville des autres sources de la course), athlètes anonymisés (nom vide)
@@ -198,8 +244,12 @@ Dossier : `transform`
     - noms_epreuves.sql : un seul nom, lisible, par course, en trois étapes sur les noms de raw_data :
       1. alias écrits à la main (table `alias_courses` dans le fichier) pour les cas que la règle ne voit pas
          (« Triathlon de l'audomarois - Arques » → « Triathlon & Duathlon de l'Audomarois », duathlon de Noyon…) ;
+         timingzone : fautes et variantes d'une année sur l'autre (« Traithlon » / « Carquerianne » →
+         « Triathlon de Carqueiranne », « … by Skoda », « Madroq … », « Swim Run » / « Swinrun » → « Swimrun »,
+         « Triathlon de Vins sur Caramy » → « Triathlon en Provence Verte »…) ;
       2. les noms tout en minuscules (fftri_t2_area) sont mis en forme par `nom_course_lisible`
-         (« triathlon d angouleme » → « Triathlon d'Angouleme » ; les accents ne peuvent pas être retrouvés) ;
+         (« triathlon d angouleme » → « Triathlon d'Angouleme » ; les accents ne peuvent pas être retrouvés),
+         comme les noms timingzone tout en majuscules (« TRIATHLON DE HYERES » → « Triathlon de Hyeres ») ;
       3. les noms qui ont la même clé `nom_course_cle` (mots sans accents ni ponctuation, sans petits mots, « open »
          ni jour, triés ; « St », « Ste » et « Sainte » comptent pour « Saint ») sont ramenés au plus lisible (majuscules, puis accents, puis le plus fréquent) :
          « Triathlon Bray-Dunes » / « Triathlon de Bray-Dunes », « Touquet Bike & Run » / « Bike & Run Le Touquet ».
@@ -328,7 +378,12 @@ Dossier : `transform`
       épreuves de la source dans ces courses prennent le nom fftri_t2_area pour être regroupées avec elles.
       protiming (23/11/2026) : 64 paires retirées, toutes à 93 % d'athlètes en commun ou plus, les autres paires à
       10 % ou moins (Verdun, Vendôme, Cepoy, Enghien… : 18 316 lignes). Restent 28 962 résultats protiming
-      (455 épreuves, 38 courses). Exécuté avant nb_races.sql.
+      (455 épreuves, 38 courses).
+      timingzone (25/11/2026) : 28 paires retirées, toutes à 90 % d'athlètes en commun ou plus (Cannes 2022-2026,
+      Natureman 2025-2026, Trigames de Cagnes et de Mandelieu 2020-2022, Duathlon de Grasse, Hyères 2022,
+      Roquebrune 2022, Provence Verte 2021, Challenge Cagnes 2023, Challenge Fréjus 2023). Restent 26 829
+      résultats timingzone (254 épreuves), regroupés dans 27 courses, dont 11 partagées avec fftri_t2_area.
+      Exécuté avant nb_races.sql.
     - lieux.sql : lieux des épreuves, déjà mis au format « Ville (code postal) » par `lieu_lisible` (raw_data.sql,
       toutes sources). Dans une course, les écritures d'une même ville sont ramenées à la plus complète ; une
       épreuve sans lieu prend le lieu le plus fréquent de sa course ; puis les corrections écrites à la main dans

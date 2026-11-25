@@ -49,7 +49,7 @@ cur = conn.cursor()
 #     cur.execute(str_drop_query)
 #     conn.commit()
 
-sources = get_sources(["prolivesport", "protiming", "chronoweb", "fftri_t2_area"])
+sources = get_sources(["prolivesport", "protiming", "chronoweb", "fftri_t2_area", "timingzone"])
 
 drop = True
 for s in sources:

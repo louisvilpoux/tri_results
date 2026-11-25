@@ -119,7 +119,22 @@ INSERT INTO alias_courses (alias, nom_garde) VALUES
     ('0 3000', 'La 0-3000'),
     ('T974', 'T97.4'),
     -- Beauvais : la source écrit « l'argentine » (D7, retour utilisateur du 23/11/2026)
-    ('Triathlon de l''argentine - Beauvais', 'Triathlon de l''Argentine - Beauvais');
+    ('Triathlon de l''argentine - Beauvais', 'Triathlon de l''Argentine - Beauvais'),
+    -- timingzone : fautes de frappe, sponsor ou variantes du nom d'une année sur l'autre
+    ('Traithlon de Carqueiranne', 'Triathlon de Carqueiranne'),
+    ('Triathlon de Carquerianne', 'Triathlon de Carqueiranne'),
+    ('Cannes International Triathlon by Skoda', 'Cannes International Triathlon'),
+    ('Triathlon de St Raphael by Roxim', 'Triathlon Saint Raphael'),
+    ('Madroq Triathlon de Roquebrune Cap Martin', 'Triathlon de Roquebrune Cap Martin'),
+    ('Madroq Triathlon Roquebrune Cap Martin', 'Triathlon de Roquebrune Cap Martin'),
+    ('Swim Run Côte Vermeille', 'Swimrun Côte Vermeille'),
+    ('Swinrun Cote Vermeille', 'Swimrun Côte Vermeille'),
+    ('Swim Run Côte d''Azur', 'Swimrun Côte d''Azur'),
+    ('Triathlon de Vins sur Caramy', 'Triathlon en Provence Verte'),
+    ('Triathlon Xs de Castellar', 'Triathlon de Castellar'),
+    ('Triathlon des Jeunes (Antibes)', 'Triathlon des Jeunes du Cap d''Antibes'),
+    ('Duathlon du Pays Grassois', 'Duathlon de Grasse'),
+    ('LUCKY…LUC by ASPL (Le Luc)', 'Lucky Luc by ASPL (Le Luc)');
 
 -- Les étapes travaillent sur la liste des noms distincts (nom_initial → nom), appliquée à
 -- raw_data à la fin.
@@ -137,10 +152,14 @@ WHERE nom_course_cle(n.nom) = nom_course_cle(a.alias);
 DROP TABLE alias_courses;
 
 
--- 2. Noms tout en minuscules (ceux de fftri_t2_area) mis en forme.
+-- 2. Noms tout en minuscules (ceux de fftri_t2_area) mis en forme, comme ceux de timingzone,
+-- tout en majuscules (« TRIATHLON DE HYERES » → « Triathlon de Hyeres », « SWIM RUN CÔTE
+-- D’AZUR » → « Swim Run Côte d’Azur »).
 UPDATE noms
-SET nom = nom_course_lisible(nom)
-WHERE nom = lower(nom);
+SET nom = nom_course_lisible(lower(nom))
+WHERE nom = lower(nom)
+   OR (nom = upper(nom)
+       AND nom IN (SELECT name_epreuve FROM raw_data WHERE source = 'timingzone'));
 
 
 -- 3. Un seul nom par clé : celui avec des majuscules, puis avec des accents, puis le plus

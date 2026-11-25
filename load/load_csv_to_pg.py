@@ -17,7 +17,8 @@ def list_files_folder(folder, path_len=5):
 input_files = list_files_folder("fftri_t2_area") | \
               list_files_folder("prolivesport") | \
               list_files_folder("chronoweb") |\
-              list_files_folder("protiming")
+              list_files_folder("protiming") |\
+              list_files_folder("timingzone")
 
 conn = psycopg2.connect(
     dbname="tri_results",
