@@ -219,6 +219,11 @@ Dossier : `transform`
       Courbevoie en 2022, 3 lignes Wasquehal en 2024-2025, un club différent sur chaque page). Exécuté après
       doublons_sources.sql.
     - nb_races.sql : table pour obtenir le nombre de courses différentes auquel un athlète a participé.
+    - noms_affiches.sql (D18, 25/11/2026) : noms d'athlètes affichés « NOM Prénom » quelle que soit la source
+      (`nom_affiche` : le nom de famille est la suite de mots en majuscules au début ou à la fin ; chez
+      prolivesport, deux espaces séparent le prénom du nom ; espaces doubles retirés ; prénom avec une majuscule à
+      chaque mot). Met à jour results.nom_athlete (hors équipes) et athletes.nom. Exécuté en fin de chaîne, avant
+      pg_index.sql, après les scripts qui retrouvent une ligne brute par son nom (homonymes.sql).
     - athletes_tmp.sql : table pour isoler les informations sur l'athlète
     - athletes.sql : table pour gérer les différentes entrées possible pour un même athlète en utilisant un unified_id.
       Clé d'un athlète : les mots du nom en minuscules, sans accents, triés ; tirets, apostrophes et virgules

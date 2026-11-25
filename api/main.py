@@ -690,10 +690,18 @@ def get_race_times(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any
     def seconds(value: str | None) -> int | None:
         return time_to_seconds(value) if value else None
 
+    # Transition que la source ne publie pour aucun classé (T1 à Sainte Aldegonde 2024-2026) :
+    # elle est comprise dans un autre segment, le simulateur ne la demande pas (U20).
+    published = [key for key, _, _ in transitions if any(getattr(row, key) for row in rows)]
     return {
         "id": race_id,
         "segments": [{"key": key, "label": label} for key, label, _ in segments],
-        "transitions": [{"key": key, "label": label} for key, label, _ in transitions],
+        "transitions": [
+            {"key": key, "label": label} for key, label, _ in transitions if key in published
+        ],
+        "transitions_non_publiees": [
+            label for key, label, _ in transitions if key not in published
+        ],
         "athletes": [
             {
                 # une équipe n'a pas de profil : pas de lien
@@ -1274,7 +1282,8 @@ def get_athlete_results(
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
 ) -> dict[str, Any]:
-    """Historique d'un athlète, avec le nombre de participants de chaque épreuve."""
+    """Historique d'un athlète, avec le nombre de participants et de classés de chaque
+    épreuve."""
     athlete_result = aliased(Result, athlete_results(athlete_id).subquery())
 
     filters = []
@@ -1294,6 +1303,14 @@ def get_athlete_results(
         .correlate_except(field)
         .scalar_subquery()
     )
+    # classés (rang valide) : dénominateur de la place, comme la progression (« 140 / 445 » et
+    # non « 140 / 465 » avec les non-classés, U22)
+    classes = (
+        select(func.count(valid_rank_or_null(field.clt)))
+        .where(field.epreuve_id == athlete_result.epreuve_id)
+        .correlate_except(field)
+        .scalar_subquery()
+    )
 
     sort_column = getattr(athlete_result, sort_by)
     if sort_by == "clt":
@@ -1303,7 +1320,7 @@ def get_athlete_results(
     direction = desc if order == "desc" else asc
 
     rows = db.execute(
-        select(athlete_result, participants)
+        select(athlete_result, participants, classes)
         .where(*filters)
         .order_by(direction(sort_column).nulls_last(), athlete_result.id.desc())
         .offset(offset)
@@ -1312,7 +1329,8 @@ def get_athlete_results(
 
     return {
         "items": [
-            {**result_to_dict(result), "participants": count} for result, count in rows
+            {**result_to_dict(result), "participants": count, "classes": ranked}
+            for result, count, ranked in rows
         ],
         "pagination": {
             "total": total,

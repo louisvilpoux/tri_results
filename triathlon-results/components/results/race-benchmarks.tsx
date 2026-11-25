@@ -26,15 +26,12 @@ export function RaceBenchmarks({
 }) {
   const [sexe, setSexe] = useState<SexeFilter>("tous");
   const [activeKey, setActiveKey] = useState(stats.segments[0]?.key);
-  // Répartition et 3ᵉ par catégorie repliés pour que le classement reste près du haut de page ;
-  // dépliés dès qu'un temps est saisi dans « Et moi ? », pour le voir dans l'histogramme.
+  // Répartition et 3ᵉ par catégorie repliés pour que le classement reste près du haut de page.
+  // Ils ne s'ouvrent plus seuls quand un temps est saisi dans « Et moi ? » : le bloc, au-dessus du
+  // formulaire, poussait la page pendant la saisie (U19). Le bouton propose alors d'y voir son
+  // temps.
   const [detailsOpen, setDetailsOpen] = useState(false);
   const hasMyTimes = Object.keys(myTimes).length > 0;
-  const [hadMyTimes, setHadMyTimes] = useState(hasMyTimes);
-  if (hasMyTimes !== hadMyTimes) {
-    setHadMyTimes(hasMyTimes);
-    if (hasMyTimes) setDetailsOpen(true);
-  }
 
   // Le choix hommes / femmes n'est proposé que si l'épreuve a des classés des deux sexes.
   const sexes: SexeFilter[] =
@@ -94,7 +91,11 @@ export function RaceBenchmarks({
               aria-controls="reperes-details"
               className="inline-flex items-center gap-1 text-sm font-semibold text-gray-500 hover:text-[#FC6B32]"
             >
-              {detailsOpen ? "Masquer" : "Voir"} la répartition et le 3ᵉ de chaque catégorie
+              {detailsOpen
+                ? "Masquer la répartition et le 3ᵉ de chaque catégorie"
+                : hasMyTimes
+                  ? "Voir ton temps dans la répartition et le 3ᵉ de chaque catégorie"
+                  : "Voir la répartition et le 3ᵉ de chaque catégorie"}
               <ChevronDown
                 size={16}
                 aria-hidden

@@ -111,8 +111,46 @@ def test_history_filters(active_athlete_id: int) -> None:
 def test_history_includes_participants(active_athlete_id: int) -> None:
     for item in get_history(active_athlete_id)["items"]:
         assert item["participants"] >= 1
+        assert 0 <= item["classes"] <= item["participants"]
         if is_ranked(item["clt"]):
-            assert item["clt"] <= item["participants"]
+            assert item["classes"] >= 1
+
+
+def test_history_and_same_race_use_the_same_count() -> None:
+    """U22 (retour du 25/11/2026) : l'historique donnait « 140 / 465 » (participants, non-classés
+    compris) et la progression « 140/445 » (classés) à Gravelines 2026 M. Les deux comptent
+    maintenant les classés."""
+    athlete_id = find_athlete(
+        """
+        SELECT x.athlete_id
+        FROM results x JOIN races r ON r.id = x.epreuve_id
+        WHERE r.name_epreuve ILIKE '%gravelines%' AND r.year_epreuve = '2026'
+          AND r.format_epreuve = 'M' AND r.type_epreuve = 'triathlon'
+          AND NOT x.equipe AND x.clt > 0 AND x.clt < 99990
+          AND EXISTS (
+              SELECT 1 FROM results y
+              WHERE y.athlete_id = x.athlete_id AND y.epreuve_id <> x.epreuve_id
+                AND y.type_epreuve = 'triathlon' AND y.format_epreuve = 'M'
+                AND y.clt > 0 AND y.clt < 99990
+          )
+        ORDER BY x.clt LIMIT 1
+        """
+    )
+    history = {
+        item["epreuve_id"]: item
+        for item in client.get(f"/athletes/{athlete_id}/results", params={"limit": 100}).json()[
+            "items"
+        ]
+    }
+    progression = client.get(f"/athletes/{athlete_id}/progression").json()
+    compared = 0
+    for series in progression["series"]:
+        for course in series["courses"]:
+            item = history.get(course["race_id"])
+            if item is not None:
+                assert item["classes"] == course["classes"]
+                compared += 1
+    assert compared > 0
 
 
 def test_history_rank_sort_puts_unranked_last(active_athlete_id: int) -> None:

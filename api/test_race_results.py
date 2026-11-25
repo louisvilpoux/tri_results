@@ -504,6 +504,7 @@ def test_race_times_for_simulator() -> None:
         """
         SELECT epreuve_id FROM results
         WHERE swim_time ~ '^\\d{2}:' AND bike_time ~ '^\\d{2}:' AND run_time ~ '^\\d{2}:'
+          AND t1_time ~ '^\\d{2}:' AND t2_time ~ '^\\d{2}:'
           AND type_epreuve = 'triathlon'
         GROUP BY epreuve_id HAVING COUNT(*) BETWEEN 100 AND 400
         ORDER BY epreuve_id LIMIT 1
@@ -785,3 +786,61 @@ def test_segments_with_transitions_longer_than_bike_are_removed() -> None:
 
 def test_race_without_removed_segments_is_not_flagged(race_id: int) -> None:
     assert client.get(f"/races/{race_id}").json()["segments_retires"] is False
+
+
+def test_cross_in_event_name_gives_cross_discipline() -> None:
+    """D19 (retour du 25/11/2026) : « Cross-Duathlon Hinges 2019 », épreuves « M » et « XS »,
+    était rangé en duathlon. Le nom de l'événement dit cross quand l'épreuve ne cite aucune
+    discipline."""
+    rows = query_rows(
+        "SELECT type_epreuve FROM races WHERE name_epreuve = 'Cross-Duathlon Hinges'"
+    )
+    if not rows:
+        pytest.skip("Cross-Duathlon Hinges absent de la base")
+    assert {row.type_epreuve for row in rows} == {"cross duathlon"}
+
+
+@pytest.mark.parametrize(
+    ("nom", "prenom_puis_nom", "expected"),
+    [
+        ("BELLET Jean francois", False, "BELLET Jean Francois"),
+        ("Jean-françois BELLET", False, "BELLET Jean-François"),
+        ("Jean francois  BELLET", True, "BELLET Jean Francois"),
+        ("JEAN FRANCOIS  BELLET", True, "BELLET Jean Francois"),
+        ("WAGNER  Alexis", False, "WAGNER Alexis"),
+        ("DE LA FONTAINE Jean-pierre", False, "DE LA FONTAINE Jean-Pierre"),
+        ("Raphael Crouzier", False, "Raphael Crouzier"),
+        ("CHAGOT DENIS", False, "CHAGOT DENIS"),
+    ],
+)
+def test_nom_affiche(nom: str, prenom_puis_nom: bool, expected: str) -> None:
+    """D18 : « NOM Prénom » quelle que soit la source (transform/noms_affiches.sql)."""
+    rows = query_rows(
+        f"SELECT nom_affiche('{nom.replace(chr(39), chr(39) * 2)}', {prenom_puis_nom}) AS nom"
+    )
+    assert rows[0].nom == expected
+
+
+def test_athlete_names_have_no_double_spaces() -> None:
+    """D18 : plus d'espace double dans les noms d'athlètes (« Felix  POUILLY » chez
+    prolivesport)."""
+    rows = query_rows(
+        "SELECT COUNT(*) AS n FROM results WHERE NOT equipe AND nom_athlete LIKE '%  %'"
+    )
+    assert rows[0].n == 0
+
+
+def test_simulator_skips_unpublished_transitions() -> None:
+    """U20 : Sainte Aldegonde 2025 S ne publie pas T1 (« — » pour tous). « Et moi ? » ne le
+    demande pas et dit pourquoi."""
+    rows = query_rows(
+        """
+        SELECT id FROM races
+        WHERE name_epreuve ILIKE '%aldegonde%' AND year_epreuve = '2025' AND format_epreuve = 'S'
+        """
+    )
+    if not rows:
+        pytest.skip("Duathlon de Sainte Aldegonde 2025 S absent de la base")
+    times = client.get(f"/races/{rows[0].id}/times").json()
+    assert [t["key"] for t in times["transitions"]] == ["t2"]
+    assert times["transitions_non_publiees"] == ["T1"]

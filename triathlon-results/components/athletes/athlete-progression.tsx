@@ -255,7 +255,7 @@ function SameRace({ series }: { series: ProgressionSeries }) {
                     />
                   ))}
                   <td className="py-2 pr-3 text-right tabular-nums">
-                    {race.clt}/{race.classes}
+                    {race.clt} / {race.classes}
                     {race.pourcentage !== null && (
                       <span className="block text-xs text-gray-400">
                         {topPercent(race.pourcentage)}

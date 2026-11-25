@@ -41,8 +41,9 @@ $$ LANGUAGE plpgsql IMMUTABLE;
 --   2. la catégorie de l'événement quand elle est précise (Bike&Run, Aquathlon, Cross Duathlon) ;
 --   3. une seule discipline citée dans le nom de l'événement ;
 --   4. la catégorie par défaut (« Triathlon - Duathlon » → duathlon, sinon triathlon).
--- « cross » dans le nom de l'épreuve, un événement XTERRA ou la catégorie Cross Duathlon donnent
--- « cross triathlon » ou « cross duathlon ». categorie et distance sont NULL pour chronoweb.
+-- « cross » dans le nom de l'épreuve (ou de l'événement quand l'épreuve ne cite aucune
+-- discipline), un événement XTERRA ou la catégorie Cross Duathlon donnent « cross triathlon » ou
+-- « cross duathlon ». categorie et distance sont NULL pour chronoweb.
 CREATE OR REPLACE FUNCTION epreuve_discipline(
     race text, event_name text, categorie text, distance text
 )
@@ -52,9 +53,12 @@ DECLARE
     race_words text[] := epreuve_named_disciplines(race);
     event_words text[] := epreuve_named_disciplines(event_name);
     km numeric := CASE WHEN pg_input_is_valid(distance, 'numeric') THEN distance::numeric END;
+    -- « cross » dans le nom de l'événement compte quand le nom de l'épreuve ne cite aucune
+    -- discipline (« M » du « Cross-Duathlon Hinges 2019 », D19 du retour du 25/11/2026)
     is_cross boolean := race_text ~ 'cross'
         OR lower(coalesce(event_name, '')) ~ 'xterra'
-        OR categorie = 'Triathlon - Cross Duathlon';
+        OR categorie = 'Triathlon - Cross Duathlon'
+        OR (cardinality(race_words) = 0 AND lower(unaccent(coalesce(event_name, ''))) ~ 'cross');
     result text;
 BEGIN
     IF race_text ~ ('\mdetails?\M|\mma+nche \d\M(?! ?\+)|speed race serie|\mqualif') THEN

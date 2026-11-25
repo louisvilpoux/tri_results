@@ -31,6 +31,8 @@ export interface AthleteProfile {
 
 export interface AthleteResult extends RaceResult {
   participants: number;
+  /** Classés de l'épreuve (rang valide) : dénominateur de la place, comme dans la progression. */
+  classes: number;
 }
 
 export interface AthleteResultsResponse {

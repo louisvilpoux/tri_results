@@ -171,5 +171,8 @@ export interface RaceTimes {
   segments: { key: string; label: string }[];
   /** T1 et T2 : saisissables pour calculer le total, non classées. */
   transitions: { key: string; label: string }[];
+  /** Transitions que la source ne publie pour aucun classé (« T1 ») : comprises dans un autre
+   * segment, pas demandées par « Et moi ? ». */
+  transitions_non_publiees: string[];
   athletes: TimedAthlete[];
 }

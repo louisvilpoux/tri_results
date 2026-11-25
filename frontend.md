@@ -223,6 +223,11 @@ Réalisés
       31 classés, top 25 % de 13, pour que les tuiles restent dans l'ordre. Sous 20 classés : pas
       d'histogramme ; épreuve sans temps : pas de bloc. Un échec de l'API des repères n'empêche pas d'afficher
       le classement. Catégories : codes FFTRI communs aux sources (Q5, voir plus bas).
+    - « Et moi ? », corrections du 25/11/2026 : la répartition des Repères ne s'ouvre plus seule au premier temps
+      saisi (elle poussait le formulaire pendant la saisie, U19) ; le bouton dit alors « Voir ton temps dans la
+      répartition… ». Une transition que la source ne publie pour aucun classé n'est pas demandée
+      (`transitions_non_publiees` de GET /races/{id}/times, T1 à Sainte Aldegonde 2024-2026) et une note dit
+      qu'elle est comprise dans les autres segments (U20).
     - « Et moi ? » (23/11/2026) : simulateur sous les repères (`components/results/race-simulator.tsx`), replié par
       défaut. L'utilisateur saisit ses temps (natation, T1, vélo, T2, course à pied ; course 1, vélo, course 2 en
       duathlon ; « 1:35:00 » ou « 32:00 », temps mal écrit signalé sous sa case) ; le total est la somme des
@@ -287,7 +292,9 @@ Réalisés
       revient au point par défaut quand on change de format ou de course. Sous l'axe, toutes les années sont
       écrites quand elles sont à au moins 34 px l'une de l'autre, petits graphiques compris. L'infobulle native
       est retirée ; la description pour les lecteurs d'écran (`aria-label`) donne toujours toutes les valeurs.
-    - Historique : date, épreuve (lien vers son classement), format, catégorie, « clt / participants », temps.
+    - Historique : date, épreuve (lien vers son classement), format, catégorie, « place / classés » (U22, 25/11/2026 :
+      les classés, comme dans la progression ; le nombre de participants, non-classés compris, est au survol),
+      temps.
       Tri par date (défaut, plus récente d'abord), classement ou temps ; filtres saison et discipline ; pagination.
     - URL : `/athletes/123?annee=2024&discipline=triathlon&sort_by=clt&order=asc&offset=20`.
     - Code : `lib/athlete-results-query.ts`, `components/athletes/`, `types/athlete.ts`.

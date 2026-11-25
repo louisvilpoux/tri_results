@@ -276,12 +276,17 @@ function SimulatorBody({
     [data]
   );
 
-  // dans l'ordre de la course : natation, T1, vélo, T2, course à pied
-  const [t1, t2] = data.transitions;
+  // dans l'ordre de la course : natation, T1, vélo, T2, course à pied ; une transition que la
+  // source ne publie pas n'est pas demandée (U20)
+  const t1 = data.transitions.find((transition) => transition.key === "t1");
+  const t2 = data.transitions.find((transition) => transition.key === "t2");
   const fields =
-    data.segments.length === 3 && t1 && t2
-      ? [data.segments[0], t1, data.segments[1], t2, data.segments[2]]
+    data.segments.length === 3
+      ? [data.segments[0], t1, data.segments[1], t2, data.segments[2]].filter(
+          (field): field is { key: string; label: string } => field !== undefined
+        )
       : [...data.segments, ...data.transitions];
+  const unpublished = data.transitions_non_publiees ?? [];
   const parsed = Object.fromEntries(
     [...fields.map((field) => field.key), "total"].map((key) => [key, parseTime(inputs[key] ?? "")])
   );
@@ -392,6 +397,14 @@ function SimulatorBody({
           onChange={(value) => setInput("total", value)}
         />
       </div>
+      {data.segments.length > 0 && unpublished.length > 0 && (
+        <p className="text-xs text-gray-500">
+          {unpublished.join(" et ")}{" "}
+          {unpublished.length > 1 ? "ne sont pas publiées" : "n’est pas publiée"} par la source
+          pour cette épreuve : {unpublished.length > 1 ? "elles sont comprises" : "elle est comprise"}{" "}
+          dans les autres segments.
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <label className="flex items-center gap-2 text-gray-500">

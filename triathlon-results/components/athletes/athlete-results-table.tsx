@@ -105,7 +105,15 @@ export function AthleteResultsTable({ athleteId, query, results }: AthleteResult
                 >
                   {formatRank(result.clt, result.rang_global)}
                 </span>
-                <span className="text-gray-400"> / {result.participants}</span>
+                {result.classes > 0 && (
+                  <span
+                    className="text-gray-400"
+                    title={`${result.classes} classés sur ${result.participants} participants`}
+                  >
+                    {" "}
+                    / {result.classes}
+                  </span>
+                )}
               </td>
 
               <td className={`${CELL} text-right font-mono font-bold text-[#17202E]`}>
