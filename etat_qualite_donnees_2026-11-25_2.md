@@ -63,7 +63,7 @@ sur 3 335. Les équipes sont exclues du calcul, d'où un total plus faible que l
 | Q24 | **Duos de swimrun comptés comme des athlètes** | — | chronoweb : 392 lignes (10 épreuves, 2 courses) ; prolivesport : Douai 2023 « Swimrun S (Duo) », 11 lignes. 0 après correction | **Corrigé** le 25/11 |
 | Q23 | Classement par catégorie présenté comme un classement général | — | 3 épreuves jeunes timingzone à plusieurs « 1ᵉʳ » (Hyères 2026 Poussins / Pupilles : 4 ; Funny Day 2024 : 2 et 2) | Nouveau |
 | Q25 | Catégories timingzone non reconnues | — | 3,1 % des lignes (« JUN », « VET », « CAD » : 174 lignes, faciles à lire). 2,2 % après correction (« HOM », « FEM », « PRO », voulus) | **Corrigé** le 25/11 |
-| Q13 | Épreuves sans format | 45 | 75 (+30 timingzone ; « MIDDLE DISTANCE », « MINI POUS / POUS » lisibles) | Rouvert |
+| Q13 | Épreuves sans format | 45 | 75 (+30 timingzone ; « MIDDLE DISTANCE », « MINI POUS / POUS » lisibles). 72 après correction | **Corrigé** le 25/11 (reste faute de distance) |
 | Q7 | Lieu manquant ou incohérent | 0 | 1 ville écrite de deux façons (Saint-Laurent-du-Var), Monaco sans code postal | Rouvert (mineur) |
 | Q16 | Identifiants instables | non revérifié | 2 redirections en chaîne (806 → 804 → 1691, 807 → 805 → 1692) | Mineur |
 | Q1 | Temps total faux | 5 084 temps suspects | 5 168 (+84 timingzone, à juste titre) | Corrigé |
@@ -234,6 +234,12 @@ Deux libellés sont lisibles et pourraient recevoir un format :
 - « AQUATHLON MINI POUS / POUS » (Saint-Raphaël 2023, 2024) : JEUNES.
 Les autres demandent une distance publiée (timingzone n'en donne pas : `distance_epreuve` vide).
 
+Corrigé le 25/11/2026 dans `epreuve_format` (`transform/disciplines.sql`) : « middle » donne L,
+comme « half » (la middle distance est la distance L), « POUS » compte comme poussins (JEUNES).
+Base reconstruite : seules ces 3 épreuves changent de format (Trigames de Cagnes 2024 → L, Saint-Raphaël 2023 et 2024 → JEUNES ; le
+« MIDDLE DISTANCE RELAIS » reste RELAIS) ; 72 épreuves sans format. Tests :
+`api/test_formats.py`.
+
 ### Q7 — Lieux
 
 Aucune épreuve sans lieu. Nouveaux :
@@ -279,5 +285,5 @@ aplatir dans `ids_stables.sql` (une redirection doit viser l'id final).
 1. ~~**Q22** et **Q24**~~ : corrigés le 25/11/2026 (base reconstruite : 894 645 résultats,
    292 238 athlètes, 20 417 lignes d'équipe).
 2. **Q23** : classements jeunes à plusieurs 1ᵉʳ.
-3. Petites corrections : ~~**Q25**~~ (corrigé le 25/11/2026), **Q13** (deux libellés lisibles), **Q7**
+3. Petites corrections : ~~**Q25**~~ et ~~**Q13**~~ (corrigés le 25/11/2026), **Q7**
    (Saint-Laurent-du-Var, Monaco), **Q16** (aplatir les redirections en chaîne).

@@ -104,12 +104,14 @@ $$ LANGUAGE plpgsql IMMUTABLE;
 -- La première règle qui répond l'emporte :
 --   1. relais : « relais », « relay », « RM » (relais mixte), « team », « équipes » ; « duo »
 --      aussi (« Half Duo »), sauf en swimrun, qui se court toujours à deux ;
---   2. épreuves jeunes (« 6-9 ans », « 10-13 », Pupille, Poussin, Benjamin, Junior, ADO,
+--   2. épreuves jeunes (« 6-9 ans », « 10-13 », Pupille, Poussin ou « POUS » (« AQUATHLON MINI
+--      POUS / POUS » de Saint-Raphaël), Benjamin, Junior, ADO,
 --      Altrikids, Tri Kid, Family, CAF / MIH, FBE / MCA, « J 12-15 »…) ;
 --   3. une lettre de format dans le nom (les codes de paratriathlon PTS…, PTWC… et « S&M »,
 --      seniors et masters, sont ignorés ; XXS et XXXS comptent pour XS) ;
 --   4. un mot connu : Super Sprint / Découverte → XS, Sprint / Short → S,
---      Olympic / Standard / Medium → M, 70.3 / Half / 111 / 113 / Long → L,
+--      Olympic / Standard / Medium → M, 70.3 / Half / Middle / 111 / 113 / Long → L (« MIDDLE
+--      DISTANCE » des Trigames de Cagnes 2024 : Q13 de l'audit du 25/11/2026 au soir),
 --      226 / Ironman / Full / Altriman → XXL ;
 --   5. pour le triathlon et le duathlon, la distance totale en km (seuils placés entre les
 --      distances FFTri : XS 12,9, S 25,75, M 51,5, L ≈ 113, XL ≈ 153, XXL 226) ;
@@ -151,7 +153,7 @@ BEGIN
     -- ou vétérans aussi
     jeunes := regexp_replace(t, 'a partir d[eu]s? \S+', ' ', 'g');
     IF jeunes !~ '\mseniors?\M|\mveterans?\M'
-       AND jeunes ~ ('\d+ ?-? ?\d* ?ans|pupille|poussin|benjamin|minime|cadet|junior|\mado\M|jeune'
+       AND jeunes ~ ('\d+ ?-? ?\d* ?ans|pupille|poussin|\mpous\M|benjamin|minime|cadet|junior|\mado\M|jeune'
             || '|kid|enfant|family|famille|\m(pu|po|be|mi|ca|ju)[fh]?\M|\m[fm](pu|po|be|mi|ca|ju)\M'
             || '|be-mi|\mj ?\d|\mj\M|^\D*\m([4-9]|1\d) ?[-_] ?([6-9]|1\d)\M\D*$') THEN
         RETURN 'JEUNES';
@@ -168,7 +170,7 @@ BEGIN
     IF t ~ 'super ?sprint|starter|decouverte' THEN RETURN 'XS'; END IF;
     IF t ~ 'sprint|\mshort\M' THEN RETURN 'S'; END IF;
     IF t ~ 'olymp|standard|court|medium' THEN RETURN 'M'; END IF;
-    IF t ~ '70[.,]3|half|\m11[13]\M|long' THEN RETURN 'L'; END IF;
+    IF t ~ '70[.,]3|half|middle|\m11[13]\M|long' THEN RETURN 'L'; END IF;
     IF t ~ '\m226\M|ironman|\mfull\M|altriman' THEN RETURN 'XXL'; END IF;
 
     IF discipline IN ('triathlon', 'duathlon') AND km IS NOT NULL THEN

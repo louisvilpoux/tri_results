@@ -92,3 +92,16 @@ def test_bike_and_run_with_only_youth_categories_is_youth() -> None:
     if not rows:
         pytest.skip("Aucun bike & run réservé aux jeunes dans la base")
     assert all(row.format_epreuve == "JEUNES" for row in rows)
+
+
+@pytest.mark.parametrize(
+    ("race", "discipline", "expected"),
+    [
+        # Q13 de l'audit du 25/11/2026 au soir (timingzone)
+        ("MIDDLE DISTANCE INDIVIDUEL", "triathlon", "L"),
+        ("MIDDLE DISTANCE RELAIS", "triathlon", "RELAIS"),
+        ("AQUATHLON MINI POUS / POUS", "aquathlon", "JEUNES"),
+    ],
+)
+def test_timingzone_format_words(race: str, discipline: str, expected: str) -> None:
+    assert epreuve_format(race, discipline) == expected
