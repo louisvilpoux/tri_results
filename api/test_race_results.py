@@ -645,3 +645,81 @@ def test_classes_plus_rapides_que_des_mieux_classes_sont_suspects(format_epreuve
         assert row.total >= plus_long_avant - timedelta(minutes=1), row
     stats = client.get(f"/races/{rows[0].epreuve_id}/stats").json()["segments"][0]
     assert stats["classes"] == len(valides)
+
+
+def test_totaux_trop_longs_entre_deux_classes_sont_suspects() -> None:
+    """Q18 : un classé (ni premier ni dernier) dont le total est plus long de plus de 50 % que
+    celui de ses deux voisins est suspect (Carnac 2016 M : 11:23:46 entre deux 02:50), sauf dans
+    les épreuves classées sur un autre temps ou à plusieurs 1er."""
+    rows = query_rows(
+        """
+        WITH v AS (
+            SELECT
+                epreuve_id, clt, total_time::interval AS total,
+                lag(total_time::interval) OVER w AS precedent,
+                lead(total_time::interval) OVER w AS suivant
+            FROM results
+            WHERE total_time ~ '^[0-9]{2}:[0-9]{2}:[0-9]{2}$' AND clt > 0 AND clt < 99990
+              AND NOT temps_suspect
+            WINDOW w AS (PARTITION BY epreuve_id ORDER BY clt, id)
+        ),
+        exclues AS (
+            SELECT epreuve_id
+            FROM v
+            GROUP BY epreuve_id
+            HAVING COUNT(*) FILTER (WHERE total < precedent - interval '30 seconds')
+                       > 0.05 * COUNT(*)
+                OR COUNT(*) FILTER (WHERE clt = 1) > 1
+        )
+        SELECT epreuve_id, clt, total, precedent, suivant
+        FROM v
+        WHERE precedent IS NOT NULL AND suivant IS NOT NULL
+          AND total > 1.5 * greatest(precedent, suivant)
+          AND epreuve_id NOT IN (SELECT epreuve_id FROM exclues)
+        """
+    )
+    assert rows == []
+    carnac = query_rows(
+        """
+        SELECT x.temps_suspect
+        FROM results x JOIN races r ON r.id = x.epreuve_id
+        WHERE r.name_epreuve = 'Triathlon de Carnac' AND r.year_epreuve = '2016'
+          AND r.format_epreuve = 'M' AND x.total_time = '11:23:46'
+        """
+    )
+    if not carnac:
+        pytest.skip("Triathlon de Carnac 2016 M absent de la base")
+    assert all(row.temps_suspect for row in carnac)
+
+
+def test_equipes_de_relais_hors_des_classements_individuels() -> None:
+    """Q18 : protiming recopiait les équipes des relais de Cepoy 2026 dans le classement du
+    triathlon M (trois « 1er ») ; l'épreuve « Entreprises » de Bordeaux 2026, faite d'équipes,
+    était rangée en triathlon S. Cepoy M n'a plus qu'un 1er et aucune équipe ; l'épreuve
+    Entreprises est un relais d'équipes."""
+    cepoy = query_rows(
+        """
+        SELECT COUNT(*) FILTER (WHERE x.clt = 1) AS premiers,
+               COUNT(*) FILTER (WHERE x.cat ~ '^(RE|DU)') AS relais
+        FROM results x JOIN races r ON r.id = x.epreuve_id
+        WHERE r.name_epreuve = 'Triathlon de Cepoy' AND r.year_epreuve = '2026'
+          AND r.format_epreuve = 'M'
+        """
+    )
+    if not cepoy or cepoy[0].premiers == 0:
+        pytest.skip("Triathlon de Cepoy 2026 M absent de la base")
+    assert cepoy[0].premiers == 1
+    assert cepoy[0].relais == 0
+
+    entreprises = query_rows(
+        """
+        SELECT r.format_epreuve, bool_and(x.equipe) AS equipes
+        FROM results x JOIN races r ON r.id = x.epreuve_id
+        WHERE r.name_epreuve = 'Triathlon de Bordeaux' AND r.year_epreuve = '2026'
+          AND r.format_initial = 'Format S - Entreprises'
+        GROUP BY r.format_epreuve
+        """
+    )
+    if not entreprises:
+        pytest.skip("Triathlon de Bordeaux 2026 absent de la base")
+    assert [(row.format_epreuve, row.equipes) for row in entreprises] == [("RELAIS", True)]

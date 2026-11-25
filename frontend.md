@@ -482,6 +482,10 @@ Points connus (données) :
   `transform/temps_totaux.sql`) : à Openlakes 2026 L, seuls les 428 finishers comptent dans les Repères ; les 334
   classés suivants ont l'alerte ⚠ dans le classement et l'historique, et leur temps n'est pas dans les meilleurs
   temps de leur profil. Message : « plus court que celui d'athlètes mieux classés ».
+  Puis un total trop long entre deux classés (Carnac 2016 M, 11:23:46 entre deux 02:50) : le message devient
+  « Temps anormal pour cette épreuve (moins de la moitié du temps médian, plus court que celui d'athlètes mieux
+  classés, ou bien plus long que celui des classés voisins) : probablement une erreur de la source ou un athlète
+  arrêté avant l'arrivée. »
 - Classement publié sur un autre temps (Q18, 25/11/2026) : sur 7 épreuves (Tours N Man 2024, Bayman 2024,
   Ventouxman 2026, Chamouille 2022…), plus de 5 % des classés ont un total plus court que le classé précédent :
   départs par vagues, temps officiel ou pénalités. Le classement de la source est gardé ; la page de classement

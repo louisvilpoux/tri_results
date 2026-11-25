@@ -67,7 +67,7 @@ fftri_t2_area 98,1 %, protiming 97,9 %, chronoweb 97,5 %. Classement dans l'ordr
 | Q15 | Sexe chronoweb | 0 valeur hors M/F | 0 ; protiming : 0 ligne individuelle sans sexe | Corrigé |
 | Q16 | Identifiants instables | 0 changement | non revérifié (pas de reconstruction) | Corrigé |
 | Q17 | Noms de course sans ponctuation | 2 courses corrigées | inchangé | Corrigé |
-| Q18 | Classement publié qui ne suit pas les temps | 34 épreuves (24/11) | 32 épreuves, dont 7 sur plus de 5 % des lignes ; Openlakes 2026 : 83 classés plus rapides que le vainqueur (arrêtés avant l'arrivée). Après correction : 5 082 temps suspects (Openlakes 2026 L : 334, XXL : 230), 7 épreuves signalées | **Corrigé** le 25/11 (totaux trop longs restants) |
+| Q18 | Classement publié qui ne suit pas les temps | 34 épreuves (24/11) | 32 épreuves, dont 7 sur plus de 5 % des lignes ; Openlakes 2026 : 83 classés plus rapides que le vainqueur (arrêtés avant l'arrivée). Après correction : 5 084 temps suspects (Openlakes 2026 L : 334, XXL : 230, Carnac 2016 : 2 trop longs), 7 épreuves signalées, équipes retirées des classements individuels (Cepoy 2026, Bordeaux 2026) | **Corrigé** le 25/11 |
 | Q19 | Temps protiming « mm:ss:00 » | 0 après correction | 0 ; 9 totaux au-dessus de 24 h, tous fftri, plausibles | Corrigé |
 | Q20 | Épreuve natation + vélo classée triathlon L | — | Chtriman 2023 et 2024 « SWIMBIKE », 329 résultats ; 0 après correction | **Corrigé** le 25/11 |
 | Q21 | Duos comptés comme des athlètes | — | Triath'Elles Gravelines 2017, 3 épreuves « Duo », 68 lignes ; 0 après correction | **Corrigé** le 25/11 |
@@ -87,6 +87,7 @@ fftri_t2_area 98,1 %, protiming 97,9 %, chronoweb 97,5 %. Classement dans l'ordr
 | Q20 | 25/11 | Épreuves « SWIMBIKE » (natation + vélo) exclues de la base : −2 épreuves, −329 résultats, −81 athlètes. |
 | Q21 | 25/11 | Lignes des épreuves « Duo » prolivesport marquées équipe : +68 lignes d'équipe, 68 faux profils retirés. |
 | Q18 | 25/11 | Classés plus rapides que le vainqueur, puis que des mieux classés, marqués `temps_suspect` (Openlakes 2026 : 334 en L, 230 en XXL) ; épreuves classées sur un autre temps signalées (`classement_hors_ordre`, bandeau sur le classement). |
+| Q18 (reste) | 25/11 | Totaux trop longs entre deux classés marqués suspects (Carnac 2016 : 2) ; équipes de relais retirées du triathlon M de Cepoy 2026 (−5 lignes) ; Bordeaux 2026 « Entreprises » en relais (28 équipes, plus de faux athlètes). |
 | Q7, Q9, D9 | 25/11 | Petits restes : 6 lignes dans `transform/lieux_courses.csv`, « À » abîmé réparé dans les clubs, finales d'Extrememan 2020 réunies. |
 | Q13 | 25/11 | Format des bike & run tiré de leur distance (nom ou prolivesport) ; 5 épreuves adultes plus classées JEUNES ; distances bouche-trou ignorées : 84 → 45 épreuves sans format. |
 
@@ -199,13 +200,42 @@ Tests : `api/test_race_results.py` (aucun classé non suspect plus rapide que l'
 épreuves signalées ; à Openlakes 2026 L, les classés restants suivent les temps et les Repères
 les comptent tous ; drapeau vrai sur l'épreuve la plus désordonnée, faux sur la plus ordonnée).
 
-Restent :
-- **Totaux aberrants trop longs** (Carnac 2016 : 228ᵉ et 252ᵉ en 11:23:46 ; Champ Man 2025 : 231ᵉ
-  en 6:50:59 entre deux 5:53) : `temps_suspect` et son message visent les temps trop courts ; les
-  marquer demanderait un second message.
-- **Plusieurs classements dans une épreuve** : Cepoy 2026 M mêle équipes et individuels dans le
-  même classement (les équipes n'y sont pas repérées comme telles) ; à séparer, ou à marquer
-  équipe, dans `transform/`.
+Reste de Q18, corrigé le même jour :
+
+3. **Totaux aberrants trop longs** (`transform/temps_totaux.sql`) : un classé qui n'est ni le
+   premier ni le dernier, dont le total est plus long de plus de 50 % que celui de ses deux
+   voisins, est marqué `temps_suspect`. Carnac 2016 M : le 228ᵉ et le 252ᵉ, en 11:23:46 entre des
+   classés en 02:50 et 03:00, sans vélo ou sans course à pied (+2 temps suspects, 5 084 en tout).
+   Mêmes exceptions que plus haut (épreuves classées sur un autre temps, comme Chamouille 2022 ;
+   épreuves à plusieurs 1ᵉʳ). Volontairement laissés :
+   - Champ Man 2025 L, 231ᵉ en 06:50:59 entre deux 05:53 : ses segments (natation 00:32:15, vélo
+     04:15:35, course 01:54:50) donnent bien ce total ; c'est son rang qui est douteux, pas son
+     temps ;
+   - les derniers classés très lents : souvent réels (jeunes, marcheurs : Chalain 2023 jeunes en
+     01:00:36, segments cohérents). Quelques-uns sont manifestement faux mais ne se distinguent
+     pas par une règle simple : Lacanau 2019 jeunes (07:32:00 derrière un 00:12:23), Grand
+     Meaulnes 2023 relais (course à pied de 09:04:32), Trialong 2026 M (natation de 09:16:03),
+     Chantilly 2021 M (14:35:28), Island Man 2011 M (16:23:30).
+   Le message de l'alerte ⚠ devient « Temps anormal pour cette épreuve (moins de la moitié du
+   temps médian, plus court que celui d'athlètes mieux classés, ou bien plus long que celui des
+   classés voisins) ».
+
+4. **Équipes de relais dans un classement individuel** (`transform/raw_data.sql`) :
+   - Cepoy 2026 M : protiming recopiait dans le classement du triathlon M les 5 équipes des relais
+     Duo et Trio (« MACH 2 », « Tic et tac », catégories REH / REM), avec leur rang de relais
+     (trois « 1ᵉʳ »). Une ligne de catégorie relais (RE…, DU…) d'une épreuve qui n'est pas un
+     relais est retirée quand la même équipe, avec le même temps, figure dans un relais du même
+     événement : −5 lignes, le triathlon M n'a plus qu'un 1ᵉʳ (122 individuels). Aucune autre
+     épreuve n'est concernée ;
+   - trouvé au passage, Bordeaux 2026 « Format S - Entreprises » (protiming) : 28 équipes (« LNSO
+     1 », « Seb et Nico », catégories REM / REF) rangées en triathlon S et comptées comme 28
+     athlètes. Une épreuve protiming (hors bike & run et swimrun) dont toutes les lignes ont une
+     catégorie relais passe en RELAIS : ses lignes sont des équipes, les faux profils
+     disparaissent. Aucune autre épreuve n'est concernée.
+
+Tests : `api/test_race_results.py` (aucun total valide plus long de 50 % que ses deux voisins hors
+épreuves exclues, Carnac 2016 marqué ; Cepoy 2026 M à un seul 1ᵉʳ sans équipe, Entreprises de
+Bordeaux 2026 en relais d'équipes).
 
 ### Q20 — Épreuve natation + vélo classée triathlon L (corrigé le 25/11/2026)
 
@@ -387,5 +417,4 @@ Reste aussi le relais CHTRIMAN 2017 relevé le 25/11 (4 équipes, vainqueur en 0
 
 ## Ordre de travail proposé
 
-1. Q18 (reste) : équipes mêlées aux individuels à Cepoy 2026 M, totaux aberrants trop longs.
-2. Q5 / D2 / D10 : table de correspondance des catégories, protiming compris.
+1. Q5 / D2 / D10 : table de correspondance des catégories, protiming compris.

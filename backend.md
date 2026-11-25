@@ -147,6 +147,10 @@ Dossier : `transform`
       athletes_tmp et results le reprennent.
       Les épreuves contre-la-montre (`format_epreuve` contenant le mot « CLM ») sont exclues de toutes les
       sources : chez prolivesport, leurs colonnes de temps sont décalées.
+      protiming, équipes de relais (Q18, 25/11/2026) : une ligne de catégorie relais (RE…, DU…) d'une épreuve qui
+      n'est pas un relais est retirée quand la même équipe, avec le même temps, figure dans un relais du même
+      événement (Cepoy 2026 M, 5 lignes) ; une épreuve dont toutes les lignes ont une catégorie relais passe en
+      RELAIS (Bordeaux 2026 « Format S - Entreprises », 28 équipes), hors bike & run et swimrun.
       protiming : date JJ/MM/AAAA mise en AAAA-MM-JJ, année retirée du nom de l'événement
       (`prolivesport_event_name`), numéro de département retiré du lieu (« Bordeaux (33) » → « Bordeaux », pour
       que lieux.sql reconnaisse la ville des autres sources de la course), athlètes anonymisés (nom vide)
@@ -267,6 +271,8 @@ Dossier : `transform`
       334 suivants sont signalés ; XXL : 230 (tous arrêtés avant l'arrivée : leur course à pied
       implicite est plus courte que celle des finishers, souvent que celle du vainqueur). Les petites inversions (Val de Gray 2013 L, 1 à 2 %) et un ou deux
       totaux aberrants trop longs (Carnac 2016, Champ Man 2025) ne déclenchent pas la règle.
+      Totaux trop longs (Q18) : un classé ni premier ni dernier dont le total dépasse de plus de 50 % celui de ses
+      deux voisins est marqué `temps_suspect` (Carnac 2016 M : 11:23:46 entre deux 02:50). Mêmes exceptions.
     - segments_prolivesport.sql : vide les 5 segments d'une ligne prolivesport dont la somme s'écarte de plus de 5 %
       du total (colonnes décalées : T1 de 00:31:45 pour un total de 00:58:36, Moines 2021 S), et ceux de toutes les
       lignes d'une épreuve dont au moins la moitié des lignes vérifiables sont incohérentes (le décalage touche

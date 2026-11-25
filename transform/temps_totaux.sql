@@ -298,3 +298,44 @@ WHERE x.id = p.id;
 
 DROP TABLE classes_valides, epreuves_exclues, candidats, plus_rapides_que_des_mieux_classes,
     ruptures;
+
+
+-- Totaux aberrants trop longs (Q18, 25/11/2026) : au Triathlon de Carnac 2016 M, le 228ᵉ et le
+-- 252ᵉ ont un total de 11:23:46 entre deux classés en 02:50 et 03:00, sans vélo ou sans course à
+-- pied. Leur rang dit qu'ils ont fini vers 02:50 ; le total est faux. Il faussait leur profil (pire
+-- temps, progression) et la plage de l'histogramme.
+-- Règle : un classé entre deux autres (ni le dernier, ni le premier) dont le total est plus long
+-- de plus de 50 % que celui de ses deux voisins. Le dernier classé n'est pas concerné : un
+-- dernier très lent est souvent réel (jeunes, marcheurs). Un écart plus faible non plus : à
+-- Champ Man 2025 L, le 231ᵉ en 06:50:59 entre deux 05:53 a des segments qui donnent bien ce
+-- total (vélo 04:15:35) ; c'est son rang qui est douteux, pas son temps. Mêmes exceptions que
+-- plus haut : épreuves classées sur un autre temps (Chamouille 2022), épreuves à plusieurs 1er.
+CREATE TEMPORARY TABLE classes_valides AS
+SELECT
+    id,
+    epreuve_id,
+    clt,
+    total_time::interval AS total,
+    lag(total_time::interval) OVER w AS total_precedent,
+    lead(total_time::interval) OVER w AS total_suivant
+FROM results
+WHERE total_time ~ '^\d{2}:\d{2}:\d{2}$' AND clt > 0 AND clt < 99990
+  AND NOT temps_suspect
+WINDOW w AS (PARTITION BY epreuve_id ORDER BY clt, id);
+
+CREATE TEMPORARY TABLE epreuves_exclues AS
+SELECT epreuve_id
+FROM classes_valides
+GROUP BY epreuve_id
+HAVING COUNT(*) FILTER (WHERE total < total_precedent - interval '30 seconds') > 0.05 * COUNT(*)
+    OR COUNT(*) FILTER (WHERE clt = 1) > 1;
+
+UPDATE results x
+SET temps_suspect = true
+FROM classes_valides c
+WHERE x.id = c.id
+  AND c.total_precedent IS NOT NULL AND c.total_suivant IS NOT NULL
+  AND c.total > 1.5 * greatest(c.total_precedent, c.total_suivant)
+  AND c.epreuve_id NOT IN (SELECT epreuve_id FROM epreuves_exclues);
+
+DROP TABLE classes_valides, epreuves_exclues;

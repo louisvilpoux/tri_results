@@ -245,6 +245,47 @@ WHERE x.source = j.source
   AND x.format_epreuve IS NOT DISTINCT FROM j.format_epreuve
   AND x.format_normalise IS DISTINCT FROM 'JEUNES';
 
+-- Équipes de relais recopiées dans un classement individuel (Q18 de l'audit du 25/11/2026) :
+-- protiming publie au Triathlon de Cepoy 2026 (« Triathlon de l'AME ») les 5 équipes des
+-- relais Duo et Trio (« MACH 2 », « Tic et tac », catégories REH / REM) aussi dans le
+-- classement du triathlon M, avec leur rang de relais (trois « 1er »). Une ligne de catégorie
+-- relais (RE…, DU…) d'une épreuve qui n'est pas un relais est retirée quand la même équipe, avec
+-- le même temps, figure dans un relais du même événement.
+DELETE FROM raw_data x
+WHERE x.source = 'protiming'
+  AND x.format_normalise IS DISTINCT FROM 'RELAIS'
+  AND x.cat ~ '^(RE|DU)[HMFX]?$'
+  AND EXISTS (
+      SELECT 1
+      FROM raw_data relais
+      WHERE relais.source = x.source
+        AND relais.name_epreuve = x.name_epreuve
+        AND relais.date_epreuve IS NOT DISTINCT FROM x.date_epreuve
+        AND relais.format_normalise = 'RELAIS'
+        AND relais.nom = x.nom
+        AND relais.temps = x.temps
+  );
+
+-- Épreuve protiming faite uniquement d'équipes de relais (Q18) : « Format S - Entreprises » du
+-- Triathlon de Bordeaux 2026, 28 équipes (« LNSO 1 », « Seb et Nico », catégories REM / REF)
+-- rangées en triathlon S et comptées comme des athlètes. Elle passe en RELAIS, et ses lignes
+-- deviennent des équipes (protiming_team_name). Le bike & run et le swimrun, qui se courent
+-- à deux, gardent leur format.
+UPDATE raw_data x
+SET format_normalise = 'RELAIS'
+FROM (
+    SELECT source, name_epreuve, year_epreuve, format_epreuve
+    FROM raw_data
+    WHERE source = 'protiming' AND type_epreuve NOT IN ('bike&run', 'swimrun')
+    GROUP BY source, name_epreuve, year_epreuve, format_epreuve
+    HAVING bool_and(coalesce(cat, '') ~ '^(RE|DU)[HMFX]?$')
+) e
+WHERE x.source = e.source
+  AND x.name_epreuve = e.name_epreuve
+  AND x.year_epreuve IS NOT DISTINCT FROM e.year_epreuve
+  AND x.format_epreuve IS NOT DISTINCT FROM e.format_epreuve
+  AND x.format_normalise IS DISTINCT FROM 'RELAIS';
+
 -- Noms et clubs mal encodés (« ThÃ©o HANQUIEZ » pour « Théo HANQUIEZ ») : le texte UTF-8 a été
 -- relu comme du Windows-1252 (ou du Latin-1) par la source ou le scraping. On refait
 -- l'opération inverse : le texte est réécrit en octets Windows-1252 (à défaut Latin-1), puis
