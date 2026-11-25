@@ -108,25 +108,48 @@ $$ LANGUAGE plpgsql IMMUTABLE;
 --      Olympic / Standard / Medium → M, 70.3 / Half / 111 / 113 / Long → L,
 --      226 / Ironman / Full / Altriman → XXL ;
 --   5. pour le triathlon et le duathlon, la distance totale en km (seuils placés entre les
---      distances FFTri : XS 12,9, S 25,75, M 51,5, L ≈ 113, XL ≈ 153, XXL 226).
+--      distances FFTri : XS 12,9, S 25,75, M 51,5, L ≈ 113, XL ≈ 153, XXL 226) ;
+--   6. pour le bike & run, la distance écrite dans le nom (« 12km800 », « 4500m », « 6km »),
+--      sinon celle donnée par prolivesport (Touquet 15 km, championnats de France 10 à 18,6 km ;
+--      Q13 de l'audit du 25/11/2026). Seuils tirés des noms qui donnent lettre et distance :
+--      « XS - 6000m », « XS - 8000m », « XS - 11km » ; « S - 12000m », « S - 14km »,
+--      « S - 16km » ; « M - 22km500 ». Sous 6 km : épreuve jeunes (1 500, 3 000 et 4 500 m
+--      sont des courses Mini-Poussins, Poussins, Pupilles, Benjamins dans les autres éditions
+--      d'Orléans). Une épreuve dont tous les classés sont jeunes passe ensuite en JEUNES
+--      (raw_data.sql).
 -- Quand la lettre du nom et la distance ne concordent pas (8 % des cas), la lettre l'emporte.
+-- Les catégories qui ouvrent une épreuve aux adultes ne la rendent pas « jeunes » (Q13) :
+-- « Distance S - 12000m - A partir de Cadets », « Cadets-Juniors-Seniors 12000m » (Orléans).
+-- « Famille » compte comme « family ».
 CREATE OR REPLACE FUNCTION epreuve_format(race text, discipline text, distance text)
 RETURNS text AS $$
 DECLARE
     t text := regexp_replace(
         lower(unaccent(coalesce(race, ''))), '\mpts?\d[a-z0-9-]*|\mpt[a-z]*|\ms ?& ?m\M', ' ', 'g'
     );
-    km numeric := CASE WHEN pg_input_is_valid(distance, 'numeric') THEN distance::numeric END;
+    -- 0, 99.99, 998 et 999 : distances bouche-trou de prolivesport (Bike & Run de Marcq 2024
+    -- « Defi », épreuves SUPP2, Val de Gâtine 2019 « Combine - General ») : inconnues
+    km numeric := CASE
+        WHEN pg_input_is_valid(distance, 'numeric')
+             AND distance::numeric NOT IN (0, 99.99) AND distance::numeric < 998
+        THEN distance::numeric
+    END;
     letter text;
+    jeunes text;
+    km_nom text[];
 BEGIN
     IF t ~ 'relais|relay|\mrm\M|\mteam\M|\mequipes?\M'
        OR (t ~ '\mduo\M' AND discipline IS DISTINCT FROM 'swimrun') THEN
         RETURN 'RELAIS';
     END IF;
 
-    IF t ~ ('\d+ ?-? ?\d* ?ans|pupille|poussin|benjamin|minime|cadet|junior|\mado\M|jeune|kid'
-            || '|enfant|family|\m(pu|po|be|mi|ca|ju)[fh]?\M|\m[fm](pu|po|be|mi|ca|ju)\M|be-mi'
-            || '|\mj ?\d|\mj\M|^\D*\m([4-9]|1\d) ?[-_] ?([6-9]|1\d)\M\D*$') THEN
+    -- « à partir de Cadets » ouvre l'épreuve aux adultes ; une liste qui va jusqu'aux seniors
+    -- ou vétérans aussi
+    jeunes := regexp_replace(t, 'a partir d[eu]s? \S+', ' ', 'g');
+    IF jeunes !~ '\mseniors?\M|\mveterans?\M'
+       AND jeunes ~ ('\d+ ?-? ?\d* ?ans|pupille|poussin|benjamin|minime|cadet|junior|\mado\M|jeune'
+            || '|kid|enfant|family|famille|\m(pu|po|be|mi|ca|ju)[fh]?\M|\m[fm](pu|po|be|mi|ca|ju)\M'
+            || '|be-mi|\mj ?\d|\mj\M|^\D*\m([4-9]|1\d) ?[-_] ?([6-9]|1\d)\M\D*$') THEN
         RETURN 'JEUNES';
     END IF;
 
@@ -153,6 +176,24 @@ BEGIN
             WHEN km < 190 THEN 'XL'
             ELSE 'XXL'
         END;
+    END IF;
+
+    IF discipline = 'bike&run' THEN
+        -- « 12km800 » = 12,8 km, « 4km500 » = 4,5 km, « 6km », « 4500m »
+        km_nom := regexp_match(t, '\m(\d+) ?km ?(\d{3})?');
+        IF km_nom IS NOT NULL THEN
+            km := km_nom[1]::numeric + coalesce(km_nom[2]::numeric / 1000, 0);
+        ELSE
+            km := coalesce((regexp_match(t, '\m(\d{3,5}) ?m\M'))[1]::numeric / 1000, km);
+        END IF;
+        IF km IS NOT NULL THEN
+            RETURN CASE
+                WHEN km < 6 THEN 'JEUNES'
+                WHEN km < 12 THEN 'XS'
+                WHEN km < 19 THEN 'S'
+                ELSE 'M'
+            END;
+        END IF;
     END IF;
 
     RETURN NULL;

@@ -3,7 +3,7 @@
 Audit du 25/11/2026 au commit `f064619`. La base est celle reconstruite avec
 `transform/run_sql.py` après le dernier changement de `transform/` (`294ca84`, Q1) : 868 141
 résultats. Elle n'a pas été reconstruite pendant l'audit.
-Q18, Q20, Q21 et les petits restes de Q7, Q9 et D9 corrigés le même jour (base reconstruite :
+Q13, Q18, Q20, Q21 et les petits restes de Q7, Q9 et D9 corrigés le même jour (base reconstruite :
 867 812 résultats, voir plus bas).
 Audit précédent : [etat_qualite_donnees_2026-11-22.md](etat_qualite_donnees_2026-11-22.md),
 complété jusqu'au 25/11 (mêmes identifiants Q1 à Q19). D2, D9, D10 et D11 renvoient à
@@ -62,7 +62,7 @@ fftri_t2_area 98,1 %, protiming 97,9 %, chronoweb 97,5 %. Classement dans l'ordr
 | Q10 | Segments prolivesport décalés | 0 ligne incohérente | 0 | Corrigé |
 | Q11 | Noms de course | 0 cas | 0 cas | Corrigé |
 | Q12 | Athlètes avec résultats des deux sexes | 668 | 689 | Atténué |
-| Q13 | Épreuves sans format | 57 | 85 (dont 35 protiming, surtout des bike & run) | **Ouvert** |
+| Q13 | Épreuves sans format | 57 | 85 (dont 35 protiming, surtout des bike & run). Après correction : 45, faute de distance publiée | **Corrigé** le 25/11 |
 | Q14 | Noms d'athlètes | 0 clé avec ponctuation | 0 | Corrigé |
 | Q15 | Sexe chronoweb | 0 valeur hors M/F | 0 ; protiming : 0 ligne individuelle sans sexe | Corrigé |
 | Q16 | Identifiants instables | 0 changement | non revérifié (pas de reconstruction) | Corrigé |
@@ -88,6 +88,7 @@ fftri_t2_area 98,1 %, protiming 97,9 %, chronoweb 97,5 %. Classement dans l'ordr
 | Q21 | 25/11 | Lignes des épreuves « Duo » prolivesport marquées équipe : +68 lignes d'équipe, 68 faux profils retirés. |
 | Q18 | 25/11 | Classés plus rapides que le vainqueur, puis que des mieux classés, marqués `temps_suspect` (Openlakes 2026 : 334 en L, 230 en XXL) ; épreuves classées sur un autre temps signalées (`classement_hors_ordre`, bandeau sur le classement). |
 | Q7, Q9, D9 | 25/11 | Petits restes : 6 lignes dans `transform/lieux_courses.csv`, « À » abîmé réparé dans les clubs, finales d'Extrememan 2020 réunies. |
+| Q13 | 25/11 | Format des bike & run tiré de leur distance (nom ou prolivesport) ; 5 épreuves adultes plus classées JEUNES ; distances bouche-trou ignorées : 84 → 45 épreuves sans format. |
 
 ---
 
@@ -266,13 +267,38 @@ ni la liste des athlètes ; ces duos s'affichent sans lien, avec « Équipe » d
 comme les autres équipes. Les équipières ne retrouvent pas ce résultat dans leur profil (limite
 connue des équipes, voir frontend.md).
 
-### Q13 — Épreuves sans format
+### Q13 — Épreuves sans format (corrigé le 25/11/2026)
 
-85 épreuves (57 le 22/11) n'apparaissent dans aucun filtre de format : 35 protiming, 30
+85 épreuves (57 le 22/11) n'apparaissaient dans aucun filtre de format : 35 protiming, 30
 prolivesport, 20 chronoweb. Côté protiming, ce sont surtout des bike & run décrits par leur seule
 distance (« 6km », « Bike and Run 20km », « 4500m » : Bike and Run d'Orléans 2017-2019, de
-Bordeaux, du Parc de Loire 2026). Piste : seuils de distance par discipline pour le bike & run
-(comme `epreuve_format` le fait déjà pour le triathlon), sinon garder « format non précisé ».
+Bordeaux, du Parc de Loire 2026).
+
+Corrigé dans `epreuve_format` (`transform/disciplines.sql`) et `transform/raw_data.sql` :
+- **bike & run** : format tiré de la distance écrite dans le nom, sinon de celle publiée par
+  prolivesport (Touquet 14 à 18 km, championnats de France de Calais 2017, 2018 et Lille 2021).
+  Seuils tirés des noms de la base qui donnent lettre et distance (« XS - 6000m », « XS -
+  8000m », « XS - 11km » ; « S - 12000m », « S - 14km », « S - 16km » ; « M - 22km500 ») : moins de
+  6 km → JEUNES (1 500, 3 000 et 4 500 m sont des courses Mini-Poussins à Benjamins dans les
+  autres éditions d'Orléans), 6 à 12 km → XS, 12 à 19 km → S, au-delà → M ;
+- un bike & run dont tous les classés sont jeunes (MP, PO, PU, BE, MI) passe en JEUNES : « 6km » et
+  « 9km » d'Orléans 2017, courus par des minimes ;
+- « Famille » compte comme « family » (JEUNES) ;
+- erreur trouvée au passage : 5 épreuves adultes étaient classées JEUNES à cause d'une catégorie
+  dans leur nom (« Distance S - 12000m - A partir de Cadets », « XS - 8000m - A partir de
+  Minimes » à Orléans Métropole 2023-2024, « Cadets-Juniors-Seniors 12000m » à Orléans 2020).
+  « À partir de <catégorie> » et une liste qui va jusqu'aux seniors ou vétérans ne font plus une
+  épreuve jeunes : elles sont en XS ou S ;
+- distances bouche-trou de prolivesport (0, 99.99, 998, 999) ignorées : le « Defi » de Marcq 2024
+  (99.99) reste sans format, et « Combine - General » de Val de Gâtine 2019 (0 km), qui était
+  classé XS, n'a plus de format.
+
+Résultat : 45 épreuves sans format (84 juste avant, 85 lors de l'audit, une épreuve SWIMBIKE
+étant sortie avec Q20) : 40 formats ajoutés, 5 corrigés (JEUNES → XS ou S), 1 retiré (Val de Gâtine). Restent, faute
+de distance publiée : 10 swimruns, 7 aquathlons, 11 cross, Marcq 2024 « Defi » et le championnat
+de France de bike & run 2016 (prolivesport), le duathlon « Avenir » d'Enghien et « Open » de
+Chartres, les finales d'Extrememan, « CD » d'Altriman et Val de Gâtine 2019. On ne déduit pas de
+format du temps du vainqueur : ce serait une estimation, pas une donnée.
 
 ### Q5 — Catégories d'âge (D2, D10)
 
@@ -362,5 +388,4 @@ Reste aussi le relais CHTRIMAN 2017 relevé le 25/11 (4 équipes, vainqueur en 0
 ## Ordre de travail proposé
 
 1. Q18 (reste) : équipes mêlées aux individuels à Cepoy 2026 M, totaux aberrants trop longs.
-2. Q13 : format des bike & run décrits par leur distance.
-3. Q5 / D2 / D10 : table de correspondance des catégories, protiming compris.
+2. Q5 / D2 / D10 : table de correspondance des catégories, protiming compris.

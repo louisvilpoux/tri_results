@@ -226,6 +226,25 @@ AND btrim(coalesce(nom, '')) <> ''
 AND format_epreuve !~* '\mclm\M'
 ;
 
+-- Bike & run dont tous les classés sont jeunes (Q13 de l'audit du 25/11/2026) : leur format
+-- vient parfois de la seule distance (« 6km », « 9km » au Bike and Run d'Orléans 2017), qui
+-- en ferait un XS adulte alors que seuls des minimes y courent. Catégories jeunes :
+-- Mini-Poussins, Poussins, Pupilles, Benjamins, Minimes (« MIF », « PUG », « MPX »…).
+UPDATE raw_data x
+SET format_normalise = 'JEUNES'
+FROM (
+    SELECT source, name_epreuve, year_epreuve, format_epreuve
+    FROM raw_data
+    WHERE type_epreuve = 'bike&run'
+    GROUP BY source, name_epreuve, year_epreuve, format_epreuve
+    HAVING bool_and(coalesce(cat, '') ~ '^(MP|PO|PU|BE|MI)[FGMHX]?$')
+) j
+WHERE x.source = j.source
+  AND x.name_epreuve = j.name_epreuve
+  AND x.year_epreuve IS NOT DISTINCT FROM j.year_epreuve
+  AND x.format_epreuve IS NOT DISTINCT FROM j.format_epreuve
+  AND x.format_normalise IS DISTINCT FROM 'JEUNES';
+
 -- Noms et clubs mal encodés (« ThÃ©o HANQUIEZ » pour « Théo HANQUIEZ ») : le texte UTF-8 a été
 -- relu comme du Windows-1252 (ou du Latin-1) par la source ou le scraping. On refait
 -- l'opération inverse : le texte est réécrit en octets Windows-1252 (à défaut Latin-1), puis

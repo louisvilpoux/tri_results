@@ -119,7 +119,10 @@ Dossier : `transform`
     - disciplines.sql : fonctions `epreuve_discipline` et `epreuve_format`, qui déduisent du nom libre d'une
       épreuve prolivesport, ou du nom de l'onglet Excel chronoweb, sa discipline (nom de l'épreuve, puis catégorie,
       puis nom de l'événement, sinon triathlon ; « cross » ou XTERRA → cross) et son format (relais, jeunes, lettre
-      XS…XXL, mots connus comme Sprint, Short, Medium, Half, Full ou Altriman, puis distance en km). Sont exclues les
+      XS…XXL, mots connus comme Sprint, Short, Medium, Half, Full ou Altriman, puis distance en km ; pour le bike &
+      run, distance du nom ou de prolivesport : < 6 km JEUNES, < 12 XS, < 19 S, sinon M ; distances bouche-trou 0,
+      99.99, 998, 999 ignorées ; « à partir de Cadets » ne fait pas une épreuve jeunes). raw_data.sql passe en JEUNES
+      un bike & run dont tous les classés sont jeunes (Q13, 25/11/2026). Sont exclues les
       épreuves d'autres sports (course à pied, natation seule, SUPP, distance ≥ 998), les
       enchaînements natation + vélo sans course à pied (« SWIMBIKE », « aquabike » : Chtriman 2023 et 2024,
       329 résultats, rangés jusqu'au 25/11/2026 en triathlon L ; leurs anciennes pages répondent 404) et les onglets chronoweb qui ne
