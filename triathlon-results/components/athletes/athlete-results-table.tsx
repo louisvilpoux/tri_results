@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { SortableHeader, nextSortOrder } from "@/components/shared/sortable-header";
+import { CategoryCell } from "@/components/shared/category-cell";
 import { TotalTime } from "@/components/shared/total-time";
 import { buildAthleteUrl } from "@/lib/athlete-results-query";
 import { capitalize, formatRank, formatShortDate } from "@/lib/format";
@@ -93,7 +94,7 @@ export function AthleteResultsTable({ athleteId, query, results }: AthleteResult
               </td>
 
               <td className={`${CELL} text-gray-500 ${DESKTOP_ONLY}`}>
-                {result.categorie ?? result.cat ?? "—"}
+                <CategoryCell fftri={result.categorie_fftri} source={result.categorie} />
               </td>
 
               <td className={`${CELL} whitespace-nowrap text-right tabular-nums`}>

@@ -105,7 +105,7 @@ swim_time, rang_swim, rang_course_swim, indice_performance_swim, t1_time,
 rang_t1, rang_course_t1, indice_performance_t1, bike_time, rang_bike, 
 rang_course_bike, indice_performance_bike, t2_time, rang_t2, rang_course_t2, 
 indice_performance_t2, run_time, rang_run, rang_course_run, 
-indice_performance_run, source)
+indice_performance_run, source, categorie_fftri)
 SELECT 
 clt, clt_f, epreuve_id, name_epreuve, type_epreuve, 
 format_epreuve, date_epreuve, year_epreuve, athlete_id, nom_athlete, sexe, club, equipe, cat, 
@@ -115,7 +115,7 @@ swim_time, rang_swim, rang_course_swim, indice_performance_swim, t1_time,
 rang_t1, rang_course_t1, indice_performance_t1, bike_time, rang_bike, 
 rang_course_bike, indice_performance_bike, t2_time, rang_t2, rang_course_t2, 
 indice_performance_t2, run_time, rang_run, rang_course_run, 
-indice_performance_run, source
+indice_performance_run, source, categorie_fftri(source, cat)
 FROM all_data
 WHERE rn = 1
   AND (total_time IS NOT NULL OR NOT athlete_a_un_temps)

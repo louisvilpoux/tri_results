@@ -75,7 +75,10 @@ export interface HistogramBar {
 }
 
 export interface CategoryBenchmark {
+  /** Catégorie d'âge FFTRI (S3, V1, JU ; SE et VE sans niveau). */
   categorie: string;
+  /** Sexe dans les repères de tous les classés (S3 hommes et S3 femmes) ; null par sexe. */
+  sexe: "M" | "F" | null;
   classes: number;
   /** Temps du 3e de la catégorie ; null quand elle compte moins de 3 classés. */
   troisieme: string | null;

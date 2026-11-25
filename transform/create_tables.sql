@@ -85,6 +85,9 @@ CREATE TABLE results (
     rang_sexe TEXT,
     rang_categorie TEXT,
     categorie TEXT,
+    -- catégorie d'âge FFTRI commune aux sources (S3, V1, JU, SE…), voir categorie_fftri
+    -- (disciplines.sql) ; categorie garde celle publiée par la source
+    categorie_fftri TEXT,
     indice_performance TEXT,
     indice_performance_reference TEXT,
     total_time TEXT,

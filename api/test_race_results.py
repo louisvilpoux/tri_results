@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 
-from main import app, engine
+from main import CATEGORY_ORDER, app, category_sort_key, engine
 
 client = TestClient(app)
 
@@ -31,9 +31,9 @@ def race_id() -> int:
                     """
                     SELECT epreuve_id
                     FROM results
-                    WHERE categorie IS NOT NULL AND swim_time ~ :pattern
+                    WHERE categorie_fftri IS NOT NULL AND swim_time ~ :pattern
                     GROUP BY epreuve_id
-                    HAVING COUNT(DISTINCT categorie) > 1 AND COUNT(*) BETWEEN 20 AND 100
+                    HAVING COUNT(DISTINCT categorie_fftri) > 1 AND COUNT(*) BETWEEN 20 AND 100
                     ORDER BY epreuve_id
                     LIMIT 1
                     """
@@ -95,12 +95,13 @@ def test_categories_endpoint_and_filter(race_id: int) -> None:
     response = client.get(f"/races/{race_id}/categories")
     assert response.status_code == 200
     categories = response.json()
-    assert categories == sorted(categories)
+    assert categories == sorted(categories, key=category_sort_key)
     assert len(categories) > 1
+    assert set(categories) <= set(CATEGORY_ORDER)
 
     data = get_results(race_id, categorie=categories[0])
     assert data["pagination"]["total"] > 0
-    assert all(item["categorie"] == categories[0] for item in data["items"])
+    assert all(item["categorie_fftri"] == categories[0] for item in data["items"])
 
 
 def test_name_search_is_case_insensitive(race_id: int) -> None:
@@ -419,7 +420,8 @@ def test_race_stats_are_ordered_and_consistent() -> None:
             assert segment["histogramme"] is None
         for category in segment["categories"]:
             assert (category["troisieme"] is None) == (category["classes"] < 3)
-            assert not category["categorie"][0].isdigit()  # « 12/FBE » → « FBE »
+            assert category["categorie"] in CATEGORY_ORDER
+            assert category["sexe"] in ("M", "F", None)
 
     with engine.connect() as connection:
         expected = connection.execute(
@@ -518,7 +520,7 @@ def test_race_times_for_simulator() -> None:
 
     for athlete in times["athletes"]:
         assert athlete["sexe"] in ("M", "F", None)
-        assert athlete["categorie"] is None or not athlete["categorie"][0].isdigit()
+        assert athlete["categorie"] is None or athlete["categorie"] in CATEGORY_ORDER
         if athlete["total"] is not None:
             place = 1 + sum(1 for total in totals if total < athlete["total"])
             assert place <= athlete["clt"] + 5  # ex aequo et classement de la source
@@ -723,3 +725,15 @@ def test_equipes_de_relais_hors_des_classements_individuels() -> None:
     if not entreprises:
         pytest.skip("Triathlon de Bordeaux 2026 absent de la base")
     assert [(row.format_epreuve, row.equipes) for row in entreprises] == [("RELAIS", True)]
+
+
+def test_categorie_filter_keeps_old_source_links(race_id: int) -> None:
+    """Un ancien lien filtré sur la catégorie de la source (« MS3 ») donne toujours ses lignes."""
+    item = next(
+        (i for i in get_results(race_id, limit=100)["items"] if i["categorie"]), None
+    )
+    if item is None or item["categorie"] in CATEGORY_ORDER:
+        pytest.skip("Pas de catégorie de source distincte du code FFTRI")
+    data = get_results(race_id, categorie=item["categorie"])
+    assert data["pagination"]["total"] > 0
+    assert all(row["categorie"] == item["categorie"] for row in data["items"])

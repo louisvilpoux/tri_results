@@ -229,6 +229,9 @@ Dossier : `transform`
       complet, quand l'épreuve coupe ses noms à une longueur fixe, que la coupure tombe au milieu d'un mot et qu'un
       seul athlète prolonge ce nom. Exécuté avant results.sql.
     - results.sql : table finale pour retrouver pour chaque athlète unified l'ensemble de ses résultats en compétition.
+      `categorie_fftri` (Q5, 25/11/2026) : catégorie d'âge FFTRI commune aux sources, calculée par `categorie_fftri`
+      (disciplines.sql) depuis la catégorie publiée (`categorie`, gardée) : MP à JU, S1 à S4, V1 à V10 ; SE et VE
+      pour un senior ou un master sans niveau publié ; NULL sinon (élite, open, handisport…).
       Un temps à 00:00:00 (total ou segment) est vidé : prolivesport l'écrit pour les non-classés et les segments
       non chronométrés.
       Un résultat est relié à son épreuve par le nom, le format et la date ; quand la date est

@@ -222,7 +222,7 @@ Réalisés
       femmes). Un top 10 % ou 25 % qui tomberait dans le podium n'est pas donné (« — ») : top 10 % à partir de
       31 classés, top 25 % de 13, pour que les tuiles restent dans l'ordre. Sous 20 classés : pas
       d'histogramme ; épreuve sans temps : pas de bloc. Un échec de l'API des repères n'empêche pas d'afficher
-      le classement. Limite : catégories telles que publiées par la source (Q5).
+      le classement. Catégories : codes FFTRI communs aux sources (Q5, voir plus bas).
     - « Et moi ? » (23/11/2026) : simulateur sous les repères (`components/results/race-simulator.tsx`), replié par
       défaut. L'utilisateur saisit ses temps (natation, T1, vélo, T2, course à pied ; course 1, vélo, course 2 en
       duathlon ; « 1:35:00 » ou « 32:00 », temps mal écrit signalé sous sa case) ; le total est la somme des
@@ -465,6 +465,14 @@ Points connus (données) :
   (Tribreizh 2022, Saint Remy sur Durolle 2005, Roybon 2021, Paris 2022), le total est recalculé depuis les
   segments (`transform/temps_totaux.sql`). Les meilleurs temps du profil ne prennent plus que les résultats classés
   (603 temps de non-classés écartés, dont ceux de Douai 2017 S, où tous les temps sont inutilisables).
+- Catégories d'âge (Q5, 25/11/2026) : chaque source publie les siennes (« MS3 », « M30-34 », « S3M », « SE »,
+  « MA »…) ; l'API renvoie aussi `categorie_fftri`, code FFTRI commun (S1-S4, V1-V10, MP à JU ; SE et VE sans
+  niveau). `lib/categories.ts` (ordre des âges, libellés « S3 · 30-34 ans », « Senior », « Master ») et
+  `components/shared/category-cell.tsx` (code affiché, libellé et catégorie publiée au survol) servent dans le
+  classement et l'historique du profil ; sans code, la catégorie de la source est affichée. Le filtre du classement
+  (`?categorie=S3`), les Repères (3ᵉ de chaque catégorie, séparé par sexe dans « Tous » : « S3 H », « S3 F ») et
+  « Et moi ? » (catégorie restreinte au sexe choisi, « Catégorie V1 (hommes) ») utilisent le code FFTRI. Un ancien
+  lien `?categorie=MS3` filtre encore sur la catégorie de la source.
 - Temps suspects (20/11/2026) : 19 temps classés restent anormalement courts (moins de la moitié du temps médian de
   l'épreuve) : Openlakes Champagne 2026 L (750e à 762e, temps d'abandon), Lacanau 2017 L (609e en 00:00:07), Ardres
   2019 Jeunes (vainqueur en 00:02:22)… Le bon temps ne peut pas être retrouvé : ils sont signalés. Le composant

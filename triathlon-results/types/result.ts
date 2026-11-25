@@ -9,7 +9,11 @@ export interface RaceResult {
   /** Résultat d'une équipe (bike&run, relais) : pas de profil d'athlète. */
   equipe: boolean;
   cat: string | null;
+  /** Catégorie telle que publiée par la source (« MS3 », « M30-34 », « S3M », « 1/MJU »…). */
   categorie: string | null;
+  /** Catégorie d'âge FFTRI commune aux sources : S1-S4, V1-V10, jeunes (MP à JU) ; SE et VE
+   * sans niveau publié ; null si la source n'en donne pas (élite, open…). */
+  categorie_fftri: string | null;
 
   clt: number | null;
   rang_global: string | null;

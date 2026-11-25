@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown, Gauge } from "lucide-react";
 
 import { ChoiceGroup } from "@/components/shared/choice-group";
+import { categoryLabel, categoryShort } from "@/lib/categories";
 import type { HistogramBar, RaceStats, SegmentBenchmarks } from "@/types/race";
 
 type SexeFilter = "tous" | "M" | "F";
@@ -237,9 +238,23 @@ function CategoryThirds({ segment }: { segment: SegmentBenchmarks }) {
       <p className="text-xs font-semibold text-gray-500">3ᵉ de chaque catégorie</p>
       <ul className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-3 lg:grid-cols-4">
         {segment.categories.map((category) => (
-          <li key={category.categorie} className="flex items-baseline justify-between gap-2">
-            <span className="font-semibold text-[#17202E]">
-              {category.categorie}
+          <li
+            key={`${category.categorie}-${category.sexe ?? ""}`}
+            className="flex items-baseline justify-between gap-2"
+          >
+            <span
+              className="font-semibold text-[#17202E]"
+              title={
+                categoryLabel(category.categorie) +
+                (category.sexe ? (category.sexe === "M" ? ", hommes" : ", femmes") : "")
+              }
+            >
+              {categoryShort(category.categorie)}
+              {category.sexe && (
+                <span className="ml-1 font-normal text-gray-500">
+                  {category.sexe === "M" ? "H" : "F"}
+                </span>
+              )}
               <span className="ml-1 text-xs font-normal text-gray-400">({category.classes})</span>
             </span>
             <span

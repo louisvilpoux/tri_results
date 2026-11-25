@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Search } from "lucide-react";
 
 import { FiltersPanel } from "@/components/results/filters-panel";
+import { categoryLabel } from "@/lib/categories";
 import { PAGE_SIZES, buildRaceResultsUrl, hasActiveFilters } from "@/lib/results-query";
 import type { RaceResultsQuery } from "@/types/result";
 
@@ -73,7 +74,7 @@ export function ResultsFilters({ raceId, query, categories }: ResultsFiltersProp
             <option value="">Toutes</option>
             {categories.map((categorie) => (
               <option key={categorie} value={categorie}>
-                {categorie}
+                {categoryLabel(categorie)}
               </option>
             ))}
           </select>

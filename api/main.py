@@ -96,6 +96,9 @@ class Result(Base):
     rang_sexe = Column(String(50))
     rang_categorie = Column(String(50))
     categorie = Column(String(50))
+    # catégorie d'âge FFTRI commune aux sources (S3, V1, JU ; SE / VE sans niveau), calculée dans
+    # transform/ (categorie_fftri, Q5) ; categorie garde celle publiée par la source
+    categorie_fftri = Column(String(10))
     indice_performance = Column(String(50))
     indice_performance_reference = Column(String(50))
     total_time = Column(String(50))
@@ -382,7 +385,9 @@ def get_result_sort_expression(sort_by: RaceResultSortBy) -> ColumnElement:
 def get_race_results(
     race_id: int,
     s: str | None = Query(None, description="Sexe : M ou F"),
-    categorie: str | None = Query(None, description="Catégorie exacte (ex: MS3)"),
+    categorie: str | None = Query(
+        None, description="Catégorie d'âge FFTRI (ex: S3, V1, JU ; SE et VE sans niveau)"
+    ),
     q: str | None = Query(None, min_length=2, description="Recherche dans le nom de l'athlète"),
     sort_by: RaceResultSortBy = Query("clt", description="Colonne à trier"),
     order: str = Query("asc", pattern="^(asc|desc)$", description="Ordre de tri : asc ou desc"),
@@ -394,7 +399,9 @@ def get_race_results(
     if s:
         query = query.filter(Result.sexe == s.upper())
     if categorie:
-        query = query.filter(Result.categorie == categorie)
+        # ancien lien avec la catégorie de la source (« MS3 ») : filtre sur celle-ci
+        column = Result.categorie_fftri if categorie in CATEGORY_ORDER else Result.categorie
+        query = query.filter(column == categorie)
     if q:
         query = query.filter(Result.nom_athlete.ilike(f"%{q}%"))
     total = query.count()
@@ -421,17 +428,32 @@ def get_race_results(
         }
     }
 
+# Ordre des catégories d'âge FFTRI (categorie_fftri) : jeunes du plus jeune au plus âgé, seniors,
+# puis masters ; « SE » et « VE » (sans niveau publié) après leurs niveaux.
+CATEGORY_ORDER = [
+    "MP", "PO", "PU", "BE", "MI", "CA", "JU",
+    "S1", "S2", "S3", "S4", "SE",
+    *(f"V{level}" for level in range(1, 11)), "VE",
+]
+
+
+def category_sort_key(category: str) -> tuple[int, str]:
+    """Rang d'une catégorie dans CATEGORY_ORDER (inconnue : à la fin, par ordre alphabétique)."""
+    if category in CATEGORY_ORDER:
+        return (CATEGORY_ORDER.index(category), "")
+    return (len(CATEGORY_ORDER), category)
+
+
 @app.get("/races/{race_id}/categories")
 def get_race_categories(race_id: int, db: Session = Depends(get_db)) -> list[str]:
-    """Liste triée des catégories présentes dans les résultats d'une épreuve."""
+    """Catégories d'âge FFTRI présentes dans les résultats d'une épreuve, dans l'ordre des âges."""
     rows = (
-        db.query(Result.categorie)
-        .filter(Result.epreuve_id == race_id, Result.categorie.isnot(None))
+        db.query(Result.categorie_fftri)
+        .filter(Result.epreuve_id == race_id, Result.categorie_fftri.isnot(None))
         .distinct()
-        .order_by(Result.categorie)
         .all()
     )
-    return [row.categorie for row in rows]
+    return sorted((row.categorie_fftri for row in rows), key=category_sort_key)
 
 
 # ----------------------
@@ -504,9 +526,10 @@ def histogram(sorted_times: list[int]) -> dict[str, Any]:
 
 
 def segment_stats(
-    key: str, label: str, times_by_category: list[tuple[int, str | None]]
+    key: str, label: str, times_by_category: list[tuple[int, tuple[str, str | None] | None]]
 ) -> dict[str, Any] | None:
-    """Repères d'un segment (ou du total) à partir de (temps en secondes, catégorie)."""
+    """Repères d'un segment (ou du total) à partir de (temps en secondes, catégorie). La catégorie
+    est un couple (catégorie FFTRI, sexe) : le sexe vaut None dans les repères d'un seul sexe."""
     times = sorted(time for time, _ in times_by_category)
     count = len(times)
     if count == 0:
@@ -515,7 +538,7 @@ def segment_stats(
     def as_time(value: int | None) -> str | None:
         return seconds_to_time(value) if value is not None else None
 
-    by_category: dict[str, list[int]] = {}
+    by_category: dict[tuple[str, str | None], list[int]] = {}
     for time, category in times_by_category:
         if category:
             by_category.setdefault(category, []).append(time)
@@ -534,12 +557,16 @@ def segment_stats(
         "categories": [
             {
                 "categorie": category,
+                "sexe": sexe,
                 "classes": len(category_times),
                 "troisieme": as_time(
                     sorted(category_times)[2] if len(category_times) >= 3 else None
                 ),
             }
-            for category, category_times in sorted(by_category.items())
+            for (category, sexe), category_times in sorted(
+                by_category.items(),
+                key=lambda item: (category_sort_key(item[0][0]), item[0][1] or ""),
+            )
         ],
     }
 
@@ -563,11 +590,9 @@ def race_benchmarks(db: Session, race: Race) -> dict[str, Any]:
     if discipline not in DISCIPLINES_WITHOUT_SPLITS and race_has_splits(db, race_id):
         columns += SEGMENTS_BY_DISCIPLINE.get(discipline, [])
 
-    # catégorie sans le rang que chronoweb colle devant (« 12/FBE » → « FBE »)
-    category = func.nullif(func.regexp_replace(Result.categorie, r"^\d+/", ""), "")
     rows = db.execute(
         select(
-            category.label("categorie"),
+            Result.categorie_fftri.label("categorie"),
             Result.sexe,
             *(valid_time_or_null(getattr(Result, column)).label(key) for key, _, column in columns),
         ).where(
@@ -577,11 +602,18 @@ def race_benchmarks(db: Session, race: Race) -> dict[str, Any]:
         )
     ).all()
 
-    def segments_of(selected: list[Any]) -> list[dict[str, Any]]:
+    def segments_of(selected: list[Any], by_sex: bool) -> list[dict[str, Any]]:
+        """by_sex : catégories séparées par sexe (repères de tous les classés : S3 hommes et S3
+        femmes, comme les catégories « MS3 » et « FS3 » des sources)."""
         segments = []
         for key, label, _ in columns:
             values = [
-                (time_to_seconds(getattr(row, key)), row.categorie)
+                (
+                    time_to_seconds(getattr(row, key)),
+                    (row.categorie, row.sexe if by_sex and row.sexe in ("M", "F") else None)
+                    if row.categorie
+                    else None,
+                )
                 for row in selected
                 if getattr(row, key) is not None
             ]
@@ -594,8 +626,11 @@ def race_benchmarks(db: Session, race: Race) -> dict[str, Any]:
     # surtout les hommes, souvent largement majoritaires.
     return {
         "id": race_id,
-        "segments": segments_of(rows),
-        "par_sexe": {sexe: segments_of([row for row in rows if row.sexe == sexe]) for sexe in "MF"},
+        "segments": segments_of(rows, by_sex=True),
+        "par_sexe": {
+            sexe: segments_of([row for row in rows if row.sexe == sexe], by_sex=False)
+            for sexe in "MF"
+        },
     }
 
 
@@ -607,7 +642,7 @@ def get_race_times(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any
     Mêmes classés que les repères (classés avec un temps, sans temps suspect). `segments` : les
     segments classés (natation, vélo, course à pied ; course 1, vélo, course 2 en duathlon) ;
     `transitions` : T1 et T2, saisissables pour calculer le total mais non classées. Temps en
-    secondes (null si absent) ; catégorie sans le rang chronoweb (« 12/FBE » → « FBE »)."""
+    secondes (null si absent) ; catégorie d'âge FFTRI (categorie_fftri : S3, V1, JU…)."""
     race = db.get(Race, race_id)
     if race is None:
         raise HTTPException(status_code=404, detail="Race not found")
@@ -620,7 +655,6 @@ def get_race_times(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any
     )
     columns = [("total", "Total", "total_time"), *segments, *transitions]
 
-    category = func.nullif(func.regexp_replace(Result.categorie, r"^\d+/", ""), "")
     rows = db.execute(
         select(
             Result.athlete_id,
@@ -628,7 +662,7 @@ def get_race_times(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any
             Result.equipe,
             Result.clt,
             Result.sexe,
-            category.label("categorie"),
+            Result.categorie_fftri.label("categorie"),
             *(valid_time_or_null(getattr(Result, column)).label(key) for key, _, column in columns),
         )
         .where(

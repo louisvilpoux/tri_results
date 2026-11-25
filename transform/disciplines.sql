@@ -373,3 +373,59 @@ RETURNS text AS $$
         THEN nullif(btrim(regexp_replace(nom, '\s+', ' ', 'g')), '')
     END
 $$ LANGUAGE sql IMMUTABLE;
+
+
+-- Catégorie d'âge FFTRI d'un résultat, quelle que soit la source (Q5, D2 et D10 de l'audit du
+-- 25/11/2026). Chaque source a son système : FFTRI « MS3 », « FV1 », « MSE » (sexe devant, avec
+-- parfois le rang collé par chronoweb : « 1/MJU ») ; tranches d'âge Ironman « M30-34 », « M40 » ;
+-- prolivesport « S2 », « M1 » (masters FFA), « SE », « MA », « 4044 » ; protiming « S3M », « V2F »,
+-- « M1M », « MAH » (sexe à la fin). Codes rendus, sans le sexe (il est dans la colonne sexe) :
+--   MP, PO, PU, BE, MI, CA, JU : jeunes (mini-poussins à juniors) ;
+--   S1 à S4 : seniors par tranche de 5 ans (20-24 à 35-39) ;
+--   V1 à V10 : masters (vétérans) par tranche de 5 ans (40-44 à 85-89) ; les masters FFA « M1 »
+--   (40-44) de prolivesport et protiming deviennent V1, « M0 » (35-39) S4 ;
+--   SE, VE : senior ou master sans niveau publié (« MSE », « SE », « MA », tranche de 10 ans ou
+--   ouverte comme « 18-24 », « V5+ », « 50+ », « V40 »). Le niveau n'est pas deviné.
+-- NULL pour le reste (élite, PRO, open, handisport, relais, « HOM »/« FEM », espoirs, codes
+-- inconnus, nombres seuls qui ne sont pas une tranche d'âge) : la catégorie de la source reste
+-- dans la colonne categorie.
+CREATE OR REPLACE FUNCTION categorie_fftri(source text, cat text)
+RETURNS text AS $$
+DECLARE
+    -- rang collé par chronoweb (« 1/MJU »), espaces (« M 40-44 »), casse (« MJu »)
+    c text := upper(regexp_replace(regexp_replace(coalesce(cat, ''), '^\d+/', ''), '\s', '', 'g'));
+    tranche text[];
+    age int;
+BEGIN
+    IF source = 'protiming' THEN
+        c := regexp_replace(c, '[MFH]$', '');           -- sexe à la fin : « S3M », « PUH »
+    ELSIF source <> 'prolivesport' THEN
+        c := regexp_replace(c, '^[MF](?=.)', '');       -- sexe devant : « MS3 », « F40-44 »
+    END IF;
+
+    IF c IN ('MP', 'PO', 'PU', 'BE', 'MI', 'CA', 'JU', 'SE', 'VE') OR c ~ '^S[1-4]$'
+       OR c ~ '^V([1-9]|10)$' THEN
+        RETURN c;
+    END IF;
+    IF c = 'MA' OR c ~ '^V\d+\+$' OR c ~ '^V[4-9]0$' THEN
+        RETURN 'VE';                                    -- master sans niveau
+    END IF;
+    IF source IN ('prolivesport', 'protiming') AND c ~ '^M([0-9]|10)$' THEN
+        RETURN CASE WHEN c = 'M0' THEN 'S4' ELSE 'V' || substr(c, 2) END;
+    END IF;
+
+    -- tranche d'âge : « 30-34 », « 3034 », « 30 », « 40-45 », « 18-24 », « 50+ »
+    tranche := regexp_match(c, '^(\d{2})(?:-?(\d{2}))?(\+?)$');
+    IF tranche IS NULL THEN
+        RETURN NULL;
+    END IF;
+    age := tranche[1]::int;
+    IF tranche[3] = '+' OR (tranche[2] IS NOT NULL AND tranche[2]::int - age NOT IN (4, 5)) THEN
+        RETURN CASE WHEN age >= 40 THEN 'VE' WHEN age >= 18 THEN 'SE' END;
+    END IF;
+    RETURN CASE
+        WHEN age BETWEEN 20 AND 39 THEN 'S' || ((age - 20) / 5 + 1)
+        WHEN age BETWEEN 40 AND 89 THEN 'V' || ((age - 40) / 5 + 1)
+    END;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;

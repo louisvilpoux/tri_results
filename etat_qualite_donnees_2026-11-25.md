@@ -3,7 +3,7 @@
 Audit du 25/11/2026 au commit `f064619`. La base est celle reconstruite avec
 `transform/run_sql.py` après le dernier changement de `transform/` (`294ca84`, Q1) : 868 141
 résultats. Elle n'a pas été reconstruite pendant l'audit.
-Q13, Q18, Q20, Q21 et les petits restes de Q7, Q9 et D9 corrigés le même jour (base reconstruite :
+Q5, Q13, Q18, Q20, Q21 et les petits restes de Q7, Q9 et D9 corrigés le même jour (base reconstruite :
 867 812 résultats, voir plus bas).
 Audit précédent : [etat_qualite_donnees_2026-11-22.md](etat_qualite_donnees_2026-11-22.md),
 complété jusqu'au 25/11 (mêmes identifiants Q1 à Q19). D2, D9, D10 et D11 renvoient à
@@ -54,7 +54,7 @@ fftri_t2_area 98,1 %, protiming 97,9 %, chronoweb 97,5 %. Classement dans l'ordr
 | Q2 | Épreuves sans temps ni classement | 270 épreuves, 17 583 lignes | 262 épreuves, 17 539 lignes (toutes prolivesport) | Traité (affichage « Participants ») |
 | Q3 | Total à 00:00:00 | 0 | 0 | Corrigé |
 | Q4 | Temps illisibles | 0 | 0 | Corrigé |
-| Q5 | Catégories d'âge | 3 050 valeurs | 3 086 valeurs, dont 67 protiming (« S3M », « V1M ») | **Ouvert** |
+| Q5 | Catégories d'âge | 3 050 valeurs | 3 086 valeurs, dont 67 protiming (« S3M », « V1M »). Après correction : codes FFTRI communs (`categorie_fftri`), saisons à plusieurs catégories 15,5 % → 0,9 % | **Corrigé** le 25/11 |
 | Q6 | Épreuves en double le même jour | 38 sous-classements | 38 | Corrigé |
 | Q7 | Lieu manquant ou incohérent | 0 épreuve sans lieu | 0 sans lieu ; lieux protiming au format « Ville (code postal) » ; 3 villes écrites de deux façons, Volcanik Tri mal situé ; 0 après correction | Corrigé |
 | Q8 | Club manquant | 39,7 % | 39,8 % des résultats individuels (protiming 44,1 %) | Corrigé (la source ne le donne pas) |
@@ -88,6 +88,7 @@ fftri_t2_area 98,1 %, protiming 97,9 %, chronoweb 97,5 %. Classement dans l'ordr
 | Q21 | 25/11 | Lignes des épreuves « Duo » prolivesport marquées équipe : +68 lignes d'équipe, 68 faux profils retirés. |
 | Q18 | 25/11 | Classés plus rapides que le vainqueur, puis que des mieux classés, marqués `temps_suspect` (Openlakes 2026 : 334 en L, 230 en XXL) ; épreuves classées sur un autre temps signalées (`classement_hors_ordre`, bandeau sur le classement). |
 | Q18 (reste) | 25/11 | Totaux trop longs entre deux classés marqués suspects (Carnac 2016 : 2) ; équipes de relais retirées du triathlon M de Cepoy 2026 (−5 lignes) ; Bordeaux 2026 « Entreprises » en relais (28 équipes, plus de faux athlètes). |
+| Q5, D2, D10 | 25/11 | Catégorie d'âge FFTRI commune aux sources (`categorie_fftri`) : classement, Repères, « Et moi ? » et profil ; catégorie de la source au survol. |
 | Q7, Q9, D9 | 25/11 | Petits restes : 6 lignes dans `transform/lieux_courses.csv`, « À » abîmé réparé dans les clubs, finales d'Extrememan 2020 réunies. |
 | Q13 | 25/11 | Format des bike & run tiré de leur distance (nom ou prolivesport) ; 5 épreuves adultes plus classées JEUNES ; distances bouche-trou ignorées : 84 → 45 épreuves sans format. |
 
@@ -330,7 +331,7 @@ de France de bike & run 2016 (prolivesport), le duathlon « Avenir » d'Enghien 
 Chartres, les finales d'Extrememan, « CD » d'Altriman et Val de Gâtine 2019. On ne déduit pas de
 format du temps du vainqueur : ce serait une estimation, pas une donnée.
 
-### Q5 — Catégories d'âge (D2, D10)
+### Q5 — Catégories d'âge (D2, D10) (corrigé le 25/11/2026)
 
 3 086 valeurs distinctes : chronoweb 2 223, fftri_t2_area 794, prolivesport 101, **protiming 67**.
 Protiming ajoute un quatrième système : « S1M » à « S4M », « V1M » à « V4M », « JUM », « CAM »,
@@ -340,7 +341,41 @@ Valeurs parasites : 2 241 avec un rang collé (« 1/MJU »), 414 nombres seuls (
 parenthèses. 18 230 résultats individuels sans catégorie. 15,8 % des saisons d'athlète ont
 plusieurs catégories (16,0 % le 22/11).
 
-Piste inchangée : table de correspondance vers les catégories FFTRI, protiming compris.
+Correction : **catégorie d'âge FFTRI commune aux sources**, dans une nouvelle colonne
+`results.categorie_fftri` ; `categorie` garde la catégorie publiée par la source.
+- `categorie_fftri(source, cat)` (`transform/disciplines.sql`, appelée par `results.sql`) ramène
+  les cinq systèmes aux codes FFTRI sans le sexe (il est dans `sexe`) : FFTRI « MS3 », « FV1 »,
+  « 1/MJU » (rang chronoweb retiré) ; tranches d'âge Ironman « M30-34 », « M40 », « 40-44 » ;
+  prolivesport « S2 », « M1 » (masters FFA : M1 = 40-44 → V1, M0 = 35-39 → S4), « 4044 » ;
+  protiming « S3M », « V2F », « M1M » (sexe à la fin). Codes : MP, PO, PU, BE, MI, CA, JU ; S1 à
+  S4 (20-24 à 35-39) ; V1 à V10 (40-44 à 85-89).
+- Catégories publiées sans niveau (« MSE », « MVE », « SE », « MA », tranches de 10 ans ou
+  ouvertes : « 18-24 », « V5+ », « V40 ») : **SE** (Senior) et **VE** (Master). Le niveau n'est
+  pas deviné.
+- Pas de code (NULL) pour élite, PRO, open, handisport, « HOM » / « FEM », espoirs, « MS3/S4 »,
+  codes « H40 » / « D24 » (tranches de 10 ans ?), nombres seuls qui ne sont pas une tranche
+  d'âge : la catégorie de la source reste affichée.
+
+Résultat (résultats individuels) :
+
+| Source | Catégorie précise | Senior / Master sans niveau | Non reconnue | Sans catégorie |
+|---|---:|---:|---:|---:|
+| fftri_t2_area | 70,8 % | 25,5 % | 1,6 % | 2,0 % |
+| chronoweb | 55,9 % | 35,5 % | 1,1 % | 7,5 % |
+| prolivesport | 46,3 % | 49,0 % | 4,6 % | 0 % |
+| protiming | 94,1 % | 4,3 % | 1,3 % | 0,3 % |
+
+Saisons d'athlète à plusieurs catégories : 15,5 % avec les catégories des sources, **0,9 %** avec
+les catégories précises (Senior et Master sans niveau mis à part). Les cas restants sont surtout
+des catégories voisines (V1 / V2, S4 / V1) : les épreuves Ironman comptent l'âge le jour de la
+course, la FFTRI au 31 décembre ; les autres viennent d'homonymes réunis. DUPONT Damien (D2) a
+en 2025 « MV1 » et « MS2 » : deux catégories éloignées, deux athlètes probables (homonymie).
+
+Affichage (API et front) : le filtre, la colonne et la liste des catégories du classement, les
+Repères (3ᵉ de chaque catégorie, par sexe dans « Tous » : « S3 H », « S3 F »), « Et moi ? »
+(catégorie restreinte au sexe choisi) et l'historique du profil utilisent le code FFTRI ; la
+catégorie publiée est au survol. Un ancien lien `?categorie=MS3` filtre toujours sur la catégorie
+de la source.
 
 ### Q7 — Lieux
 
@@ -408,13 +443,14 @@ Reste aussi le relais CHTRIMAN 2017 relevé le 25/11 (4 équipes, vainqueur en 0
 
 | # | Statut |
 |---|--------|
-| D2 | Catégories d'âge : non corrigé (Q5). |
+| D2 | Catégories d'âge : corrigé le 25/11 (Q5, catégorie FFTRI commune aux sources). |
 | D9 | Épreuves publiées par sexe : corrigé le 23/11. Restaient 11 paires hors épreuves jeunes (10 après la correction ci-dessous), presque toutes des classements **par division ou par catégorie**, que la règle laisse séparés à dessein : D3F / D3H (Noyon 2017, Lomme 2018, Audomarois 2017, Moines 2021 Est et Nord), « FEMMES » / « SEH » / « MAH » (Championnats de France Sprint 2024). Extrememan 2020, « Finale Hommes » / « Finales Femmes » (pluriel différent) : réunies le 25/11/2026 (`format_sans_sexe` lit « finales » comme « finale »), l'ancienne épreuve des femmes redirige vers l'épreuve réunie. |
-| D10 | Noms protiming : corrigé (32 lignes tout en majuscules sur 23 447). Catégories protiming : ouvert (Q5). |
+| D10 | Noms protiming : corrigé (32 lignes tout en majuscules sur 23 447). Catégories protiming : corrigé le 25/11 (Q5). |
 | D11 | Lieux : corrigé ; 3 villes écrites de deux façons, corrigées le 25/11 (Q7). |
 
 ---
 
 ## Ordre de travail proposé
 
-1. Q5 / D2 / D10 : table de correspondance des catégories, protiming compris.
+Tous les points ouverts de cet audit sont traités. Restent les limites notées dans chaque point
+(derniers classés aux totaux aberrants de Q18, épreuves sans distance publiée de Q13).

@@ -10,8 +10,10 @@ import {
   useMySimulation,
   type MySimulation,
 } from "@/components/results/my-simulation";
+import { CategoryCell } from "@/components/shared/category-cell";
 import { SortableHeader, nextSortOrder } from "@/components/shared/sortable-header";
 import { TotalTime } from "@/components/shared/total-time";
+import { categoryLabel, categoryShort } from "@/lib/categories";
 import { formatRank } from "@/lib/format";
 import { buildRaceResultsUrl } from "@/lib/results-query";
 import type { RaceResult, RaceResultSortBy, RaceResultsQuery } from "@/types/result";
@@ -188,7 +190,7 @@ export function ResultsTable({
 
                 <td className={`${CELL} ${DESKTOP_ONLY}`}>
                   <span className="rounded-md bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-600">
-                    {result.categorie ?? result.cat ?? "—"}
+                    <CategoryCell fftri={result.categorie_fftri} source={result.categorie} />
                   </span>
                 </td>
 
@@ -253,7 +255,7 @@ function MyRow({
       <td className={`${CELL} ${DESKTOP_ONLY}`}>
         {mine.categorie ? (
           <span className="rounded-md bg-white/10 px-2 py-1 text-xs font-semibold">
-            {mine.categorie}
+            <span title={categoryLabel(mine.categorie)}>{categoryShort(mine.categorie)}</span>
           </span>
         ) : (
           <span className="text-gray-400">—</span>

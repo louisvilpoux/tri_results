@@ -10,6 +10,7 @@ import {
   SIMULATOR_PARAM_PREFIX,
   SIMULATOR_SEXE_PARAM,
 } from "@/lib/simulator";
+import { categoryLabel, categoryShort, sortCategories } from "@/lib/categories";
 import { formatGap } from "@/lib/time";
 import type { MySimulation } from "@/components/results/my-simulation";
 import type { RaceTimes, TimedAthlete } from "@/types/race";
@@ -269,8 +270,9 @@ function SimulatorBody({
   );
   const categories = useMemo(
     () =>
-      [...new Set(data.athletes.map((athlete) => athlete.categorie).filter(Boolean))].sort() as
-        string[],
+      sortCategories(
+        [...new Set(data.athletes.map((athlete) => athlete.categorie).filter(Boolean))] as string[]
+      ),
     [data]
   );
 
@@ -342,11 +344,19 @@ function SimulatorBody({
       if (bySex) rows.push(bySex);
     }
     if (categorie) {
+      // catégorie FFTRI sans le sexe : celui choisi la restreint (S3 hommes), comme « MS3 »
       const subset = timesOf(
-        data.athletes.filter((athlete) => athlete.categorie === categorie),
+        data.athletes.filter(
+          (athlete) => athlete.categorie === categorie && (!sexe || athlete.sexe === sexe)
+        ),
         "total"
       );
-      const byCategory = placement(`Catégorie ${categorie}`, subset, total);
+      const sexLabel = sexe ? (sexe === "M" ? " (hommes)" : " (femmes)") : "";
+      const byCategory = placement(
+        `Catégorie ${categoryShort(categorie)}${sexLabel}`,
+        subset,
+        total
+      );
       if (byCategory) rows.push(byCategory);
     }
   }
@@ -407,7 +417,7 @@ function SimulatorBody({
               <option value="">—</option>
               {categories.map((value) => (
                 <option key={value} value={value}>
-                  {value}
+                  {categoryLabel(value)}
                 </option>
               ))}
             </select>
