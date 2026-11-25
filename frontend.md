@@ -252,7 +252,8 @@ Réalisés
     - Chiffres clés : courses, podiums, top 10, meilleur classement, nombre de saisons.
     - Meilleurs temps par discipline et format, avec lien vers le classement de la course. Seuls les résultats
       classés comptent : le temps d'un non-classé est souvent celui de son abandon (00:32:50 sur un M) ; un temps
-      suspect (voir ci-dessous) non plus.
+      suspect (voir ci-dessous) non plus. Ordre (25/11/2026) : celui de la progression, disciplines de la page
+      d'accueil puis formats du plus court au plus long (XS → XXL).
     - Progression (22/11/2026), entre les meilleurs temps et l'historique (`components/athletes/athlete-progression.tsx`,
       `GET /athletes/{id}/progression`) : pour une discipline et un format couru au moins deux fois (choix
       dans l'ordre des disciplines de la page d'accueil, puis du plus court au plus long format, XS → XXL, le

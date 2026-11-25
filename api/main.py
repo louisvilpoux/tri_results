@@ -1016,7 +1016,9 @@ def is_valid_time(value: str | None) -> bool:
 def get_best_times(results: list[Result]) -> list[dict[str, Any]]:
     """Meilleur temps total par discipline et format, parmi les résultats classés : le temps d'un
     non-classé est souvent celui de son abandon (00:32:50 sur un M à Bordeaux 2018). Un temps
-    suspect (probable erreur de la source) n'est pas pris non plus."""
+    suspect (probable erreur de la source) n'est pas pris non plus. Même ordre que la progression :
+    disciplines de la page d'accueil, puis formats du plus court au plus long (XS → XXL), puis
+    Jeunes et Relais."""
     best: dict[tuple[str, str], Result] = {}
     for result in results:
         if not is_valid_time(result.total_time) or not is_valid_rank(result.clt):
@@ -1036,7 +1038,13 @@ def get_best_times(results: list[Result]) -> list[dict[str, Any]]:
             "name_epreuve": result.name_epreuve,
             "date_epreuve": result.date_epreuve,
         }
-        for _, result in sorted(best.items())
+        for result in sorted(
+            best.values(),
+            key=lambda result: (
+                discipline_sort_key(result.type_epreuve),
+                format_sort_key(result.format_epreuve),
+            ),
+        )
     ]
 
 

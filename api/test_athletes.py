@@ -556,3 +556,27 @@ def test_athlete_progression_order_across_formats() -> None:
         for item in series
     ]
     assert keys == sorted(keys)
+
+
+def test_best_times_order_across_formats() -> None:
+    """Meilleurs temps du profil dans le même ordre que la progression : disciplines de la page
+    d'accueil, puis formats du plus court au plus long (XS → XXL)."""
+    athlete_id = find_athlete(
+        """
+        SELECT athlete_id
+        FROM results
+        WHERE NOT equipe AND NOT sous_classement AND clt > 0 AND clt < 99990
+          AND format_epreuve IN ('XS', 'S', 'M', 'L', 'XL', 'XXL')
+          AND total_time ~ '^\\d{2}:' AND NOT temps_suspect
+        GROUP BY athlete_id
+        HAVING COUNT(DISTINCT format_epreuve) >= 3 AND COUNT(DISTINCT type_epreuve) >= 2
+        ORDER BY athlete_id LIMIT 1
+        """
+    )
+    best_times = get_profile(athlete_id)["best_times"]
+    assert len(best_times) >= 3
+    keys = [
+        (discipline_sort_key(best["type_epreuve"]), format_sort_key(best["format_epreuve"]))
+        for best in best_times
+    ]
+    assert keys == sorted(keys)
