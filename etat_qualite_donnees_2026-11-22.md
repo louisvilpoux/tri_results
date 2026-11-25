@@ -4,7 +4,8 @@ Audit du 22/11/2026 au commit `d38c0de`, refait le même jour au commit `ea15b02
 corrections de lieux de `transform/lieux_courses.csv` (43 lignes), base reconstruite avec
 `transform/run_sql.py`.
 Complété le 24/11/2026 (Q18 et Q19) : constats faits pendant la refonte UX (voir [ux.md](ux.md),
-ligne « Toi » du classement). Q19 corrigé le même jour, base reconstruite : 868 141 résultats.
+ligne « Toi » du classement). Q19 corrigé le même jour, Q1 (prolivesport) le 25/11, base
+reconstruite : 868 141 résultats.
 Audit précédent : [etat_qualite_donnees_2026-11-20.md](etat_qualite_donnees_2026-11-20.md)
 (mêmes identifiants Q1 à Q14 ; D1 à D6 renvoient à [retour_utilisateur_2026-11-19.md](retour_utilisateur_2026-11-19.md)).
 
@@ -39,7 +40,7 @@ segments prolivesport : 100 % cohérents avec le total à 5 % près (fftri 98,1 
 
 | # | Problème | 20/11/2026 | 22/11/2026 | Statut |
 |---|----------|-----------|-----------|--------|
-| Q1 | Temps total faux | ≥ 22 épreuves | 4 épreuves recalculées, 19 temps suspects signalés ; 7 épreuves prolivesport S/XS au vainqueur sous 15 min | **Partiel** |
+| Q1 | Temps total faux | ≥ 22 épreuves | 4 épreuves recalculées, 19 temps suspects signalés ; 7 épreuves prolivesport S/XS au vainqueur sous 15 min. 25/11 : 35 épreuves prolivesport aux totaux non fiables marquées en bloc (4 481 totaux), temps négatifs vidés | **Corrigé** le 25/11 (1 relais restant) |
 | Q2 | Épreuves sans temps ni classement | 270 épreuves, 17 584 lignes | 270 épreuves, 17 583 lignes (prolivesport) | Traité (affichage « Participants ») |
 | Q3 | Total à 00:00:00 | 0 | 0 | Corrigé |
 | Q4 | Temps chronoweb illisibles | 0 | 0 ; ailleurs, 6 totaux et 286 lignes avec un segment négatifs (« -00:00:01 ») | Corrigé |
@@ -69,6 +70,7 @@ segments prolivesport : 100 % cohérents avec le total à 5 % près (fftri 98,1 
 | Q14 | `6a85da2` | La virgule (« MEUNIER, Paul », chronoweb) ne sépare plus deux profils : 2 268 profils réunis. |
 | Q1 | `f4fb7c0` | Total recalculé depuis les segments quand les totaux ne suivent pas le classement mais les segments si (Tribreizh 2022, Saint Remy sur Durolle 2005, Roybon 2021, Paris 2022). Meilleurs temps limités aux classés. |
 | Q1 | `b58c3dd` | 19 totaux classés de moins de la moitié de la médiane marqués `temps_suspect` : alerte ⚠ dans le classement, le podium et le profil, exclus des meilleurs temps. |
+| Q1 | 25/11 | Totaux prolivesport non fiables (temps de tour) marqués `temps_suspect` en bloc dans 35 épreuves ; temps négatifs vidés (`temps_ou_null` dans `results.sql`) ; bandeau « pas de temps total fiable » sur le classement (`temps_non_fiables` de `/races/{id}`). Détail plus bas. |
 | — | `0927ffa` | Épreuves sans aucun temps intermédiaire : seule la colonne du total est affichée. |
 | Q10 | `edfdfb3` | Segments prolivesport vidés quand leur somme s'écarte de plus de 5 % du total, et sur toute l'épreuve quand la moitié de ses lignes le sont. |
 | Q16 | `126f29f` | Id d'épreuve et d'athlète stables (`ids_stables`), anciens id redirigés. |
@@ -82,29 +84,80 @@ segments prolivesport : 100 % cohérents avec le total à 5 % près (fftri 98,1 
 
 ## Détail des points ouverts
 
-### Q1 — Temps totaux faux restants (priorité 1)
-Les corrections ligne par ligne (recalcul, temps suspects) ne voient pas une épreuve dont
-**tous** les totaux sont faux de la même façon, sans segments pour les recalculer. 7 épreuves
-prolivesport S ou XS ont un vainqueur sous 15 minutes (ou négatif) :
+### Q1 — Totaux prolivesport non fiables (corrigé le 25/11/2026)
 
-| Épreuve | Format | Vainqueur |
-|---------|--------|-----------|
-| Nouveau Triathlon d'Amiens 2018 | S | -00:00:01 |
-| Triathlon & Duathlon de l'Audomarois 2018 | S | 00:07:45 |
-| Triathlon Villeneuve d'Ascq 2019 | XS | 00:07:42 |
-| Triathlon Chevilly-larue 2024 | XS | 00:08:19 |
-| Triathlon Dunkerque 2019 | S | 00:09:28 |
-| L'Aventure Grandeur Nature - Lumbres 2019 | XS | 00:13:34 |
-| Triathlon de Chantilly 2019 | S | 00:14:05 |
+Les 7 épreuves prolivesport S ou XS relevées le 22/11 (vainqueur sous 15 minutes ou négatif)
+n'étaient qu'une partie du problème. Sur certains événements, **l'API prolivesport ne donne pas
+de temps total** : son champ `time` est un temps de tour ou un temps intermédiaire, et le
+classement publié suit ce temps. Exemple : CHTRIMAN Gravelines 2017, 226 km, vainqueur en
+01:10:23, égal à son 7ᵉ temps intermédiaire (l'API en donne jusqu'à 20, `timeT1` à `timeT20`,
+et aucun total : `timeSec` vaut 0), quand natation, T1, vélo, T2 et course totalisent 09:36:02.
+La somme des segments ne suit le classement qu'une fois sur deux : ni le total ni le classement
+ne sont fiables, et rien ne permet de retrouver les vrais temps de façon sûre.
 
-Ces temps entrent dans les meilleurs temps S et XS des profils. Les autres vainqueurs « rapides »
-relevés (Ardres M en 01:14 à 01:26, Pop Triathlon de Guiche L en 02:36, Ironman de Nice 2019 en
-07:16 par un professionnel) correspondent à des parcours courts ou à l'élite : un seuil fixe par
-format écarterait de vrais temps.
+Choix retenu : garder le classement de la source et marquer **tous les totaux de l'épreuve**
+`temps_suspect`. Ils sont signalés ⚠ dans le classement, exclus des Repères, de « Et moi ? » et
+des meilleurs temps, et la page affiche « La source ne publie pas de temps total fiable pour
+cette épreuve » (`temps_non_fiables` de `/races/{id}`, vrai quand tous les totaux sont suspects).
 
-Piste : seuil minimal par discipline et format, appliqué à l'épreuve entière (médiane des
-classés) plutôt qu'à la ligne : une épreuve S dont la médiane est sous 20 minutes est marquée
-`temps_suspect` en bloc.
+Règles (`transform/temps_totaux.sql`, épreuves prolivesport seulement) :
+1. la somme des 5 segments vaut au moins 3 fois le total pour la moitié des classés qui ont les
+   5 segments (au moins 3) ;
+2. sans segments utilisables, triathlon ou duathlon dont le temps médian des classés est
+   impossible pour le format (au moins 5 classés) : moins de 20 minutes en XS, 35 en S, 50 en M.
+   Les aquathlons et le bike & run, plus courts, ne sont pas concernés par ce seuil ; il écarte
+   aussi le Grand Prix Duathlon 2026 (élite, médiane de 55 minutes en « M »).
+
+Résultat : **35 épreuves, 4 481 totaux** marqués en bloc, dont les 7 du 22/11. Les 19 temps
+suspects isolés (7 épreuves) sont inchangés.
+
+| Épreuve | Classés | Vainqueur publié |
+|---------|--------:|-----------------:|
+| Bike&Run by Night - Marcq en Baroeul 2017, XS | 113 | 00:05:21 |
+| Bike&Run by Night - Marcq en Baroeul 2018, XS | 112 | 00:05:18 |
+| Chtriman - Gravelines 2017, relais (226 km) | 18 | 01:12:27 |
+| Chtriman - Gravelines 2017, relais | 6 | 01:15:58 |
+| Duathlon de Douai 2021, XS | 16 | 00:09:31 |
+| Duathlon de Noyon 2018, S | 70 | 00:07:22 |
+| Duathlon de Noyon 2019, S | 201 | 00:06:24 |
+| Duathlon de Noyon 2019, Jeunes (2 épreuves) | 225 et 191 | 00:06:52, 00:07:00 |
+| Duathlon de Noyon 2021, S | 115 | 00:11:04 |
+| Duathlon de Noyon 2021, Jeunes (3 épreuves) | 214, 234 et 164 | 00:02:49 à 00:03:33 |
+| Duathlon des 3H 2019, S | 235 | 00:12:34 |
+| Duathlon du Stade Français (Paris) 2018, S | 84 | 00:09:03 |
+| Duathlon Lomme 2018, S (2 épreuves) | 45 et 11 | 00:00:43, 00:00:54 |
+| Duathlon Lomme 2024, XS | 11 | 00:07:59 |
+| L'Aventure Grandeur Nature - Lumbres 2019, XS | 30 | 00:13:34 |
+| Nouveau Triathlon d'Amiens 2018, S | 147 | négatif, vidé |
+| Nouveau Triathlon d'Amiens 2018, M | 271 | négatif, vidé |
+| Triathlon & Duathlon de l'Audomarois 2017, duathlon S | 97 | 00:16:10 |
+| Triathlon & Duathlon de l'Audomarois 2018, triathlon S | 253 | 00:07:45 |
+| Triathlon & Duathlon de l'Audomarois 2018, duathlon S | 137 | 00:07:56 |
+| Triathlon Chevilly-larue 2024, XS | 56 | 00:08:19 |
+| Triathlon de Chantilly 2019, S (2 épreuves) | 305 et 164 | 00:14:05 |
+| Triathlon de Quiberon 2024, XS | 188 | 00:20:00 |
+| Triathlon Dunkerque 2019, S | 232 | 00:09:28 |
+| Triathlon Dunkerque 2021, S | 181 | 00:22:01 |
+| Triathlon Dunkerque 2026, duathlon XS | 19 | 00:09:55 |
+| Triathlon et Duathlon de Saint-Saulve 2019, triathlon S | 75 | 00:23:10 |
+| Triathlon et Duathlon de Saint-Saulve 2019, duathlon S | 36 | 00:28:39 |
+| Triathlon Étaples-sur-Mer 2018, relais | 22 | 00:30:10 |
+| Triathlon Villeneuve d'Ascq 2019, XS | 63 | 00:07:42 |
+
+Dans les données brutes, 45 épreuves prolivesport ont une somme des segments au moins 3 fois
+plus longue que le total. Toutes ne sont pas en base : les épreuves individuelles du CHTRIMAN
+2017, par exemple, existent aussi chez fftri_t2_area avec de vrais totaux (vainqueur du 226 km
+en 09:11:24), et `doublons_sources.sql` garde la version fftri.
+
+Restent :
+- un relais CHTRIMAN 2017 (4 équipes, vainqueur en 01:10:23) : aucune ligne n'a les 5 segments
+  et le seuil par format ne vise pas les relais ;
+- les épreuves où la somme des segments vaut 1,3 à 3 fois le total (64 dans les données brutes) :
+  le total y est plausible et ce sont les segments qui sont décalés ou cumulés ; ils sont déjà
+  vidés par `segments_prolivesport.sql` (Q10).
+
+Piste, si l'on veut retrouver de vrais temps : garder dans `sources/prolivesport.py` les 20
+temps intermédiaires de l'API, puis identifier par épreuve ceux qui sont des segments.
 
 ### Q15 — Sexe chronoweb (corrigé le 22/11/2026)
 31 820 lignes chronoweb (62 %) avaient un chiffre dans la colonne sexe. Ce n'était pas un rang :
@@ -300,19 +353,16 @@ invisibles. Le profil et le filtre affichent le sexe le plus fréquent.
 - 7 athlètes-saisons dépassent 15 courses (CHEVREUIL Mathieu : 24 en 2022, 23 en 2021) : à
   vérifier, probables homonymes réunis.
 - Temps négatifs (« -00:00:01 ») : 6 totaux (prolivesport, dont le vainqueur d'Amiens 2018 S) et
-  286 lignes avec un segment négatif (269 prolivesport, 17 fftri_t2_area). Ils sont affichés tels
-  quels ; piste : les vider dans results.sql, comme 00:00:00.
+  286 lignes avec un segment négatif (269 prolivesport, 17 fftri_t2_area). Vidés depuis le 25/11
+  dans `results.sql` (`temps_ou_null`), comme 00:00:00 : 0 temps négatif en base.
 
 ---
 
 ## Ordre de travail proposé
 
-1. **Q1** : seuil par épreuve (médiane des classés trop basse pour le format), pour les 7
-   épreuves prolivesport S/XS, et temps négatifs vidés. C'est ce qui fausse encore des meilleurs
-   temps de profil.
-2. **Q18** (ajouté le 24/11) : drapeau d'épreuve « classement publié différent de l'ordre des
+1. **Q18** (ajouté le 24/11) : drapeau d'épreuve « classement publié différent de l'ordre des
    temps », totaux aberrants trop longs marqués suspects.
-3. Q13.
-4. Q5 (catégories), mis de côté.
+2. Q13.
+3. Q5 (catégories), mis de côté.
 
-Q19 (ajouté et corrigé le 24/11) ne figure plus dans cette liste.
+Q19 (corrigé le 24/11) et Q1 (corrigé le 25/11) ne figurent plus dans cette liste.

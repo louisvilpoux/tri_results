@@ -527,3 +527,32 @@ def test_race_times_for_simulator() -> None:
 def timedelta_seconds(value: str) -> int:
     hours, minutes, seconds = (int(part) for part in value.split(":"))
     return hours * 3600 + minutes * 60 + seconds
+
+
+def test_temps_non_fiables() -> None:
+    """Une épreuve dont tous les totaux sont suspects (temps de tour prolivesport) est signalée
+    par temps_non_fiables ; une épreuve avec quelques temps suspects ne l'est pas."""
+    try:
+        with engine.connect() as connection:
+            rows = connection.execute(
+                text(
+                    """
+                    SELECT epreuve_id, bool_and(temps_suspect) AS tous
+                    FROM results
+                    WHERE total_time ~ '^[0-9]{2}:[0-9]{2}:[0-9]{2}$' AND total_time <> '00:00:00'
+                    GROUP BY epreuve_id
+                    HAVING bool_or(temps_suspect)
+                    """
+                )
+            ).all()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    toutes = next((row.epreuve_id for row in rows if row.tous), None)
+    quelques = next((row.epreuve_id for row in rows if not row.tous), None)
+    if toutes is None or quelques is None:
+        pytest.skip("Pas d'épreuve des deux cas dans la base")
+
+    assert client.get(f"/races/{toutes}").json()["temps_non_fiables"] is True
+    race = client.get(f"/races/{quelques}").json()
+    assert race["temps_suspects"] >= 1
+    assert race["temps_non_fiables"] is False

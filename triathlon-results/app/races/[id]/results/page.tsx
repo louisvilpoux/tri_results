@@ -180,8 +180,12 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
           {race.temps_suspects > 0 && (
             <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
               <TriangleAlert size={18} aria-hidden className="mt-0.5 shrink-0" />
-              Certains temps de cette épreuve semblent erronés dans la source. Ils sont signalés
-              dans le classement.
+              {race.temps_non_fiables
+                ? "La source ne publie pas de temps total fiable pour cette épreuve (temps de tour " +
+                  "ou temps intermédiaire à la place du total) : temps et classement sont donnés " +
+                  "tels quels, sans repères."
+                : "Certains temps de cette épreuve semblent erronés dans la source. Ils sont " +
+                  "signalés dans le classement."}
             </p>
           )}
 

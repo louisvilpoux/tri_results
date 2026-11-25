@@ -1,3 +1,12 @@
+-- Temps vidé quand ce n'est pas un temps :
+--   - 00:00:00, que prolivesport écrit pour les non-classés et les segments non chronométrés ;
+--   - un temps négatif (« -00:00:01 ») : 6 totaux prolivesport (dont les 3 premiers du Nouveau
+--     Triathlon d'Amiens 2018 S) et 286 segments le 22/11/2026 (Q1 de l'audit qualité).
+CREATE OR REPLACE FUNCTION temps_ou_null(temps text) RETURNS text
+LANGUAGE sql IMMUTABLE AS $$
+    SELECT CASE WHEN temps = '00:00:00' OR temps LIKE '-%' THEN NULL ELSE temps END
+$$;
+
 WITH all_data AS (
 SELECT
     rfta.clt,
@@ -27,26 +36,26 @@ SELECT
     rfta.categorie,
     rfta.indice_performance,
     rfta.indice_performance_reference,
-    -- Un temps à 00:00:00 n'est pas un temps : prolivesport l'écrit pour les non-classés et
-    -- pour les segments non chronométrés. Il est vidé (affiché « — »), comme un temps absent.
-    NULLIF(rfta.total_time, '00:00:00') AS total_time,
-    NULLIF(rfta.swim_time, '00:00:00') AS swim_time,
+    -- Un temps à 00:00:00 ou négatif n'est pas un temps (voir temps_ou_null) : il est vidé
+    -- (affiché « — »), comme un temps absent.
+    temps_ou_null(rfta.total_time) AS total_time,
+    temps_ou_null(rfta.swim_time) AS swim_time,
     rfta.rang_swim,
     rfta.rang_course_swim,
     rfta.indice_performance_swim,
-    NULLIF(rfta.t1_time, '00:00:00') AS t1_time,
+    temps_ou_null(rfta.t1_time) AS t1_time,
     rfta.rang_t1,
     rfta.rang_course_t1,
     rfta.indice_performance_t1,
-    NULLIF(rfta.bike_time, '00:00:00') AS bike_time,
+    temps_ou_null(rfta.bike_time) AS bike_time,
     rfta.rang_bike,
     rfta.rang_course_bike,
     rfta.indice_performance_bike,
-    NULLIF(rfta.t2_time, '00:00:00') AS t2_time,
+    temps_ou_null(rfta.t2_time) AS t2_time,
     rfta.rang_t2,
     rfta.rang_course_t2,
     rfta.indice_performance_t2,
-    NULLIF(rfta.run_time, '00:00:00') AS run_time,
+    temps_ou_null(rfta.run_time) AS run_time,
     rfta.rang_run,
     rfta.rang_course_run,
     rfta.indice_performance_run,
@@ -56,11 +65,11 @@ SELECT
     -- doublon de la source (Ironman de Nice 2023, publié deux fois : catégories FFTRI et
     -- Ironman) ; deux temps différents sont deux homonymes, séparés ensuite par homonymes.sql.
     row_number() OVER (
-        PARTITION BY r.id, a.unified_id, NULLIF(rfta.total_time, '00:00:00')
+        PARTITION BY r.id, a.unified_id, temps_ou_null(rfta.total_time)
         ORDER BY rfta.clt NULLS LAST, rfta.id
     ) AS rn,
     -- une ligne sans temps à côté d'une ligne avec temps est un doublon incomplet
-    bool_or(NULLIF(rfta.total_time, '00:00:00') IS NOT NULL)
+    bool_or(temps_ou_null(rfta.total_time) IS NOT NULL)
         OVER (PARTITION BY r.id, a.unified_id) AS athlete_a_un_temps
 FROM raw_data AS rfta
 JOIN races AS r ON r.name_epreuve = rfta.name_epreuve

@@ -14,6 +14,8 @@ export interface Race {
   avec_segments: boolean;
   /** Nombre de temps signalés comme probablement faux dans la source. */
   temps_suspects: number;
+  /** Tous les temps totaux sont suspects : la source ne publie pas de temps total fiable. */
+  temps_non_fiables: boolean;
 }
 
 // Types alignés sur GET /races/{id}/event : la course (nom + année) et ses formats.

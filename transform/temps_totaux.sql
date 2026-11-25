@@ -103,3 +103,65 @@ FROM temps_suspects t
 WHERE x.id = t.id;
 
 DROP TABLE classes, temps_suspects;
+
+
+-- Temps de tour prolivesport (Q1 de l'audit qualité, 25/11/2026) : sur certains événements,
+-- l'API prolivesport ne donne pas de temps total. Son champ « time » est alors un temps de tour
+-- (CHTRIMAN Gravelines 2017, 226 km : vainqueur en 01:10:23, égal à son 7e temps intermédiaire,
+-- quand natation, T1, vélo, T2 et course totalisent 09:36:02), et le classement publié suit ce
+-- temps de tour. Ni le total ni le classement ne sont fiables, et la somme des segments ne suit
+-- le classement qu'une fois sur deux : tous les totaux de l'épreuve sont marqués temps_suspect
+-- (exclus des Repères, de « Et moi ? » et des meilleurs temps), le classement de la source est
+-- gardé. Deux règles, sur les seules épreuves prolivesport :
+--   1. la somme des 5 segments vaut au moins 3 fois le total pour la moitié des classés qui ont
+--      les 5 segments (au moins 3 : relais du CHTRIMAN 2017, 4 équipes, vainqueur en 01:10:23
+--      sur 226 km) ;
+--   2. sans segments utilisables, triathlon ou duathlon dont le temps médian des classés est
+--      impossible pour le format (au moins 5 classés) : moins de 20 minutes en XS, 35 en S, 50
+--      en M (Triathlon Dunkerque 2019 S : vainqueur en 00:09:28, aucun segment publié).
+-- Exécuté avant segments_prolivesport.sql, qui vide ensuite les segments incohérents.
+CREATE TEMPORARY TABLE classes_prolivesport AS
+SELECT
+    r.id,
+    r.epreuve_id,
+    r.type_epreuve,
+    r.format_epreuve,
+    extract(epoch FROM r.total_time::interval) AS total,
+    CASE
+        WHEN r.swim_time ~ '^\d{2}:\d{2}:\d{2}$' AND r.t1_time ~ '^\d{2}:\d{2}:\d{2}$'
+             AND r.bike_time ~ '^\d{2}:\d{2}:\d{2}$' AND r.t2_time ~ '^\d{2}:\d{2}:\d{2}$'
+             AND r.run_time ~ '^\d{2}:\d{2}:\d{2}$'
+        THEN extract(epoch FROM r.swim_time::interval + r.t1_time::interval
+                     + r.bike_time::interval + r.t2_time::interval + r.run_time::interval)
+    END AS somme_segments
+FROM results r
+WHERE r.source = 'prolivesport'
+  AND r.total_time ~ '^\d{2}:\d{2}:\d{2}$' AND r.total_time <> '00:00:00'
+  AND r.clt > 0 AND r.clt < 99990;
+
+CREATE TEMPORARY TABLE epreuves_temps_de_tour AS
+SELECT epreuve_id
+FROM classes_prolivesport
+WHERE somme_segments IS NOT NULL
+GROUP BY epreuve_id
+HAVING COUNT(*) >= 3
+   AND percentile_cont(0.5) WITHIN GROUP (ORDER BY somme_segments / total) >= 3
+UNION
+SELECT epreuve_id
+FROM classes_prolivesport
+WHERE type_epreuve IN ('triathlon', 'duathlon', 'cross triathlon', 'cross duathlon')
+GROUP BY epreuve_id, format_epreuve
+HAVING COUNT(*) >= 5
+   AND percentile_cont(0.5) WITHIN GROUP (ORDER BY total) < CASE format_epreuve
+           WHEN 'XS' THEN 20 * 60
+           WHEN 'S' THEN 35 * 60
+           WHEN 'M' THEN 50 * 60
+       END;
+
+UPDATE results x
+SET temps_suspect = true
+FROM epreuves_temps_de_tour e
+WHERE x.epreuve_id = e.epreuve_id
+  AND x.total_time IS NOT NULL;
+
+DROP TABLE classes_prolivesport, epreuves_temps_de_tour;

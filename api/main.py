@@ -204,19 +204,33 @@ def get_race(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
     race = db.query(Race).filter(Race.id == race_id).first()
     if not race:
         raise HTTPException(status_code=404, detail="Race not found")
+    # nombre de temps signalés comme probablement faux (bandeau sur la page de l'épreuve)
+    temps_suspects = (
+        db.scalar(
+            select(func.count(Result.id)).where(
+                Result.epreuve_id == race.id, Result.temps_suspect.is_(True)
+            )
+        )
+        or 0
+    )
+    temps_totaux = (
+        db.scalar(
+            select(func.count(Result.id)).where(
+                Result.epreuve_id == race.id, valid_time_or_null(Result.total_time).isnot(None)
+            )
+        )
+        or 0
+    )
     return {
         column.name: getattr(race, column.name) for column in Race.__table__.columns
     } | {
         "lieu_epreuve": clean_lieu(race.lieu_epreuve),
         "sans_temps": race.id in races_without_time(db, [race.id]),
         "avec_segments": race_has_splits(db, race.id),
-        # nombre de temps signalés comme probablement faux (bandeau sur la page de l'épreuve)
-        "temps_suspects": db.scalar(
-            select(func.count(Result.id)).where(
-                Result.epreuve_id == race.id, Result.temps_suspect.is_(True)
-            )
-        )
-        or 0,
+        "temps_suspects": temps_suspects,
+        # Tous les temps totaux sont suspects : la source ne publie pas de temps total fiable
+        # (temps de tour prolivesport, voir transform/temps_totaux.sql).
+        "temps_non_fiables": temps_suspects > 0 and temps_suspects == temps_totaux,
     }
 
 RaceResultSortBy = Literal[
