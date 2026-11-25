@@ -3,7 +3,8 @@
 La liste des événements vient de l'API WordPress du site (`/wp-json/wp/v2/tz_event`), filtrée sur
 les sports retenus. Pour chaque événement, on lit la page des résultats
 (`<fiche>?publication=results`), qui contient au choix :
-- un widget RACE RESULT (`RRPublish(..., <id>, ...)`) : une ligne, résultats sur my.raceresult.com ;
+- un widget RACE RESULT (`RRPublish(..., <id>, "<onglet>")`) : une ligne, résultats sur
+  my.raceresult.com ;
 - un ou plusieurs PDF (`<section class="result-document">`, titre de l'épreuve en <h3>) : une
   ligne par PDF ;
 - « Cette publication n'est pas encore disponible. » : événement ignoré.
@@ -95,12 +96,15 @@ def liens_resultats(publication: Tag) -> list[dict]:
     """Liens de résultats de la section « Résultats » : widget RACE RESULT et/ou PDF."""
     liens = []
     for source in publication.select("textarea.rr-source"):
-        match = re.search(r"RRPublish\([^,]+,\s*(\d+)", source.get_text())
+        # new RRPublish(<div>, 422721, "live") : id de l'événement et onglet publié (« live » ou
+        # « results »), utilisés par timingzone.py pour lire les classements.
+        match = re.search(r"RRPublish\([^,]+,\s*(\d+)\s*,\s*[\"']([^\"']+)[\"']", source.get_text())
         if match:
             liens.append({
                 "type_resultat": "raceresult",
                 "nom_resultat": None,
                 "raceresult_id": int(match.group(1)),
+                "raceresult_onglet": match.group(2),
                 "url_resultat": f"https://my.raceresult.com/{match.group(1)}/results",
             })
     pdfs: dict[str, str | None] = {}  # url -> nom de l'épreuve, dans l'ordre de la page
@@ -115,6 +119,7 @@ def liens_resultats(publication: Tag) -> list[dict]:
             "type_resultat": "pdf",
             "nom_resultat": nom,
             "raceresult_id": None,
+            "raceresult_onglet": None,
             "url_resultat": url,
         })
     return liens

@@ -98,6 +98,31 @@ nom_de_la_source :
        de ses équipiers (« Equipier 1 », « Athlete 2 »…), « NOM1 & NOM2 ». 15 athlètes anonymisés par la
        source restent sans nom.
 
+- timingzone (chronométreur de la Côte d'Azur et du Var) : pas encore d'étape organize, de chargement ni
+  de transformation. Dépendances : requests, beautifulsoup4, pandas, pdfplumber.
+    1. timingzone_links.py : événements de l'API WordPress du site (`/wp-json/wp/v2/tz_event`), sports
+       Triathlon / Duathlon / Aquathlon (268) et Swimrun (273), puis la page `?publication=results` de
+       chacun → url/urls.csv, une ligne par lien de résultats : widget RACE RESULT (`raceresult_id`,
+       `raceresult_onglet` « live » ou « results ») ou PDF (`nom_resultat` lu dans les trois mises en page
+       du site). 92 événements le 25/11/2026, 97 liens (55 RACE RESULT, 42 PDF), 23 sans résultats publiés.
+    2. timingzone.py : un CSV par épreuve dans `raw/`, colonnes sous leur nom publié plus « Groupe »,
+       name_epreuve, format_epreuve, date_epreuve (JJ/MM/AAAA), lieu_epreuve, url_epreuve, year_epreuve,
+       type_evenement.
+       - RACE RESULT (`{slug}_rr{id}_{épreuve}.csv`) : `my.raceresult.com/{id}/{onglet}/config` donne les
+         épreuves et les listes publiées ; pour chaque épreuve, la liste « Scratch » / « Classement » (hors
+         inscrits, live, points intermédiaires, challenges, classements par équipe) est lue en entier
+         (`/list?r=all`), avec « Dossard ». Les épreuves jeunes ou annexes sans classement publié n'ont pas de
+         CSV. RACE RESULT renvoie souvent des 404 passagers (une même adresse répond 404 puis 200) : cinq
+         essais espacés, et un événement déjà téléchargé n'est plus interrogé ; relancer le script reprend
+         les événements restés « introuvables ». L'id 426027 est lié à deux fiches (Natureman 2026 et
+         Triathlon de St Raphaël 2026) : il n'est lu que pour la fiche qui porte son nom (Natureman).
+       - PDF (`{slug}_{fichier}.csv`), lus par timingzone_pdf.py : position de chaque mot (pdfplumber), rangé
+         sous son en-tête de colonne (texte : colonne commencée à sa gauche ; temps et leur rang « (12) » :
+         colonne au centre le plus proche) ; équipiers d'un relais dans « Equipiers ». Classements par équipe,
+         de cyclisme et de course à pied ignorés (Lucky Luc 2023, Cap d'Ail 2021).
+       Le 25/11/2026 : 285 CSV, 37 082 lignes (33 860 RACE RESULT, 3 222 PDF), 67 événements, 2020 à 2026.
+       Duathlon de Grasse 2024 : classements publiés mais vides sur RACE RESULT.
+
 # Chargement de la donnée source dans la base de données
 Dossier : `load`
 1. create_table_to_pg : on vient créer pour chaque source de données la table raw_ dans laquelle la donnée sera écrite. On créé un schéma propre avec le bon nom de colonne et les timestamp nécessaires. Pour ce faire, on prend un fichier d'exemple pour chaque source de données : le premier CSV non vide (les fichiers sans résultat peuvent avoir un autre en-tête).
