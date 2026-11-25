@@ -33,7 +33,8 @@
 --   - lettre seule en dernier mot, s'il reste un autre mot (« S M » → « s », « XS F » → « xs ») ;
 --     une lettre seule n'est pas retirée (« M » est un format) ;
 --   - lettre collée à la fin d'un code publié en majuscules sans espace (« D3H » → « d3 »,
---     « BEF » → « be », « SW » → « s », « OPENF » → « open », « PTS2-5-F » → « pts2-5 »).
+--     « BEF » → « be », « SW » → « s », « OPENF » → « open », « PTS2-5-F » → « pts2-5 ») ;
+--   - « finales » au singulier (Extrememan 2020 : « Finale Hommes » / « Finales Femmes »).
 CREATE OR REPLACE FUNCTION format_sans_sexe(libelle text)
 RETURNS text AS $$
 DECLARE
@@ -42,6 +43,7 @@ BEGIN
     t := regexp_replace(
         t, '\m(hommes?|femmes?|masculine?s?|feminine?s?|men|women|dames?|messieurs)\M', ' ', 'g'
     );
+    t := regexp_replace(t, '\mfinales\M', 'finale', 'g');
     t := btrim(regexp_replace(t, '\s+', ' ', 'g'), ' -');
     IF t ~ '\s[hfmw]$' THEN
         t := btrim(regexp_replace(t, '\s[hfmw]$', ''), ' -');

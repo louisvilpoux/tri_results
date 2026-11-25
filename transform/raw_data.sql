@@ -266,6 +266,8 @@ WHERE nom ~ '[ÃÂÅâ]' OR club ~ '[ÃÂÅâ]';
 -- Clubs : on ne garde que de vrais noms de club.
 --   - « ` » est remplacé par une apostrophe (« TRIATHLON CLUB D`HAZEBROUCK », 5 694 lignes) ;
 --     espaces insécables et espaces en trop retirés ;
+--   - « À » abîmé par la source réécrit (« COURIR Ã FUVEAU », « COURIR ‡ FUVEAU », 3 lignes
+--     fftri le 25/11/2026) ;
 --   - les valeurs qui disent seulement « pas de club » sont vidées : « NON LICENCIE » et ses
 --     variantes, « NL », « NONE », « N/A », « AUCUN », « SANS CLUB », « 0 », « - », « ? », « XXX »…
 --     (1 519 lignes le 20/11/2026) ;
@@ -275,9 +277,12 @@ WHERE nom ~ '[ÃÂÅâ]' OR club ~ '[ÃÂÅâ]';
 CREATE OR REPLACE FUNCTION nettoie_club(club text)
 RETURNS text AS $$
 DECLARE
-    propre text := btrim(
-        regexp_replace(replace(replace(club, '`', ''''), chr(160), ' '), '\s+', ' ', 'g')
-    );
+    -- « À » abîmé par la source : « Ã » seul entre deux espaces (le second octet de « À » perdu)
+    -- ou « ‡ » (« COURIR Ã FUVEAU », « COURIR ‡ FUVEAU » → « COURIR À FUVEAU »)
+    propre text := btrim(regexp_replace(
+        replace(replace(replace(replace(club, '`', ''''), chr(160), ' '), ' Ã ', ' À '), '‡', 'À'),
+        '\s+', ' ', 'g'
+    ));
     cle text := upper(unaccent(propre));
 BEGIN
     IF propre IS NULL OR propre = '' THEN

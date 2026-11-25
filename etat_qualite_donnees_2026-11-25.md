@@ -3,7 +3,8 @@
 Audit du 25/11/2026 au commit `f064619`. La base est celle reconstruite avec
 `transform/run_sql.py` après le dernier changement de `transform/` (`294ca84`, Q1) : 868 141
 résultats. Elle n'a pas été reconstruite pendant l'audit.
-Q20 et Q21 corrigés le même jour (base reconstruite : 867 812 résultats, voir plus bas).
+Q20, Q21 et les petits restes de Q7, Q9 et D9 corrigés le même jour (base reconstruite : 867 812
+résultats, voir plus bas).
 Audit précédent : [etat_qualite_donnees_2026-11-22.md](etat_qualite_donnees_2026-11-22.md),
 complété jusqu'au 25/11 (mêmes identifiants Q1 à Q19). D2, D9, D10 et D11 renvoient à
 [retour_utilisateur_2026-11-23_2.md](retour_utilisateur_2026-11-23_2.md).
@@ -55,9 +56,9 @@ fftri_t2_area 98,1 %, protiming 97,9 %, chronoweb 97,5 %. Classement dans l'ordr
 | Q4 | Temps illisibles | 0 | 0 | Corrigé |
 | Q5 | Catégories d'âge | 3 050 valeurs | 3 086 valeurs, dont 67 protiming (« S3M », « V1M ») | **Ouvert** |
 | Q6 | Épreuves en double le même jour | 38 sous-classements | 38 | Corrigé |
-| Q7 | Lieu manquant ou incohérent | 0 épreuve sans lieu | 0 sans lieu ; lieux protiming au format « Ville (code postal) » ; 3 villes écrites de deux façons | Corrigé |
+| Q7 | Lieu manquant ou incohérent | 0 épreuve sans lieu | 0 sans lieu ; lieux protiming au format « Ville (code postal) » ; 3 villes écrites de deux façons, Volcanik Tri mal situé ; 0 après correction | Corrigé |
 | Q8 | Club manquant | 39,7 % | 39,8 % des résultats individuels (protiming 44,1 %) | Corrigé (la source ne le donne pas) |
-| Q9 | Noms mal encodés | 0 | 5 lignes (Ironman de Nice 2019, Sardines Titus 2015) | Corrigé, résidu de la source |
+| Q9 | Noms mal encodés | 0 | 5 lignes (Ironman de Nice 2019, Sardines Titus 2015) ; club réparé, 3 noms irrécupérables | Corrigé, résidu de la source |
 | Q10 | Segments prolivesport décalés | 0 ligne incohérente | 0 | Corrigé |
 | Q11 | Noms de course | 0 cas | 0 cas | Corrigé |
 | Q12 | Athlètes avec résultats des deux sexes | 668 | 689 | Atténué |
@@ -85,6 +86,7 @@ fftri_t2_area 98,1 %, protiming 97,9 %, chronoweb 97,5 %. Classement dans l'ordr
 | Q1 | `294ca84` | Totaux prolivesport non fiables marqués suspects en bloc (35 épreuves, 4 481 totaux) ; temps négatifs vidés. |
 | Q20 | 25/11 | Épreuves « SWIMBIKE » (natation + vélo) exclues de la base : −2 épreuves, −329 résultats, −81 athlètes. |
 | Q21 | 25/11 | Lignes des épreuves « Duo » prolivesport marquées équipe : +68 lignes d'équipe, 68 faux profils retirés. |
+| Q7, Q9, D9 | 25/11 | Petits restes : 6 lignes dans `transform/lieux_courses.csv`, « À » abîmé réparé dans les clubs, finales d'Extrememan 2020 réunies. |
 
 ---
 
@@ -238,14 +240,24 @@ Restent :
 - à vérifier : Volcanik Tri (2016-2019) est situé à « Saint-Pierre (97500) », code de
   Saint-Pierre-et-Miquelon, quand les autres courses de Saint-Pierre sont à La Réunion (97410).
 
-Piste : trois lignes dans `transform/lieux_courses.csv`.
+Corrigé le 25/11/2026 dans `transform/lieux_courses.csv` (6 lignes ajoutées, 3 modifiées) :
+« La Baule-Escoublac (44500) », « Lissac-sur-Couze (19600) », « Saint-Georges-d'Oléron (17190) »,
+« Saint-Pierre (97410) » et « Saint-Leu (97424) » partout. Volcanik Tri : fftri le situe à
+« Saint-Pierre (97500) », mais la course (devenue Ocean Lava Réunion) se court dans le lagon de
+Saint-Pierre de La Réunion ; elle est remise à « Saint-Pierre (97410) ». Restent, voulues, les
+villes distinctes (Port-Louis) et une même ville sous plusieurs codes postaux (Paris, Nice, Tours,
+Les Sables-d'Olonne, Saint-Leu 97424 / 97436).
 
 ### Q9 — Noms mal encodés
 
 14 lignes contiennent « Ã », dont 9 sont justes (« JOÃO », « ROMÃO », « DA APRESENTAÇÃO »).
-5 sont des noms abîmés par la source, sans correction automatique sûre : « JHOAÃIBOEL THOMAS »,
-« LSElaÃibO GUERRIERE », « JeOrÃsiOld Jensen Christian » (Ironman de Nice 2019) et le club
-« COURIR Ã FUVEAU TRIATHL... » (Sardines Titus Triathlon 2015, 2 lignes).
+5 sont des noms abîmés par la source :
+- le club « COURIR Ã FUVEAU TRIATHL... » (Sardines Titus Triathlon 2015, 2 lignes) et « COURIR ‡
+  FUVEAU TRIA » (1 ligne) : « À » abîmé, réparé le 25/11/2026 dans `nettoie_club`
+  (`transform/raw_data.sql`) → « COURIR À FUVEAU… » ;
+- 3 noms de l'Ironman de Nice 2019, « JHOAÃIBOEL THOMAS », « LSElaÃibO GUERRIERE »,
+  « JeOrÃsiOld Jensen Christian » : lettres mélangées dans la source, le vrai nom ne peut pas être
+  retrouvé de façon sûre. Laissés tels quels.
 
 ### Q12 — Athlètes avec résultats des deux sexes
 
@@ -281,9 +293,9 @@ Reste aussi le relais CHTRIMAN 2017 relevé le 25/11 (4 équipes, vainqueur en 0
 | # | Statut |
 |---|--------|
 | D2 | Catégories d'âge : non corrigé (Q5). |
-| D9 | Épreuves publiées par sexe : corrigé le 23/11. Restent 11 paires hors épreuves jeunes, presque toutes des classements **par division ou par catégorie**, que la règle laisse séparés à dessein : D3F / D3H (Noyon 2017, Lomme 2018, Audomarois 2017, Moines 2021 Est et Nord), « FEMMES » / « SEH » / « MAH » (Championnats de France Sprint 2024). Un seul cas à revoir : Extrememan 2020, « Finale Hommes » / « Finales Femmes » (pluriel différent). |
+| D9 | Épreuves publiées par sexe : corrigé le 23/11. Restaient 11 paires hors épreuves jeunes (10 après la correction ci-dessous), presque toutes des classements **par division ou par catégorie**, que la règle laisse séparés à dessein : D3F / D3H (Noyon 2017, Lomme 2018, Audomarois 2017, Moines 2021 Est et Nord), « FEMMES » / « SEH » / « MAH » (Championnats de France Sprint 2024). Extrememan 2020, « Finale Hommes » / « Finales Femmes » (pluriel différent) : réunies le 25/11/2026 (`format_sans_sexe` lit « finales » comme « finale »), l'ancienne épreuve des femmes redirige vers l'épreuve réunie. |
 | D10 | Noms protiming : corrigé (32 lignes tout en majuscules sur 23 447). Catégories protiming : ouvert (Q5). |
-| D11 | Lieux : corrigé ; 3 villes écrites de deux façons (Q7). |
+| D11 | Lieux : corrigé ; 3 villes écrites de deux façons, corrigées le 25/11 (Q7). |
 
 ---
 
@@ -292,6 +304,5 @@ Reste aussi le relais CHTRIMAN 2017 relevé le 25/11 (4 équipes, vainqueur en 0
 1. **Q18** : classés plus rapides que le vainqueur marqués suspects (Openlakes 2026 : 83 temps qui
    faussent les Repères), puis drapeau d'épreuve « classement publié différent de l'ordre des
    temps ».
-2. Q7 (3 lignes de `lieux_courses.csv`, Volcanik Tri à vérifier) et Extrememan 2020 (D9).
-3. Q13 : format des bike & run décrits par leur distance.
-4. Q5 / D2 / D10 : table de correspondance des catégories, protiming compris.
+2. Q13 : format des bike & run décrits par leur distance.
+3. Q5 / D2 / D10 : table de correspondance des catégories, protiming compris.

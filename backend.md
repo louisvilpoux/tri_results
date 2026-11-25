@@ -157,7 +157,8 @@ Dossier : `transform`
       Les noms et clubs mal encodés (« ThÃ©o » pour « Théo ») sont corrigés par `corrige_encodage` : texte réécrit
       en Windows-1252 (à défaut Latin-1) puis relu en UTF-8, seulement si le résultat est valide (« JOÃO »,
       « CHÂTEAU » restent intacts).
-      Les clubs sont nettoyés par `nettoie_club` : « ` » remplacé par une apostrophe, valeurs « pas de club »
+      Les clubs sont nettoyés par `nettoie_club` : « ` » remplacé par une apostrophe, « À » abîmé par la source
+      réécrit (« COURIR Ã FUVEAU », « COURIR ‡ FUVEAU »), valeurs « pas de club »
       (« NON LICENCIE », « NL », « NONE », « 0 », « - »…) et licences individuelles (« INDIVIDUEL », « LICENCE
       INDIV. »…) vidées : ce ne sont pas des clubs.
       Les temps chronoweb sont ramenés au format hh:mm:ss (`chronoweb_temps`) : fractions de seconde tronquées
@@ -177,7 +178,8 @@ Dossier : `transform`
       comptaient que les hommes, et la première femme n'apparaissait pas. Conditions : même source, nom de
       course, date, discipline et format ; noms publiés identiques une fois le sexe retiré (`format_sans_sexe`) ;
       chaque épreuve à au moins 90 % d'un seul sexe et les deux sexes présents. Des divisions ou catégories
-      différentes (D1H / D2H, BEF / CAF, PTS2 / PTS4) restent séparées. Nom de l'épreuve réunie : les noms
+      différentes (D1H / D2H, BEF / CAF, PTS2 / PTS4) restent séparées. « Finales » compte pour « Finale »
+      (Extrememan 2020 : « Finale Hommes » / « Finales Femmes », réunies le 25/11/2026). Nom de l'épreuve réunie : les noms
       publiés (« S Feminin / S Masculin ») ; le nom publié de chaque ligne est gardé dans `raw_data.format_source`
       (clé de l'id stable : l'épreuve réunie garde le plus petit id, l'autre redirige). Le classement publié
       par sexe passe dans `rang_sexe` ; `clt` devient le classement de l'épreuve réunie par temps total, parmi
@@ -269,6 +271,10 @@ Dossier : `transform`
       `transform/lieux_a_verifier.csv` (non versionné), au même format, avec les courses dont une édition n'a pas de
       lieu ou dont les éditions ont des lieux différents, le lieu le plus fréquent pré-rempli et les lieux vus ;
       corriger, copier les lignes dans `transform/lieux_courses.csv`, reconstruire la base.
+      Ce script ne voit pas une même ville écrite de deux façons dans deux courses différentes : le 25/11/2026,
+      des lignes ont ramené « La Baule Escoublac (44055) », « Lissac sur Couze » et « Saint Georges d'Oléron »,
+      « Saint Pierre » et « Saint Leu » à une seule écriture, et le Volcanik Tri (« Saint-Pierre (97500) » chez
+      fftri, code de Saint-Pierre-et-Miquelon) à Saint-Pierre de La Réunion (97410).
 4. génération des index :
     - pg_index.sql : création des index pour améliorer les performances des requêtes sur les tables.
 
