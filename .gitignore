@@ -3,6 +3,7 @@ sources/chronoweb
 sources/fftri_t2_area
 sources/prolivesport
 sources/protiming
+sources/timingzone
 .ipynb_checkpoints
 chrono
 api/__pycache__
