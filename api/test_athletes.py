@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 
-from main import app, engine, search_words
+from main import app, discipline_sort_key, engine, format_sort_key, search_words
 from test_race_results import is_ranked, is_valid_time
 
 client = TestClient(app)
@@ -493,8 +493,13 @@ def test_athlete_progression() -> None:
     )
     progression = client.get(f"/athletes/{athlete_id}/progression").json()
     assert progression["series"]
-    sizes = [len(series["courses"]) for series in progression["series"]]
-    assert sizes == sorted(sizes, reverse=True) and min(sizes) >= 2
+    assert min(len(series["courses"]) for series in progression["series"]) >= 2
+    # même ordre sur tous les profils : disciplines de la page d'accueil, puis XS → XXL
+    keys = [
+        (discipline_sort_key(series["type_epreuve"]), format_sort_key(series["format_epreuve"]))
+        for series in progression["series"]
+    ]
+    assert keys == sorted(keys)
 
     for series in progression["series"]:
         assert series["format_epreuve"] not in ("JEUNES", "RELAIS")
@@ -522,3 +527,32 @@ def test_athlete_progression() -> None:
 def timedelta_seconds(value: str) -> int:
     hours, minutes, seconds = (int(part) for part in value.split(":"))
     return hours * 3600 + minutes * 60 + seconds
+
+
+def test_athlete_progression_order_across_formats() -> None:
+    """Un athlète qui a couru plusieurs formats et disciplines les voit dans l'ordre des
+    disciplines de la page d'accueil, puis du plus court au plus long format (XS → XXL), quel que
+    soit le nombre de courses de chaque format."""
+    athlete_id = find_athlete(
+        """
+        SELECT athlete_id FROM (
+            SELECT athlete_id, type_epreuve, format_epreuve
+            FROM results
+            WHERE NOT equipe AND NOT sous_classement AND clt > 0 AND clt < 99990
+              AND format_epreuve IN ('XS', 'S', 'M', 'L', 'XL', 'XXL')
+              AND total_time ~ '^\\d{2}:' AND NOT temps_suspect
+            GROUP BY athlete_id, type_epreuve, format_epreuve
+            HAVING COUNT(*) >= 2
+        ) s
+        GROUP BY athlete_id
+        HAVING COUNT(*) >= 3 AND COUNT(DISTINCT type_epreuve) >= 2
+        ORDER BY athlete_id LIMIT 1
+        """
+    )
+    series = client.get(f"/athletes/{athlete_id}/progression").json()["series"]
+    assert len(series) >= 3
+    keys = [
+        (discipline_sort_key(item["type_epreuve"]), format_sort_key(item["format_epreuve"]))
+        for item in series
+    ]
+    assert keys == sorted(keys)

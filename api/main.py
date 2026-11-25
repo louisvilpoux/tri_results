@@ -1226,9 +1226,13 @@ def get_athlete_progression(athlete_id: int, db: Session = Depends(get_db)) -> d
         item["segments"] = [{"key": key, "label": label} for key, label in item["segments"].items()]
         result.append(item)
 
-    # format le plus couru d'abord (affiché par défaut)
+    # même ordre sur tous les profils : disciplines de la page d'accueil, puis formats du plus
+    # court au plus long (XS, S, M, L, XL, XXL) ; le front affiche d'abord le plus couru
     result.sort(
-        key=lambda item: (-len(item["courses"]), item["type_epreuve"], item["format_epreuve"])
+        key=lambda item: (
+            discipline_sort_key(item["type_epreuve"]),
+            format_sort_key(item["format_epreuve"]),
+        )
     )
     return {"id": athlete_id, "series": result}
 

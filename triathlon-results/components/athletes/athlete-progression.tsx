@@ -26,6 +26,10 @@ function seriesKey(series: ProgressionSeries): string {
   return `${series.type_epreuve}|${series.format_epreuve}`;
 }
 
+function mostRun(series: ProgressionSeries[]): ProgressionSeries {
+  return series.reduce((best, item) => (item.courses.length > best.courses.length ? item : best));
+}
+
 function seriesLabel(series: ProgressionSeries): string {
   return `${capitalize(series.type_epreuve)} ${series.format_epreuve}`;
 }
@@ -45,7 +49,9 @@ function raceName(race: ProgressionRace): string {
  * course, au fil des saisons ; puis comparaison des éditions d'une même course.
  */
 export function AthleteProgressionBlock({ progression }: { progression: AthleteProgression }) {
-  const [selectedKey, setSelectedKey] = useState(seriesKey(progression.series[0]));
+  // Les formats arrivent dans l'ordre des disciplines puis des distances (XS → XXL) ; le plus
+  // couru est affiché par défaut (le premier dans cet ordre en cas d'égalité).
+  const [selectedKey, setSelectedKey] = useState(() => seriesKey(mostRun(progression.series)));
   // course choisie sur un graphique, montrée sur tous (U9)
   const [selectedRace, setSelectedRace] = useState<number | null>(null);
   const series =

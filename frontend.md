@@ -254,8 +254,9 @@ Réalisés
       classés comptent : le temps d'un non-classé est souvent celui de son abandon (00:32:50 sur un M) ; un temps
       suspect (voir ci-dessous) non plus.
     - Progression (22/11/2026), entre les meilleurs temps et l'historique (`components/athletes/athlete-progression.tsx`,
-      `GET /athletes/{id}/progression`) : pour une discipline et un format couru au moins deux fois (le plus couru
-      d'abord), un point par course classée, de la plus ancienne à la plus récente (saisons sous l'axe, nom, date
+      `GET /athletes/{id}/progression`) : pour une discipline et un format couru au moins deux fois (choix
+      dans l'ordre des disciplines de la page d'accueil, puis du plus court au plus long format, XS → XXL, le
+      même sur tous les profils ; le plus couru est affiché par défaut, depuis le 25/11/2026), un point par course classée, de la plus ancienne à la plus récente (saisons sous l'axe, nom, date
       et valeur de la course active écrits au-dessus du graphique, dernière course mise en valeur) : petits graphiques des temps de natation, vélo et
       course à pied (course 1, vélo, course 2 en duathlon) et du classement en pourcentage (place / classés,
       « Top 6 % »). Une phrase rappelle que plus bas = plus rapide ou mieux classé, et que les temps d'une course à
