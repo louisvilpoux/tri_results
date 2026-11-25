@@ -225,7 +225,11 @@ Dossier : `transform`
       (« SWIM BIKE » du Réunion Tri Tour et « CAP 10 KM » du Funny Day exclus). Équipes :
       `timingzone_team_name` (results.sql), règles de protiming plus les noms « A & B » formés par
       timingzone_organize.py (Top de Porquerolles, triathlon en duo). Catégories « S2M », « M2M » lues
-      comme protiming (`categorie_fftri`), « SEN » → SE et « MAS » → VE.
+      comme protiming (`categorie_fftri`), « SEN » → SE, « MAS » et « VET » → VE, « JUN » → JU, « CAD » → CA ;
+      reste de rang laissé par la lecture des PDF retiré quand il reste un code entier (« _PU », « 6_ MI »,
+      « 1_) 30-34 » : Triathlon des Jeunes du Cap d'Antibes 2024), pas quand une lettre manque (« P_ »).
+      Catégories non reconnues : 3,1 % → 2,2 % des lignes individuelles timingzone (Q25, 25/11/2026), surtout
+      « HOM » / « FEM » (sexe seul) et « PRO », sans code voulu.
       protiming : date JJ/MM/AAAA mise en AAAA-MM-JJ, année retirée du nom de l'événement
       (`prolivesport_event_name`), numéro de département retiré du lieu (« Bordeaux (33) » → « Bordeaux », pour
       que lieux.sql reconnaisse la ville des autres sources de la course), athlètes anonymisés (nom vide)

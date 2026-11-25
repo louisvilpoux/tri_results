@@ -62,7 +62,7 @@ sur 3 335. Les équipes sont exclues du calcul, d'où un total plus faible que l
 | Q22 | **Club écrit à la place du nom de l'athlète** | — | Triathlon de Hyères 2026 (timingzone) : 98 lignes individuelles, 37 faux athlètes (« TRI ACADEMY SQUAD » : 14 résultats). 0 après correction | **Corrigé** le 25/11 |
 | Q24 | **Duos de swimrun comptés comme des athlètes** | — | chronoweb : 392 lignes (10 épreuves, 2 courses) ; prolivesport : Douai 2023 « Swimrun S (Duo) », 11 lignes. 0 après correction | **Corrigé** le 25/11 |
 | Q23 | Classement par catégorie présenté comme un classement général | — | 3 épreuves jeunes timingzone à plusieurs « 1ᵉʳ » (Hyères 2026 Poussins / Pupilles : 4 ; Funny Day 2024 : 2 et 2) | Nouveau |
-| Q25 | Catégories timingzone non reconnues | — | 3,1 % des lignes (« JUN », « VET », « CAD » : 174 lignes, faciles à lire) | Nouveau |
+| Q25 | Catégories timingzone non reconnues | — | 3,1 % des lignes (« JUN », « VET », « CAD » : 174 lignes, faciles à lire). 2,2 % après correction (« HOM », « FEM », « PRO », voulus) | **Corrigé** le 25/11 |
 | Q13 | Épreuves sans format | 45 | 75 (+30 timingzone ; « MIDDLE DISTANCE », « MINI POUS / POUS » lisibles) | Rouvert |
 | Q7 | Lieu manquant ou incohérent | 0 | 1 ville écrite de deux façons (Saint-Laurent-du-Var), Monaco sans code postal | Rouvert (mineur) |
 | Q16 | Identifiants instables | non revérifié | 2 redirections en chaîne (806 → 804 → 1691, 807 → 805 → 1692) | Mineur |
@@ -204,6 +204,22 @@ Master sans niveau ; 3,1 % ne sont pas reconnues, 1,4 % sont vides. Parmi les no
 
 « JUN », « VET » et « CAD » (174 lignes) s'ajoutent sans risque à `categorie_fftri`.
 
+Corrigé le 25/11/2026 dans `categorie_fftri` (`transform/disciplines.sql`) :
+- timingzone : « JUN » → JU (101 lignes), « CAD » → CA (21), « VET » → VE (52, vétéran sans
+  niveau) ;
+- reste de rang abîmé par la lecture du PDF du Triathlon des Jeunes du Cap d'Antibes 2024 retiré
+  quand il reste un code entier : « _PU » → PU, « 6_ MI » → MI, « 1_) PO » → PO, « 1_) 30-34 » →
+  S3, « _ V1M » → V1 (une quarantaine de lignes). Quand une lettre manque (« P_ », « B_ »,
+  « _M_ », « __E », 17 lignes), la catégorie n'est pas devinée (« P_ » peut être PO ou PU).
+
+Résultat (base reconstruite, lignes individuelles timingzone) : catégorie précise 92,8 % →
+93,4 %, senior ou master sans niveau 2,7 % → 3,0 %, non reconnue 3,1 % → 2,2 %. Restent sans code,
+à dessein : « HOM » / « FEM » (426 lignes, le sexe seul), « PRO » (35), « HANDI » (1). Tests :
+`api/test_categories.py`.
+
+Effet de Q24 au passage : chronoweb passe de 1,1 % à 0,3 % de catégories non reconnues, les duos
+de swimrun (« MIXT », « MASC ») n'étant plus des lignes individuelles.
+
 ---
 
 ## Points rouverts
@@ -263,5 +279,5 @@ aplatir dans `ids_stables.sql` (une redirection doit viser l'id final).
 1. ~~**Q22** et **Q24**~~ : corrigés le 25/11/2026 (base reconstruite : 894 645 résultats,
    292 238 athlètes, 20 417 lignes d'équipe).
 2. **Q23** : classements jeunes à plusieurs 1ᵉʳ.
-3. Petites corrections : **Q25** (JUN, VET, CAD), **Q13** (deux libellés lisibles), **Q7**
+3. Petites corrections : ~~**Q25**~~ (corrigé le 25/11/2026), **Q13** (deux libellés lisibles), **Q7**
    (Saint-Laurent-du-Var, Monaco), **Q16** (aplatir les redirections en chaîne).

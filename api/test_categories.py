@@ -51,6 +51,18 @@ def categorie_fftri(source: str, cat: str | None) -> str | None:
         ("protiming", "M1M", "V1"),
         ("protiming", "MAH", "VE"),
         ("protiming", "PUH", "PU"),
+        # timingzone (Q25 de l'audit du 25/11/2026 au soir) : comme protiming, plus « JUN »,
+        # « CAD », « VET », et le reste de rang laissé par la lecture des PDF
+        ("timingzone", "S2M", "S2"),
+        ("timingzone", "SEN", "SE"),
+        ("timingzone", "JUN", "JU"),
+        ("timingzone", "CAD", "CA"),
+        ("timingzone", "VET", "VE"),
+        ("timingzone", "_PU", "PU"),
+        ("timingzone", "6_ MI", "MI"),
+        ("timingzone", "1_) PO", "PO"),
+        ("timingzone", "1_) 30-34", "S3"),
+        ("timingzone", "_ V1M", "V1"),
     ],
 )
 def test_categories_des_sources(source: str, cat: str, expected: str) -> None:
@@ -67,6 +79,11 @@ def test_categories_des_sources(source: str, cat: str, expected: str) -> None:
         ("chronoweb", "MIXT"),
         ("protiming", "HOM"),
         ("protiming", "FEM"),
+        # lettre perdue à la lecture du PDF : « P_ » peut être PO ou PU, rien n'est deviné
+        ("timingzone", "P_"),
+        ("timingzone", "_M_"),
+        ("timingzone", "4__49"),
+        ("timingzone", "PRO"),
         ("prolivesport", "R"),
         ("fftri_t2_area", None),
         ("fftri_t2_area", ""),

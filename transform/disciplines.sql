@@ -437,11 +437,25 @@ DECLARE
     tranche text[];
     age int;
 BEGIN
+    IF source = 'timingzone' THEN
+        -- reste du rang abîmé par la lecture des PDF (Triathlon des Jeunes du Cap d'Antibes 2024,
+        -- Q25 de l'audit du 25/11/2026 au soir) : « _PU », « 6_ MI », « 1_) PO », « 1_) 30-34 »,
+        -- « _ V1M ».
+        -- Retiré seulement s'il reste un code entier : « P_ » (PO ou PU ?) n'est pas deviné.
+        IF regexp_replace(c, '^\d*[_)]+', '') ~ '^([A-Z]{2}|[A-Z]\d|\d{2}-\d{2})' THEN
+            c := regexp_replace(c, '^\d*[_)]+', '');
+        END IF;
+    END IF;
     IF source IN ('protiming', 'timingzone') THEN
         c := regexp_replace(c, '[MFH]$', '');           -- sexe à la fin : « S3M », « PUH »
         IF source = 'timingzone' THEN
-            -- swimruns timingzone : « SEN » (senior), « MAS » (master)
-            c := CASE c WHEN 'SEN' THEN 'SE' WHEN 'MAS' THEN 'VE' ELSE c END;
+            -- timingzone : « SEN » (senior), « MAS » (master) des swimruns ; « JUN » (junior),
+            -- « CAD » (cadet), « VET » (vétéran, sans niveau) de Natureman, Roquebrune,
+            -- Castellar (Q25)
+            c := CASE c
+                WHEN 'SEN' THEN 'SE' WHEN 'MAS' THEN 'VE' WHEN 'VET' THEN 'VE'
+                WHEN 'JUN' THEN 'JU' WHEN 'CAD' THEN 'CA' ELSE c
+            END;
         END IF;
     ELSIF source <> 'prolivesport' THEN
         c := regexp_replace(c, '^[MF](?=.)', '');       -- sexe devant : « MS3 », « F40-44 »
