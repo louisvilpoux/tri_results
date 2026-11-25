@@ -9,6 +9,7 @@ from sqlalchemy import (
     Column,
     ForeignKey,
     Integer,
+    Interval,
     String,
     and_,
     asc,
@@ -231,6 +232,8 @@ def get_race(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
         # Tous les temps totaux sont suspects : la source ne publie pas de temps total fiable
         # (temps de tour prolivesport, voir transform/temps_totaux.sql).
         "temps_non_fiables": temps_suspects > 0 and temps_suspects == temps_totaux,
+        # Le classement publié suit un autre temps que le total (Q18) : la page le signale.
+        "classement_hors_ordre": ranking_out_of_order(db, race.id),
     }
 
 RaceResultSortBy = Literal[
@@ -307,6 +310,46 @@ def races_without_time(db: Session, race_ids: list[int]) -> set[int]:
         .distinct()
     )
     return set(race_ids) - set(with_time_or_rank)
+
+
+# Classement publié sur un autre temps que le total (Q18 de l'audit qualité du 25/11/2026) :
+# part des classés dont le total est plus court de plus de 30 secondes que celui du classé
+# précédent. Même règle que transform/temps_totaux.sql, qui n'y marque pas les classés plus
+# rapides que le vainqueur.
+OUT_OF_ORDER_GAP_SECONDS = 30
+OUT_OF_ORDER_SHARE = 0.05
+
+
+def ranking_out_of_order(db: Session, race_id: int) -> bool:
+    """Vrai si le classement publié ne suit pas l'ordre des temps totaux : plus de 5 % des
+    classés (temps valide, non suspect) ont un total plus court de plus de 30 secondes que
+    celui du classé précédent. La source classe alors sur un autre temps (départs par vagues,
+    temps officiel, pénalités : Tours N Man 2024, Bayman 2024, Ventouxman 2026). Le classement
+    de la source est gardé ; la page le signale."""
+    total = func.cast(valid_time_or_null(Result.total_time), Interval)
+    ordered = (
+        select(
+            total.label("total"),
+            func.lag(total)
+            .over(partition_by=Result.epreuve_id, order_by=(Result.clt, Result.id))
+            .label("previous"),
+        )
+        .where(
+            Result.epreuve_id == race_id,
+            valid_rank_or_null(Result.clt).isnot(None),
+            valid_time_or_null(Result.total_time).isnot(None),
+            Result.temps_suspect.is_(False),
+        )
+        .subquery()
+    )
+    gap = func.make_interval(0, 0, 0, 0, 0, 0, OUT_OF_ORDER_GAP_SECONDS)
+    row = db.execute(
+        select(
+            func.count().label("classes"),
+            func.count().filter(ordered.c.total < ordered.c.previous - gap).label("inversions"),
+        ).select_from(ordered)
+    ).one()
+    return row.classes > 0 and row.inversions > OUT_OF_ORDER_SHARE * row.classes
 
 
 SPLIT_TIME_COLUMNS = ["swim_time", "t1_time", "bike_time", "t2_time", "run_time"]

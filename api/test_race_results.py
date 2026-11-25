@@ -6,6 +6,7 @@ du contenu exact des données. Lancement : `cd api && pytest`.
 """
 
 import re
+from datetime import timedelta
 from typing import Any
 
 import pytest
@@ -556,3 +557,91 @@ def test_temps_non_fiables() -> None:
     race = client.get(f"/races/{quelques}").json()
     assert race["temps_suspects"] >= 1
     assert race["temps_non_fiables"] is False
+
+
+def query_rows(sql: str, params: dict[str, Any] | None = None) -> list[Any]:
+    try:
+        with engine.connect() as connection:
+            return connection.execute(text(sql), params or {}).all()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+
+
+def test_classes_plus_rapides_que_le_vainqueur_sont_suspects() -> None:
+    """Q18 (audit du 25/11/2026) : un classé non suspect n'a jamais un total plus court de plus
+    d'une minute que celui de l'unique 1er, sauf dans une épreuve classée sur un autre temps
+    (classement_hors_ordre)."""
+    rows = query_rows(
+        """
+        WITH classes AS (
+            SELECT epreuve_id, clt, total_time::interval AS total
+            FROM results
+            WHERE total_time ~ '^[0-9]{2}:[0-9]{2}:[0-9]{2}$' AND clt > 0 AND clt < 99990
+              AND NOT temps_suspect
+        ),
+        vainqueurs AS (
+            SELECT epreuve_id, min(total) AS total FROM classes WHERE clt = 1
+            GROUP BY epreuve_id HAVING COUNT(*) = 1
+        )
+        SELECT DISTINCT c.epreuve_id
+        FROM classes c JOIN vainqueurs v USING (epreuve_id)
+        WHERE c.total < v.total - interval '1 minute'
+        """
+    )
+    for row in rows:
+        assert client.get(f"/races/{row.epreuve_id}").json()["classement_hors_ordre"] is True
+
+
+def test_classement_hors_ordre() -> None:
+    """Une épreuve dont plus de 5 % des classés ont un total plus court que le classé précédent
+    est signalée ; une épreuve dont le classement suit les temps ne l'est pas."""
+    rows = query_rows(
+        """
+        SELECT epreuve_id,
+               avg((total < precedent - interval '30 seconds')::int) AS part
+        FROM (
+            SELECT epreuve_id, total_time::interval AS total,
+                   lag(total_time::interval) OVER (PARTITION BY epreuve_id ORDER BY clt, id)
+                       AS precedent
+            FROM results
+            WHERE total_time ~ '^[0-9]{2}:[0-9]{2}:[0-9]{2}$' AND clt > 0 AND clt < 99990
+              AND NOT temps_suspect
+        ) t
+        WHERE precedent IS NOT NULL
+        GROUP BY epreuve_id
+        HAVING COUNT(*) >= 50
+        ORDER BY part DESC
+        """
+    )
+    if not rows or rows[0].part <= 0.05:
+        pytest.skip("Pas d'épreuve classée sur un autre temps dans la base")
+    assert client.get(f"/races/{rows[0].epreuve_id}").json()["classement_hors_ordre"] is True
+    assert client.get(f"/races/{rows[-1].epreuve_id}").json()["classement_hors_ordre"] is False
+
+
+@pytest.mark.parametrize("format_epreuve", ["L", "XXL"])
+def test_classes_plus_rapides_que_des_mieux_classes_sont_suspects(format_epreuve: str) -> None:
+    """Openlakes Champagne 2026 L et XXL : un classé dont le total est plus court que celui de mieux
+    classés (arrêté avant l'arrivée, classé avec le temps de son dernier passage) est suspect,
+    donc absent des Repères et des meilleurs temps : les classés restants suivent les temps."""
+    rows = query_rows(
+        """
+        SELECT x.id, x.epreuve_id, x.clt, x.total_time::interval AS total, x.temps_suspect
+        FROM results x JOIN races r ON r.id = x.epreuve_id
+        WHERE r.name_epreuve = 'Openlakes Champagne' AND r.year_epreuve = '2026'
+          AND r.format_epreuve = :format_epreuve AND x.clt > 0 AND x.clt < 99990
+          AND x.total_time ~ '^[0-9]{2}:[0-9]{2}:[0-9]{2}$'
+        ORDER BY x.clt, x.id
+        """,
+        {"format_epreuve": format_epreuve},
+    )
+    if not rows:
+        pytest.skip(f"Openlakes Champagne 2026 {format_epreuve} absent de la base")
+    valides = [row for row in rows if not row.temps_suspect]
+    # après la rupture, aucun classé restant n'est plus court qu'un mieux classé : le classement
+    # restant suit les temps (à une minute près)
+    for index, row in enumerate(valides):
+        plus_long_avant = max((better.total for better in valides[:index]), default=row.total)
+        assert row.total >= plus_long_avant - timedelta(minutes=1), row
+    stats = client.get(f"/races/{rows[0].epreuve_id}/stats").json()["segments"][0]
+    assert stats["classes"] == len(valides)

@@ -189,6 +189,16 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
             </p>
           )}
 
+          {race.classement_hors_ordre && !race.temps_non_fiables && (
+            <p className="flex items-start gap-2 rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
+              <Info size={18} aria-hidden className="mt-0.5 shrink-0 text-gray-400" />
+              Le classement publié par la source ne suit pas l&apos;ordre des temps totaux (départs
+              par vagues, temps officiel ou pénalités) : un athlète peut être classé devant un autre
+              plus rapide. Le classement de la source est gardé ; trier par temps total donne
+              l&apos;ordre des temps.
+            </p>
+          )}
+
           <MyPlaceBanner
             query={query}
             results={items}

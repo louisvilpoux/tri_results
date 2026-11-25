@@ -3,8 +3,8 @@
 Audit du 25/11/2026 au commit `f064619`. La base est celle reconstruite avec
 `transform/run_sql.py` après le dernier changement de `transform/` (`294ca84`, Q1) : 868 141
 résultats. Elle n'a pas été reconstruite pendant l'audit.
-Q20, Q21 et les petits restes de Q7, Q9 et D9 corrigés le même jour (base reconstruite : 867 812
-résultats, voir plus bas).
+Q18, Q20, Q21 et les petits restes de Q7, Q9 et D9 corrigés le même jour (base reconstruite :
+867 812 résultats, voir plus bas).
 Audit précédent : [etat_qualite_donnees_2026-11-22.md](etat_qualite_donnees_2026-11-22.md),
 complété jusqu'au 25/11 (mêmes identifiants Q1 à Q19). D2, D9, D10 et D11 renvoient à
 [retour_utilisateur_2026-11-23_2.md](retour_utilisateur_2026-11-23_2.md).
@@ -67,7 +67,7 @@ fftri_t2_area 98,1 %, protiming 97,9 %, chronoweb 97,5 %. Classement dans l'ordr
 | Q15 | Sexe chronoweb | 0 valeur hors M/F | 0 ; protiming : 0 ligne individuelle sans sexe | Corrigé |
 | Q16 | Identifiants instables | 0 changement | non revérifié (pas de reconstruction) | Corrigé |
 | Q17 | Noms de course sans ponctuation | 2 courses corrigées | inchangé | Corrigé |
-| Q18 | Classement publié qui ne suit pas les temps | 34 épreuves (24/11) | 32 épreuves, dont 7 sur plus de 5 % des lignes ; Openlakes 2026 : 83 classés plus rapides que le vainqueur (arrêtés avant l'arrivée) | **Ouvert, priorité 1** |
+| Q18 | Classement publié qui ne suit pas les temps | 34 épreuves (24/11) | 32 épreuves, dont 7 sur plus de 5 % des lignes ; Openlakes 2026 : 83 classés plus rapides que le vainqueur (arrêtés avant l'arrivée). Après correction : 5 082 temps suspects (Openlakes 2026 L : 334, XXL : 230), 7 épreuves signalées | **Corrigé** le 25/11 (totaux trop longs restants) |
 | Q19 | Temps protiming « mm:ss:00 » | 0 après correction | 0 ; 9 totaux au-dessus de 24 h, tous fftri, plausibles | Corrigé |
 | Q20 | Épreuve natation + vélo classée triathlon L | — | Chtriman 2023 et 2024 « SWIMBIKE », 329 résultats ; 0 après correction | **Corrigé** le 25/11 |
 | Q21 | Duos comptés comme des athlètes | — | Triath'Elles Gravelines 2017, 3 épreuves « Duo », 68 lignes ; 0 après correction | **Corrigé** le 25/11 |
@@ -86,13 +86,14 @@ fftri_t2_area 98,1 %, protiming 97,9 %, chronoweb 97,5 %. Classement dans l'ordr
 | Q1 | `294ca84` | Totaux prolivesport non fiables marqués suspects en bloc (35 épreuves, 4 481 totaux) ; temps négatifs vidés. |
 | Q20 | 25/11 | Épreuves « SWIMBIKE » (natation + vélo) exclues de la base : −2 épreuves, −329 résultats, −81 athlètes. |
 | Q21 | 25/11 | Lignes des épreuves « Duo » prolivesport marquées équipe : +68 lignes d'équipe, 68 faux profils retirés. |
+| Q18 | 25/11 | Classés plus rapides que le vainqueur, puis que des mieux classés, marqués `temps_suspect` (Openlakes 2026 : 334 en L, 230 en XXL) ; épreuves classées sur un autre temps signalées (`classement_hors_ordre`, bandeau sur le classement). |
 | Q7, Q9, D9 | 25/11 | Petits restes : 6 lignes dans `transform/lieux_courses.csv`, « À » abîmé réparé dans les clubs, finales d'Extrememan 2020 réunies. |
 
 ---
 
 ## Détail des points ouverts
 
-### Q18 — Classement publié qui ne suit pas les temps (priorité 1)
+### Q18 — Classement publié qui ne suit pas les temps (corrigé le 25/11/2026)
 
 Classés (rang 1 à 99 989, hors temps suspects et sous-classements) dont le total est plus court
 de plus de 30 secondes que celui du classé précédent : **32 épreuves sur 3 601** (34 le 24/11) :
@@ -133,18 +134,77 @@ est rare : 4 autres épreuves ont un seul classé plus rapide que le vainqueur (
 Moines 2019 M, Vercorsman 2021 XL, Aquathlon de la Verrerie 2023) ou suivent un autre temps
 (Bike & Run de Marcq 2024, 14 lignes).
 
-Pistes :
-- **Classés plus rapides que le vainqueur** : un total plus court de plus d'une minute que celui
-  du 1ᵉʳ est impossible ; le marquer `temps_suspect` (83 lignes à Openlakes 2026, 3 ailleurs), sauf
-  dans les épreuves classées sur un autre temps (Bike & Run de Marcq 2024). Les classés arrêtés
-  avant l'arrivée mais plus lents que le vainqueur restent invisibles : une règle « total égal à
-  la somme des segments sans course à pied » toucherait aussi des aquathlons et des épreuves
-  jeunes dont les colonnes sont utilisées autrement (Arcachon 2016, Ardres 2026…).
-- **Classements sur un autre temps** : drapeau d'épreuve calculé dans `transform/` (plus de 5 % de
-  lignes inversées), qui garde le rang publié et prévient à l'affichage (« classement publié
-  différent de l'ordre des temps »).
-- **Totaux aberrants trop longs** (Carnac 2016, Champ Man 2025) : les marquer suspects quand ils
-  dépassent le classé suivant de plus d'une heure.
+Correction du 25/11/2026 :
+
+1. **Classés plus rapides que le vainqueur** (`transform/temps_totaux.sql`) : un total plus court
+   de plus d'une minute que celui du 1ᵉʳ est impossible ; il est marqué `temps_suspect`. Deux
+   exceptions : les épreuves classées sur un autre temps (point 2 : Bike & Run de Marcq 2024), et
+   celles qui ont **plusieurs « 1ᵉʳ »**, où l'on ne sait pas lequel est le vainqueur. La simulation
+   a révélé ce second cas : Triathlon de Cepoy 2026 M (protiming) mêle aux individuels deux
+   classements d'équipes (« MACH 2 », « Tic et tac »…, trois « 1ᵉʳ »), et l'Ironman de Nice 2023 a
+   deux « 1ᵉʳ ». Sans cette exception, 41 individuels de Cepoy et 4 de Nice auraient été marqués
+   à tort.
+
+   Résultat : **86 temps marqués** (Openlakes Champagne 2026 : 47 en L, 36 en XXL ; un dernier
+   classé à Vercorsman 2021 XL, aux Moines 2019 M et à l'Aquathlon de la Verrerie 2023). 4 586
+   temps suspects en tout. Les Repères d'Openlakes 2026 L comptent 703 classés et donnent le vrai
+   vainqueur (03:52:32) ; le message de l'alerte ⚠ cite maintenant ce cas. Les classés arrêtés
+   avant l'arrivée mais plus lents que le vainqueur restent invisibles : une règle « total égal à
+   la somme des segments sans course à pied » toucherait aussi des aquathlons et des épreuves
+   jeunes dont les colonnes sont utilisées autrement (Arcachon 2016, Ardres 2026…).
+
+   Complément (même jour) : **classés plus rapides que des mieux classés**. À Openlakes 2026 L,
+   la source classe après le dernier finisher (428ᵉ, 07:17:34) les athlètes arrêtés avant
+   l'arrivée, regroupés selon la distance parcourue, avec le temps de leur dernier passage
+   (429ᵉ en 05:49:04, natation et vélo seulement). Plus lents que le vainqueur, ils échappaient à la
+   règle précédente. Règle ajoutée : un classé dont au moins 3 mieux classés ont un total plus
+   long de plus de 5 % est suspect ; à partir de ce premier cas (rupture), tout classé suivant plus
+   court de plus d'une minute qu'un mieux classé l'est aussi. Mêmes exceptions que plus haut.
+   Le seuil de 5 % et le minimum de 3 laissent de côté les petites inversions de pénalités (Val de
+   Gray 2013 L, 1 à 2 %) et un ou deux totaux aberrants trop longs devant (Carnac 2016 M, Champ Man
+   2025 L). Résultat : seul Openlakes 2026 est touché par la rupture ; en L, les 428 finishers
+   gardent leur temps et les **334 suivants** sont signalés (absents des Repères, de « Et moi ? »
+   et des meilleurs temps du profil, alerte ⚠ dans le classement et l'historique). 5 082 temps
+   suspects en tout.
+
+   Openlakes 2026 XXL : 230 classés signalés sur 256, à juste titre. Seuls les 16 premiers ont
+   un temps de course à pied ; la suite est découpée en blocs, chacun classé par temps, selon le
+   dernier point de passage atteint. La course à pied implicite (total moins natation, transitions
+   et vélo) le montre :
+
+   | Rangs | Classés | Course à pied implicite (min / médiane / max) | Lecture |
+   |---|---|---|---|
+   | 1 à 16 | 16 | 03:07:39 / 03:33:12 / 04:12:21 (publiée) | finishers |
+   | 17 à 51 | 35 | 02:39:38 / 03:07:13 / 03:45:20 | dernier pointage avant l'arrivée |
+   | 52 à 141 | 90 | 01:51:54 / 02:23:31 / 03:12:35 | pointage précédent |
+   | 142 à 203 | 62 | 00:48:05 / 01:18:30 / 02:02:01 | début du marathon |
+   | 204 à 256 | 53 | moins de 01:33 ou pas de vélo | arrêtés plus tôt |
+
+   Le bloc 17 à 51 n'est pas fait de finishers sans temps de course à pied : ces athlètes sont plus
+   lents à vélo que les finishers (médiane 05:21:14 contre 04:52:22), mais 18 sur 35 auraient couru
+   plus vite que le meilleur marathon de l'épreuve (03:07:38, celui du vainqueur), et 33 sur 35 plus
+   vite que le marathon médian des finishers. Leur total est le temps d'un pointage avant l'arrivée,
+   pas un temps final : l'alerte est correcte et la règle reste telle quelle.
+
+2. **Classements sur un autre temps** : GET /races/{id} renvoie `classement_hors_ordre`, vrai quand
+   plus de 5 % des classés (temps valide, non suspect) ont un total plus court de plus de
+   30 secondes que celui du classé précédent ; c'est le cas des 7 épreuves du tableau ci-dessus.
+   Calculé à la demande (une requête), sans colonne en base. La page de classement affiche alors :
+   « Le classement publié par la source ne suit pas l'ordre des temps totaux (départs par vagues,
+   temps officiel ou pénalités) : un athlète peut être classé devant un autre plus rapide. Le
+   classement de la source est gardé ; trier par temps total donne l'ordre des temps. »
+
+Tests : `api/test_race_results.py` (aucun classé non suspect plus rapide que l'unique 1ᵉʳ hors
+épreuves signalées ; à Openlakes 2026 L, les classés restants suivent les temps et les Repères
+les comptent tous ; drapeau vrai sur l'épreuve la plus désordonnée, faux sur la plus ordonnée).
+
+Restent :
+- **Totaux aberrants trop longs** (Carnac 2016 : 228ᵉ et 252ᵉ en 11:23:46 ; Champ Man 2025 : 231ᵉ
+  en 6:50:59 entre deux 5:53) : `temps_suspect` et son message visent les temps trop courts ; les
+  marquer demanderait un second message.
+- **Plusieurs classements dans une épreuve** : Cepoy 2026 M mêle équipes et individuels dans le
+  même classement (les équipes n'y sont pas repérées comme telles) ; à séparer, ou à marquer
+  équipe, dans `transform/`.
 
 ### Q20 — Épreuve natation + vélo classée triathlon L (corrigé le 25/11/2026)
 
@@ -301,8 +361,6 @@ Reste aussi le relais CHTRIMAN 2017 relevé le 25/11 (4 équipes, vainqueur en 0
 
 ## Ordre de travail proposé
 
-1. **Q18** : classés plus rapides que le vainqueur marqués suspects (Openlakes 2026 : 83 temps qui
-   faussent les Repères), puis drapeau d'épreuve « classement publié différent de l'ordre des
-   temps ».
+1. Q18 (reste) : équipes mêlées aux individuels à Cepoy 2026 M, totaux aberrants trop longs.
 2. Q13 : format des bike & run décrits par leur distance.
 3. Q5 / D2 / D10 : table de correspondance des catégories, protiming compris.

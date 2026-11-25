@@ -12,7 +12,9 @@
       pagination que /events, appliqués aux épreuves. `edition` : l'édition la plus récente qui répond aux
       filtres (id, année, période) ; `editions` : toutes les éditions de la course (id, année), de la plus
       récente à la plus ancienne ; `types` : toutes ses disciplines. Triées par la date de `edition`.
-    - /races/{id} : voir les informations d'une épreuve (un format) donnée ; `lieu_epreuve` nettoyé des "nan".
+    - /races/{id} : voir les informations d'une épreuve (un format) donnée ; `lieu_epreuve` nettoyé des "nan" ;
+      `classement_hors_ordre` vrai quand le classement publié suit un autre temps que le total (plus de 5 % des
+      classés plus rapides que le précédent de plus de 30 s).
     - /races/{id}/event : la course à laquelle appartient l'épreuve (même nom + même année) : période, lieu,
       participants distincts, formats (participants, vainqueur, première femme) et autres éditions (une épreuve par année).
       Les épreuves sans résultat sont ignorées.

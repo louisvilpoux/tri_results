@@ -165,3 +165,136 @@ WHERE x.epreuve_id = e.epreuve_id
   AND x.total_time IS NOT NULL;
 
 DROP TABLE classes_prolivesport, epreuves_temps_de_tour;
+
+
+-- Classés plus rapides que le vainqueur (Q18 de l'audit qualité, 25/11/2026) : certaines
+-- épreuves classent des athlètes arrêtés avant l'arrivée, à la fin de la liste, avec le temps
+-- de leur dernier passage (Openlakes Champagne 2026 L : vainqueur en 03:52:32, 47 classés entre
+-- 02:52:57 et 03:51, natation et vélo seulement ; en XXL, 36 classés plus rapides que le
+-- vainqueur). Seuls les plus courts étaient pris par la règle de la moitié du temps médian ; les
+-- autres faussaient les Repères, « Et moi ? » et les meilleurs temps. Un total plus court de plus
+-- d'une minute que celui du 1er est impossible : il est marqué temps_suspect.
+-- Sauf dans les épreuves classées sur un autre temps que le total publié (départs par vagues,
+-- temps officiel, pénalités : Bike & Run de l'Hippodrome de Marcq 2024), repérées comme dans
+-- l'API (classement_hors_ordre de GET /races/{id}) : plus de 5 % des classés ont un total plus
+-- court de plus de 30 secondes que celui du classé précédent. Là, le classement suit un autre
+-- temps et un total plus court que celui du 1er n'est pas une erreur.
+-- Sauf aussi dans les épreuves à plusieurs « 1er » (plusieurs classements publiés dans une même
+-- épreuve : relais et individuels de Cepoy 2026 M chez protiming, Ironman de Nice 2023) : on ne
+-- sait pas quel 1er est le vainqueur.
+CREATE TEMPORARY TABLE classes_valides AS
+SELECT
+    id,
+    epreuve_id,
+    clt,
+    total_time::interval AS total,
+    lag(total_time::interval) OVER (PARTITION BY epreuve_id ORDER BY clt, id) AS total_precedent
+FROM results
+WHERE total_time ~ '^\d{2}:\d{2}:\d{2}$' AND clt > 0 AND clt < 99990
+  AND NOT temps_suspect;
+
+CREATE TEMPORARY TABLE epreuves_hors_ordre AS
+SELECT epreuve_id
+FROM classes_valides
+GROUP BY epreuve_id
+HAVING COUNT(*) FILTER (WHERE total < total_precedent - interval '30 seconds') > 0.05 * COUNT(*);
+
+CREATE TEMPORARY TABLE vainqueurs AS
+SELECT epreuve_id, min(total) AS total
+FROM classes_valides
+WHERE clt = 1
+GROUP BY epreuve_id
+HAVING COUNT(*) = 1;
+
+CREATE TEMPORARY TABLE plus_rapides_que_le_vainqueur AS
+SELECT c.id
+FROM classes_valides c
+JOIN vainqueurs v ON v.epreuve_id = c.epreuve_id
+WHERE c.total < v.total - interval '1 minute'
+  AND c.epreuve_id NOT IN (SELECT epreuve_id FROM epreuves_hors_ordre);
+
+UPDATE results x
+SET temps_suspect = true
+FROM plus_rapides_que_le_vainqueur p
+WHERE x.id = p.id;
+
+DROP TABLE classes_valides, epreuves_hors_ordre, vainqueurs, plus_rapides_que_le_vainqueur;
+
+
+-- Classés plus rapides que des mieux classés (Q18, 25/11/2026) : la règle précédente ne prend
+-- que les totaux plus courts que celui du vainqueur. À Openlakes Champagne 2026 L, les athlètes
+-- arrêtés avant l'arrivée sont classés après tous les finishers, avec le temps de leur dernier
+-- passage, regroupés selon la distance parcourue : le dernier finisher est 428ᵉ en 07:17:34, le
+-- 429ᵉ en 05:49:04 (natation, T1 et vélo, pas de course à pied). Leur total est plus court que
+-- celui de nombreux mieux classés : il est marqué temps_suspect.
+-- Règle : au moins 3 mieux classés ont un total plus long de plus de 5 % (un athlète en 05:00
+-- derrière trois classés en 05:16 ou plus). Les petites inversions de fin de classement
+-- (pénalités : Triathlon du Val de Gray 2013 L, 1 à 2 %) et un ou deux totaux aberrants trop
+-- longs devant (Carnac 2016 M, Champ Man 2025 L) ne sont pas concernés.
+-- Rupture : une fois ce premier cas trouvé, le classement ne suit plus les temps (la source
+-- classe ensuite les non-finishers, puis les classés à qui il manque un temps intermédiaire). Tout
+-- classé placé après lui dont le total est plus court de plus d'une minute que celui d'un mieux
+-- classé est aussi marqué (Openlakes 2026 L : 666ᵉ à 669ᵉ, de 06:46:34 à 07:15:18, derrière le
+-- dernier finisher en 07:17:34). Mêmes exceptions que la
+-- règle du vainqueur : épreuves classées sur un autre temps, épreuves à plusieurs « 1er ».
+CREATE TEMPORARY TABLE classes_valides AS
+SELECT
+    id,
+    epreuve_id,
+    clt,
+    total_time::interval AS total,
+    lag(total_time::interval) OVER (PARTITION BY epreuve_id ORDER BY clt, id) AS total_precedent,
+    max(total_time::interval) OVER (
+        PARTITION BY epreuve_id ORDER BY clt, id
+        ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+    ) AS plus_long_des_mieux_classes
+FROM results
+WHERE total_time ~ '^\d{2}:\d{2}:\d{2}$' AND clt > 0 AND clt < 99990
+  AND NOT temps_suspect;
+
+CREATE TEMPORARY TABLE epreuves_exclues AS
+SELECT epreuve_id
+FROM classes_valides
+GROUP BY epreuve_id
+HAVING COUNT(*) FILTER (WHERE total < total_precedent - interval '30 seconds') > 0.05 * COUNT(*)
+    OR COUNT(*) FILTER (WHERE clt = 1) > 1;
+
+-- candidats : plus courts de plus de 5 % que le plus long des mieux classés
+CREATE TEMPORARY TABLE candidats AS
+SELECT id, epreuve_id, clt, total
+FROM classes_valides
+WHERE total < 0.95 * plus_long_des_mieux_classes
+  AND epreuve_id NOT IN (SELECT epreuve_id FROM epreuves_exclues);
+
+CREATE TEMPORARY TABLE plus_rapides_que_des_mieux_classes AS
+SELECT c.id
+FROM candidats c
+WHERE (
+    SELECT COUNT(*)
+    FROM classes_valides m
+    WHERE m.epreuve_id = c.epreuve_id
+      AND (m.clt, m.id) < (c.clt, c.id)
+      AND m.total * 0.95 > c.total
+) >= 3;
+
+-- rupture : premier cas de chaque épreuve, puis les classés suivants plus courts qu'un mieux classé
+CREATE TEMPORARY TABLE ruptures AS
+SELECT c.epreuve_id, min(c.clt) AS clt
+FROM plus_rapides_que_des_mieux_classes p
+JOIN classes_valides c ON c.id = p.id
+GROUP BY c.epreuve_id;
+
+INSERT INTO plus_rapides_que_des_mieux_classes (id)
+SELECT c.id
+FROM classes_valides c
+JOIN ruptures r ON r.epreuve_id = c.epreuve_id
+WHERE c.clt > r.clt
+  AND c.total < c.plus_long_des_mieux_classes - interval '1 minute';
+
+UPDATE results x
+SET temps_suspect = true
+FROM plus_rapides_que_des_mieux_classes p
+WHERE x.id = p.id;
+
+DROP TABLE classes_valides, epreuves_exclues, candidats, plus_rapides_que_des_mieux_classes,
+    ruptures;

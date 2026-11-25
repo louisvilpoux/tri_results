@@ -474,6 +474,21 @@ Points connus (données) :
   format. La page de classement affiche un bandeau quand l'épreuve en contient : « Certains temps de cette épreuve
   semblent erronés dans la source. Ils sont signalés dans le classement. » Le classement reste celui de la source ;
   ces temps ne comptent pas dans les meilleurs temps du profil.
+  Depuis le 25/11/2026 (Q18), un classé plus rapide que le vainqueur est aussi signalé (Openlakes Champagne 2026 :
+  athlètes arrêtés avant l'arrivée, classés avec le temps de leur dernier passage) ; le message de l'alerte dit
+  « moins de la moitié du temps médian, ou plus court que celui du vainqueur » et « un athlète arrêté avant
+  l'arrivée ». Les Repères d'Openlakes 2026 L donnent maintenant le vrai vainqueur (03:52:32 au lieu de 02:52:57).
+  Puis tout classé dont le total est plus court que celui de mieux classés (règle et rupture dans
+  `transform/temps_totaux.sql`) : à Openlakes 2026 L, seuls les 428 finishers comptent dans les Repères ; les 334
+  classés suivants ont l'alerte ⚠ dans le classement et l'historique, et leur temps n'est pas dans les meilleurs
+  temps de leur profil. Message : « plus court que celui d'athlètes mieux classés ».
+- Classement publié sur un autre temps (Q18, 25/11/2026) : sur 7 épreuves (Tours N Man 2024, Bayman 2024,
+  Ventouxman 2026, Chamouille 2022…), plus de 5 % des classés ont un total plus court que le classé précédent :
+  départs par vagues, temps officiel ou pénalités. Le classement de la source est gardé ; la page de classement
+  affiche, quand `classement_hors_ordre` de GET /races/{id} est vrai, « Le classement publié par la source ne suit
+  pas l'ordre des temps totaux (…) : un athlète peut être classé devant un autre plus rapide. Le classement de la
+  source est gardé ; trier par temps total donne l'ordre des temps. » La ligne « Toi » propose déjà de trier par
+  temps total sur ces pages (`components/results/my-place.tsx`).
 - Segments prolivesport décalés (20/11/2026) : dans une centaine d'épreuves prolivesport, les colonnes de temps
   intermédiaires étaient décalées (Moines 2021 S, vainqueur : T1 00:31:45 pour un total de 00:58:36 ; Sartrouville
   2026 Jeunes : vélo 00:00:32). Ces segments sont vidés (`transform/segments_prolivesport.sql`) : « — » pour une

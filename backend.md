@@ -249,6 +249,21 @@ Dossier : `transform`
       (`temps_suspect` sur chaque résultat et chaque leader du podium, `temps_suspects` sur GET /races/{id} ; `avec_segments` y indique si l'épreuve a au moins
       un temps intermédiaire, sinon seule la colonne du total est affichée) et les
       exclut des meilleurs temps du profil. Exécuté après homonymes.sql.
+      Classés plus rapides que le vainqueur (Q18, 25/11/2026) : un total plus court de plus d'une minute que celui
+      de l'unique 1er est aussi marqué `temps_suspect`. Certaines épreuves classent des athlètes arrêtés avant
+      l'arrivée avec le temps de leur dernier passage (Openlakes Champagne 2026 : 47 classés en L, 36 en XXL, plus
+      3 derniers classés isolés ailleurs ; 86 résultats). Pas dans les épreuves classées sur un autre temps (plus
+      de 5 % des classés au total plus court de plus de 30 s que le précédent : Bike & Run de Marcq 2024), ni dans
+      celles qui ont plusieurs « 1er » (plusieurs classements dans une épreuve : Cepoy 2026 M, Ironman de Nice
+      2023). L'API repère les épreuves classées sur un autre temps avec la même règle : `classement_hors_ordre` de
+      GET /races/{id} (7 épreuves le 25/11/2026 : Tours N Man 2024, Bayman 2024, Ventouxman 2026…).
+      Classés plus rapides que des mieux classés (Q18, 25/11/2026) : un classé dont au moins 3 mieux classés ont un
+      total plus long de plus de 5 % est marqué `temps_suspect` ; à partir de ce premier cas (rupture : la source
+      classe ensuite les non-finishers), tout classé suivant plus court de plus d'une minute qu'un mieux classé l'est
+      aussi. Mêmes exceptions. Openlakes Champagne 2026 L : les 428 premiers (finishers) gardent leur temps, les
+      334 suivants sont signalés ; XXL : 230 (tous arrêtés avant l'arrivée : leur course à pied
+      implicite est plus courte que celle des finishers, souvent que celle du vainqueur). Les petites inversions (Val de Gray 2013 L, 1 à 2 %) et un ou deux
+      totaux aberrants trop longs (Carnac 2016, Champ Man 2025) ne déclenchent pas la règle.
     - segments_prolivesport.sql : vide les 5 segments d'une ligne prolivesport dont la somme s'écarte de plus de 5 %
       du total (colonnes décalées : T1 de 00:31:45 pour un total de 00:58:36, Moines 2021 S), et ceux de toutes les
       lignes d'une épreuve dont au moins la moitié des lignes vérifiables sont incohérentes (le décalage touche

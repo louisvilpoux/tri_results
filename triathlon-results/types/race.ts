@@ -16,6 +16,8 @@ export interface Race {
   temps_suspects: number;
   /** Tous les temps totaux sont suspects : la source ne publie pas de temps total fiable. */
   temps_non_fiables: boolean;
+  /** Le classement publié suit un autre temps que le total (plus de 5 % des classés hors ordre). */
+  classement_hors_ordre: boolean;
 }
 
 // Types alignés sur GET /races/{id}/event : la course (nom + année) et ses formats.

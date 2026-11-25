@@ -1,8 +1,9 @@
 import { TriangleAlert } from "lucide-react";
 
 export const SUSPECT_TIME_MESSAGE =
-  "Temps anormalement court pour cette épreuve (moins de la moitié du temps médian) : " +
-  "probablement une erreur de la source.";
+  "Temps anormalement court pour cette épreuve (moins de la moitié du temps médian, ou plus " +
+  "court que celui d'athlètes mieux classés) : probablement une erreur de la source ou un " +
+  "athlète arrêté avant l'arrivée.";
 
 /**
  * Temps total d'un résultat. Un temps suspect (voir transform/temps_totaux.sql) est grisé et
