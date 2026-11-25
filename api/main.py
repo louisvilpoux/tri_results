@@ -16,6 +16,7 @@ from sqlalchemy import (
     case,
     create_engine,
     desc,
+    exists,
     func,
     or_,
 )
@@ -81,6 +82,9 @@ class Result(Base):
     # probable erreur de la source, signalée et exclue des meilleurs temps (voir
     # transform/temps_totaux.sql).
     temps_suspect = Column(Boolean)
+    # Temps intermédiaires publiés par la source mais incohérents, retirés dans transform/
+    # (segments_prolivesport.sql : somme différente du total, transitions plus longues que le vélo)
+    segments_retires = Column(Boolean)
     type_epreuve = Column(String(50))
     format_epreuve = Column(String(50))
     year_epreuve = Column(String(50))
@@ -237,6 +241,16 @@ def get_race(race_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
         "temps_non_fiables": temps_suspects > 0 and temps_suspects == temps_totaux,
         # Le classement publié suit un autre temps que le total (Q18) : la page le signale.
         "classement_hors_ordre": ranking_out_of_order(db, race.id),
+        # Temps intermédiaires de la source retirés car incohérents (D12) : la page le signale.
+        "segments_retires": bool(
+            db.scalar(
+                select(
+                    exists().where(
+                        Result.epreuve_id == race.id, Result.segments_retires.is_(True)
+                    )
+                )
+            )
+        ),
     }
 
 RaceResultSortBy = Literal[
@@ -1118,6 +1132,7 @@ def get_athlete_progression(athlete_id: int, db: Session = Depends(get_db)) -> d
             Result.type_epreuve,
             Result.format_epreuve,
             Result.clt,
+            Result.segments_retires,
             valid_time_or_null(Result.total_time).label("total"),
             *(
                 valid_time_or_null(getattr(Result, column)).label(column)
@@ -1206,6 +1221,8 @@ def get_athlete_progression(athlete_id: int, db: Session = Depends(get_db)) -> d
                     for key, _, column in segment_columns
                     if getattr(row, column) is not None
                 },
+                # temps intermédiaires de la source retirés car incohérents (D12)
+                "segments_retires": bool(row.segments_retires),
                 "clt": row.clt,
                 "classes": stats.classes,
                 "pourcentage": round(row.clt / stats.classes, 4) if stats.classes else None,

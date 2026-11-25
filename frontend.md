@@ -496,6 +496,13 @@ Points connus (données) :
   « Temps anormal pour cette épreuve (moins de la moitié du temps médian, plus court que celui d'athlètes mieux
   classés, ou bien plus long que celui des classés voisins) : probablement une erreur de la source ou un athlète
   arrêté avant l'arrivée. »
+- Temps intermédiaires retirés (D12, 25/11/2026) : quand la source publie des segments incohérents (colonnes
+  décalées : transitions plus longues que le vélo au Duathlon Lomme 2025 et 2026 S, ou segments qui ne donnent pas
+  le total), `transform/` les retire et GET /races/{id} renvoie `segments_retires`. La page de classement affiche
+  alors un bandeau : « Les temps intermédiaires publiés par la source pour cette épreuve sont incohérents […]. Ils
+  ne sont pas affichés ; le temps total et le classement sont gardés. » Dans la progression du profil, une note
+  nomme les courses sans point sur les graphiques de segments pour cette raison (elles restent dans le
+  classement en pourcentage).
 - Classement publié sur un autre temps (Q18, 25/11/2026) : sur 7 épreuves (Tours N Man 2024, Bayman 2024,
   Ventouxman 2026, Chamouille 2022…), plus de 5 % des classés ont un total plus court que le classé précédent :
   départs par vagues, temps officiel ou pénalités. Le classement de la source est gardé ; la page de classement

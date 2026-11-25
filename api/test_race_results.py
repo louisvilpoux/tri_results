@@ -737,3 +737,51 @@ def test_categorie_filter_keeps_old_source_links(race_id: int) -> None:
     data = get_results(race_id, categorie=item["categorie"])
     assert data["pagination"]["total"] > 0
     assert all(row["categorie"] == item["categorie"] for row in data["items"])
+
+
+def test_segments_with_transitions_longer_than_bike_are_removed() -> None:
+    """D12 (retour utilisateur du 25/11/2026) : au Duathlon Lomme 2026 S, les colonnes de la
+    source rangent des tours de vélo en T1 et T2 (« T1 00:14:19 », « Vélo 00:09:28 »). Aucune
+    épreuve ne garde des segments où la majorité des classés a une transition plus longue que le
+    vélo ; ses segments sont retirés, signalés par GET /races/{id}, et la progression le dit."""
+    rows = query_rows(
+        """
+        SELECT epreuve_id
+        FROM results
+        WHERE clt > 0 AND clt < 99990 AND NOT temps_suspect
+          AND bike_time ~ '^[0-9]{2}:[0-9]{2}:[0-9]{2}$' AND bike_time <> '00:00:00'
+          AND t1_time ~ '^[0-9]{2}:[0-9]{2}:[0-9]{2}$'
+          AND t2_time ~ '^[0-9]{2}:[0-9]{2}:[0-9]{2}$'
+        GROUP BY epreuve_id
+        HAVING AVG((greatest(t1_time::interval, t2_time::interval)
+                    > bike_time::interval)::int) > 0.5
+        """
+    )
+    assert rows == []
+
+    lomme = query_rows(
+        """
+        SELECT r.id, x.athlete_id, x.bike_time, x.t1_time, x.segments_retires
+        FROM results x JOIN races r ON r.id = x.epreuve_id
+        WHERE r.name_epreuve = 'Duathlon Lomme' AND r.year_epreuve = '2026'
+          AND r.format_epreuve = 'S' AND x.clt = 1
+        """
+    )
+    if not lomme:
+        pytest.skip("Duathlon Lomme 2026 S absent de la base")
+    winner = lomme[0]
+    assert winner.bike_time is None and winner.t1_time is None and winner.segments_retires
+    race = client.get(f"/races/{winner.id}").json()
+    assert race["segments_retires"] is True
+    assert race["avec_segments"] is False
+
+    progression = client.get(f"/athletes/{winner.athlete_id}/progression").json()
+    courses = [course for series in progression["series"] for course in series["courses"]]
+    for course in courses:
+        if course["race_id"] == winner.id:
+            assert course["segments_retires"] is True
+            assert course["segments"] == {}
+
+
+def test_race_without_removed_segments_is_not_flagged(race_id: int) -> None:
+    assert client.get(f"/races/{race_id}").json()["segments_retires"] is False

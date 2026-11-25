@@ -18,6 +18,9 @@ export interface Race {
   temps_non_fiables: boolean;
   /** Le classement publié suit un autre temps que le total (plus de 5 % des classés hors ordre). */
   classement_hors_ordre: boolean;
+  /** Temps intermédiaires publiés par la source mais incohérents, retirés : seul le total est
+   * affiché (transitions plus longues que le vélo, somme différente du total). */
+  segments_retires: boolean;
 }
 
 // Types alignés sur GET /races/{id}/event : la course (nom + année) et ses formats.

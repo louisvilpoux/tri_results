@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, TriangleAlert } from "lucide-react";
 
 import { ChoiceGroup } from "@/components/shared/choice-group";
 import { LineChart } from "@/components/shared/line-chart";
@@ -62,6 +62,10 @@ export function AthleteProgressionBlock({ progression }: { progression: AthleteP
   const labels = races.map((race) => race.year);
   const names = races.map(raceName);
   const last = races.length - 1;
+  // courses dont les temps intermédiaires de la source ont été retirés (incohérents, D12)
+  const retired = races.filter((race) => race.segments_retires);
+  const retiredCount = retired.length;
+  const retiredNames = retired.map((race) => `${race.name_epreuve} ${race.year}`).join(", ");
 
   return (
     <section className="space-y-4" aria-labelledby="progression-titre">
@@ -143,6 +147,17 @@ export function AthleteProgressionBlock({ progression }: { progression: AthleteP
             />
           </ChartCard>
         </div>
+
+        {retiredCount > 0 && series.segments.length > 0 && (
+          <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            <TriangleAlert size={14} aria-hidden className="mt-0.5 shrink-0" />
+            {retiredCount === 1
+              ? "1 course n’a pas de point sur les graphiques de segments : "
+              : `${retiredCount} courses n’ont pas de point sur les graphiques de segments : `}
+            leurs temps intermédiaires publiés par la source sont incohérents (
+            {retiredNames}) et ne sont pas utilisés. Le classement en pourcentage les compte.
+          </p>
+        )}
 
         <p className="text-xs text-gray-400">
           Sur tous les graphiques, plus bas = plus rapide ou mieux classé. Les temps d’une course

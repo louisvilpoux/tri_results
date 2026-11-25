@@ -62,6 +62,8 @@ export interface ProgressionRace {
   total: string | null;
   /** Temps de chaque segment, par clé (swim, bike, run ; run1, bike, run2 en duathlon). */
   segments: Record<string, string>;
+  /** Temps intermédiaires publiés par la source mais incohérents, retirés (D12). */
+  segments_retires: boolean;
   clt: number;
   /** Nombre de classés de l'épreuve. */
   classes: number;

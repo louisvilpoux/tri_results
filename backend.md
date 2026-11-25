@@ -281,6 +281,11 @@ Dossier : `transform`
       lignes d'une épreuve dont au moins la moitié des lignes vérifiables sont incohérentes (le décalage touche
       surtout une épreuve entière : 169 épreuves sous 10 % d'incohérentes, 98 au-dessus de 90 %). Total et
       classement gardés. Exécuté après temps_totaux.sql.
+      Toutes sources (D12, 25/11/2026) : vide aussi les segments d'une épreuve où plus de la moitié des classés ont
+      une transition (T1 ou T2) plus longue que le vélo, même si leur somme donne le total (Duathlon Lomme 2025 et
+      2026 S : tours de vélo rangés en T1 et T2). `results.segments_retires` marque les lignes dont des segments
+      ont été vidés par l'une ou l'autre règle ; l'API le renvoie (`segments_retires` de GET /races/{id} et de
+      chaque course de la progression).
     - doublons_sources.sql : retire les épreuves prolivesport, chronoweb ou protiming publiées aussi par
       fftri_t2_area (dates à un jour près, au moins la moitié des athlètes en commun) ; la version fftri_t2_area
       est gardée et la table doublons_sources garde la trace des paires retirées (colonne `source`). Les autres

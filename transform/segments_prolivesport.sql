@@ -1,4 +1,5 @@
--- Segments prolivesport décalés : vidés quand leur somme ne correspond pas au temps total.
+-- Segments décalés : vidés quand leur somme ne correspond pas au temps total (prolivesport), ou
+-- quand une transition est plus longue que le vélo pour la plupart des classés (toutes sources).
 --
 -- Chez prolivesport, les colonnes de temps intermédiaires sont parfois décalées : T1 de
 -- 00:31:45 et vélo de 00:18:39 pour un total de 00:58:36 (Triathlon des Moines 2021 S, 1er),
@@ -43,8 +44,38 @@ GROUP BY epreuve_id
 HAVING AVG(incoherent::int) >= 0.5;
 
 UPDATE results
-SET swim_time = NULL, t1_time = NULL, bike_time = NULL, t2_time = NULL, run_time = NULL
+SET swim_time = NULL, t1_time = NULL, bike_time = NULL, t2_time = NULL, run_time = NULL,
+    segments_retires = num_nonnulls(swim_time, t1_time, bike_time, t2_time, run_time) > 0
 WHERE id IN (SELECT id FROM segments_verifies WHERE incoherent)
    OR epreuve_id IN (SELECT epreuve_id FROM epreuves_decalees);
 
 DROP TABLE segments_verifies, epreuves_decalees;
+
+
+-- Segments décalés dont la somme donne pourtant le total (D12 du retour utilisateur du
+-- 25/11/2026), toutes sources. Au Duathlon Lomme 2025 et 2026 S (prolivesport), le 1er a
+-- « T1 00:14:19 », « Vélo 00:09:28 », « T2 00:14:16 » : le vélo est découpé en tours rangés dans
+-- les colonnes de transition. La somme des segments égale le total, la règle précédente ne le
+-- voit pas. Une transition plus longue que le vélo n'arrive pas pour un finisher ; quand c'est
+-- le cas de plus de la moitié des classés d'une épreuve, ses colonnes ne sont pas celles qu'elles
+-- disent être, et tous ses segments sont retirés. Le 25/11/2026 : 18 épreuves, de 4 sources
+-- (Lomme 2025 et 2026 S, Quiberon 2025 XS, Ironman de Nice 2019 avec des transitions de 8 h,
+-- Jura Vouglans 2011 et 2013 L avec un vélo de 3 min, relais militaire de Brive 2023…). Les
+-- épreuves où seuls quelques classés ont une longue transition (crevaison comptée en T2 ?) ne
+-- sont pas touchées.
+CREATE TEMPORARY TABLE epreuves_transitions_longues AS
+SELECT epreuve_id
+FROM results
+WHERE clt > 0 AND clt < 99990 AND NOT temps_suspect
+  AND bike_time ~ '^\d{2}:\d{2}:\d{2}$' AND bike_time <> '00:00:00'
+  AND t1_time ~ '^\d{2}:\d{2}:\d{2}$' AND t2_time ~ '^\d{2}:\d{2}:\d{2}$'
+GROUP BY epreuve_id
+HAVING AVG((greatest(t1_time::interval, t2_time::interval) > bike_time::interval)::int) > 0.5;
+
+UPDATE results
+SET swim_time = NULL, t1_time = NULL, bike_time = NULL, t2_time = NULL, run_time = NULL,
+    segments_retires = true
+WHERE epreuve_id IN (SELECT epreuve_id FROM epreuves_transitions_longues)
+  AND num_nonnulls(swim_time, t1_time, bike_time, t2_time, run_time) > 0;
+
+DROP TABLE epreuves_transitions_longues;

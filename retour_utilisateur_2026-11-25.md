@@ -153,3 +153,11 @@ Ce qui pourrait me faire partir : tomber sur un deuxième cas comme Lomme (D12).
    **D19**.
 5. **D14 + D15 + F11** Natation annulée signalée, distances affichées, records fiables (**U23**).
 6. **F9**, **F8**, puis **D16**, **D17**, **U24**, **F12**, **F13**.
+
+---
+
+## Suivi
+
+| # | Statut |
+|---|--------|
+| D12 | **Corrigé le 25/11/2026.** Au Duathlon Lomme 2025 et 2026 S (prolivesport), les colonnes T1 et T2 contiennent des tours de vélo : la somme des segments donne bien le total, le contrôle existant ne le voyait pas. Nouveau contrôle, toutes sources (`transform/segments_prolivesport.sql`) : une épreuve où plus de la moitié des classés ont une transition plus longue que le vélo perd tous ses segments. 18 épreuves touchées, toutes aux segments manifestement faux : Lomme 2025 et 2026 S, Quiberon 2025 XS, Ardres 2026 M, Ironman de Nice 2019 (transitions de 8 h), Jura Vouglans 2011 et 2013 L (vélo de 3 min), Altriman 2011 L, Luberon 2014 L, relais militaire de Brive 2023, épreuves jeunes de Noyon, Sainte-Aldegonde et Beauvais… L'utilisateur est averti : bandeau sur la page de classement (« Les temps intermédiaires publiés par la source pour cette épreuve sont incohérents […] ») et note dans la progression du profil, qui nomme les courses sans point sur les graphiques de segments. Les épreuves dont les segments étaient déjà retirés par l'ancien contrôle (somme ≠ total) ont désormais le même bandeau : 112 épreuves, 14 610 résultats en tout (`results.segments_retires`). |

@@ -189,6 +189,15 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
             </p>
           )}
 
+          {race.segments_retires && (
+            <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <TriangleAlert size={18} aria-hidden className="mt-0.5 shrink-0" />
+              Les temps intermédiaires publiés par la source pour cette épreuve sont incohérents
+              et ne sont donc pas affichés ; le temps total et le
+              classement sont gardés.
+            </p>
+          )}
+
           {race.classement_hors_ordre && !race.temps_non_fiables && (
             <p className="flex items-start gap-2 rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
               <Info size={18} aria-hidden className="mt-0.5 shrink-0 text-gray-400" />
