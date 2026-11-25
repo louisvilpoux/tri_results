@@ -18,7 +18,9 @@ fichier est ramené aux mêmes colonnes que protiming (COLONNES_FINALES) :
 - nom écrit « NOM Prénom » (« MERLAND, Mathieu (1187) », « Axel BAUMANS » → « MERLAND Mathieu »,
   « BAUMANS Axel »), dossard collé retiré. Équipe (relais, swimrun, duo) : son nom
   (« Nom relais », « Team name », « Équipe / Noms »…) ; sans nom d'équipe, ses équipiers
-  « NOM1 Prénom1 & NOM2 Prénom2 » (« Noms » du Top de Porquerolles) ;
+  « NOM1 Prénom1 & NOM2 Prénom2 » (« Noms » du Top de Porquerolles). Une épreuve individuelle
+  publiée avec la mise en page des relais (au plus un équipier par ligne : Hyères 2026) prend
+  le nom de l'équipier, et le nom d'équipe devient le club ;
 - club sans le numéro de club (« 30770 (TEAM NISSA TRIATHLON) » → « TEAM NISSA TRIATHLON ») ;
 - cat sans les rangs (« 1-S2M », « 1) 40-44 », « HOM (2) » → « S2M », « 40-44 », « HOM ») ;
 - sexe (M ou F) : colonne H/F, M/F, Genre… (« 1F », « (2) M », « HOM » ; vide = homme quand la
@@ -297,6 +299,19 @@ def organise(df: pd.DataFrame, villes: dict[str, str | None]) -> pd.DataFrame:
             r"[,/&|]", na=False).any():
         equipe = colonnes["noms"]
         membres = [c for c in membres if c != equipe]
+    # Épreuve individuelle publiée avec la mise en page des relais (Q22 de l'audit du 25/11/2026,
+    # Triathlon de Hyères 2026 « SPRINT INDIVIDUELS », « BENJAMINS ») : « Team name » est alors le
+    # club (« SAINT RAPHAEL TRIATHLON (41) ») et « AfficherNoms » la personne (« SAJAT, David / »).
+    # On le reconnaît à ce qu'aucune ligne ne liste plus d'un équipier, dans une épreuve dont le
+    # nom ne dit pas relais, duo ou équipe (l'aquathlon en relais de Provence Verte 2025 donne
+    # son second relayeur seul dans « AfficherNom2 », le premier étant dans « Team »).
+    club_equipe = None
+    libelle = " ".join(df["format_epreuve"].dropna().astype(str).unique()).lower()
+    if equipe and membres and not re.search(r"relais|duo|[ée]quipe|team", libelle):
+        nb_equipiers = df[membres].apply(
+            lambda ligne: len((equipiers(list(ligne)) or "").split(" & ")), axis=1)
+        if nb_equipiers.max() <= 1:
+            club_equipe, equipe = equipe, None
     personne = premiere_colonne(colonnes, NOM_PERSONNE)
     noms = pd.Series(None, index=df.index, dtype=object)
     if equipe:
@@ -311,6 +326,9 @@ def organise(df: pd.DataFrame, villes: dict[str, str | None]) -> pd.DataFrame:
     if col_club is None and not membres and "team" in colonnes:
         col_club = colonnes["team"]          # RACE RESULT individuel : « Team » est le club
     sortie["club"] = df[col_club].map(club) if col_club else None
+    if col_club is None and club_equipe:
+        # individuel en mise en page relais (voir plus haut) : le nom d'équipe, sans le dossard
+        sortie["club"] = df[club_equipe].map(lambda v: club(nom_equipe(v)))
 
     col_cat = premiere_colonne(colonnes, CATEGORIE)
     col_sexe = premiere_colonne(colonnes, SEXE)

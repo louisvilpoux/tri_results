@@ -891,3 +891,46 @@ def test_swim_cancelled_duathlon_is_flagged() -> None:
         """
     )
     assert wrong == []
+
+
+def test_timingzone_individuals_named_after_the_person() -> None:
+    """Q22 (audit du 25/11/2026) : épreuves individuelles timingzone publiées avec la mise en page
+    des relais (Hyères 2026) : le nom est celui de la personne, le nom d'équipe est son club ;
+    aucun athlète ne porte le nom d'un club."""
+    rows = query_rows(
+        """
+        SELECT x.nom_athlete, x.club FROM results x JOIN races r ON r.id = x.epreuve_id
+        WHERE r.name_epreuve = 'Triathlon de Hyeres' AND r.year_epreuve = '2026'
+          AND r.format_initial = 'SPRINT INDIVIDUELS'
+        """
+    )
+    if not rows:
+        pytest.skip("Triathlon de Hyères 2026 absent de la base")
+    assert not any(row.nom_athlete == row.club for row in rows)
+    assert sum(row.club is not None for row in rows) >= 90
+    by_name = {row.nom_athlete: row.club for row in rows}
+    assert by_name.get("SAJAT David") == "SAINT RAPHAEL TRIATHLON"
+
+
+def test_swimrun_duos_are_teams() -> None:
+    """Q24 (audit du 25/11/2026) : swimruns chronoweb (courus en duo) et épreuves « Duo »
+    prolivesport : chaque ligne est une équipe, aucune ne devient un athlète."""
+    rows = query_rows(
+        """
+        SELECT x.source, count(*) FILTER (WHERE NOT x.equipe) AS individuels, count(*) AS lignes
+        FROM results x JOIN races r ON r.id = x.epreuve_id
+        WHERE (x.source = 'chronoweb' AND r.type_epreuve = 'swimrun')
+           OR (x.source = 'prolivesport' AND r.format_initial ~* '\\mduo\\M')
+        GROUP BY x.source
+        """
+    )
+    if not rows:
+        pytest.skip("Aucun swimrun chronoweb ni épreuve Duo prolivesport")
+    assert all(row.individuels == 0 for row in rows)
+    douai = query_rows(
+        """
+        SELECT x.nom_athlete FROM results x JOIN races r ON r.id = x.epreuve_id
+        WHERE r.format_initial = 'Swimrun S (Duo)' AND x.nom_athlete = 'RETARDATAIRE'
+        """
+    )
+    assert len(douai) == 1

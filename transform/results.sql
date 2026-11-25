@@ -89,8 +89,18 @@ CROSS JOIN LATERAL (
         THEN prolivesport_team_name(
             rfta.nom, r.type_epreuve = 'bike&run' OR lower(r.format_initial) ~ '\mduo\M'
         )
+        -- autre épreuve « Duo » (Q24 de l'audit du 25/11/2026 : « Swimrun S (Duo) » de Douai
+        -- 2023) : chaque ligne est une équipe ; seul le nom d'équipe est publié
+        -- (« RETARDATAIRE . »), il est gardé sans le point qui tient lieu de prénom
+        WHEN rfta.source = 'prolivesport' AND lower(r.format_initial) ~ '\mduo\M'
+        THEN COALESCE(
+            prolivesport_team_name(rfta.nom, true),
+            nullif(btrim(regexp_replace(rfta.nom, '[\s.]+$', '')), '')
+        )
+        -- swimrun chronoweb (Q24) : couru en duo, chaque ligne est une équipe, écrite comme un
+        -- relais (nom d'équipe et équipiers dans le club, ou équipiers dans le nom)
         WHEN rfta.source = 'chronoweb'
-             AND (r.type_epreuve = 'bike&run' OR r.format_epreuve = 'RELAIS')
+             AND (r.type_epreuve IN ('bike&run', 'swimrun') OR r.format_epreuve = 'RELAIS')
         THEN chronoweb_team_name(rfta.nom, rfta.club)
         WHEN rfta.source = 'protiming'
         THEN protiming_team_name(rfta.nom, r.type_epreuve, r.format_epreuve, r.format_initial)

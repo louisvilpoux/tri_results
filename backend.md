@@ -140,7 +140,11 @@ nom_de_la_source :
          majuscules = nom de famille) ; dossard collé retiré. Équipe : son nom (Nom relais, Team name,
          Équipe / Noms, Nom d'équipe, « Team » quand le fichier liste aussi des équipiers), sinon ses
          équipiers « NOM1 Prénom1 & NOM2 Prénom2 » (Top de Porquerolles, Triathlon de la St Sylvestre
-         2022) ;
+         2022). Épreuve individuelle publiée avec la mise en page des relais (aucune ligne ne liste plus
+         d'un équipier, libellé sans « relais », « duo », « équipe » ni « team » : Hyères 2026 « SPRINT
+         INDIVIDUELS » et « BENJAMINS ») : le nom vient des équipiers (« AfficherNoms »), et le nom
+         d'équipe, sans le dossard, devient le club (avant le 25/11/2026, 98 lignes portaient le nom de
+         leur club, 37 faux athlètes : Q22 de etat_qualite_donnees_2026-11-25_2.md) ;
        - club sans numéro de club (« 30770 (TEAM NISSA TRIATHLON) ») ; en RACE RESULT individuel,
          « Team » est le club ;
        - cat sans les rangs (« 1-S2M », « 1) 40-44 », « HOM (2) », non-classé « ) 25-29 » ou
@@ -326,7 +330,10 @@ Dossier : `transform`
       La colonne `equipe` marque les lignes d'équipe (bike&run, relais) : prolivesport, repérées ligne par ligne par
       `prolivesport_team_name` (dans un bike&run ou une épreuve « Duo », « NOM Prénom  NOM PRÉNOM » est une paire
       d'équipiers : les 69 lignes des Duos des Triath'Elles de Gravelines 2017 étaient jusqu'au 25/11/2026 de
-      faux athlètes, Q21) ; chronoweb, toutes les lignes de ces épreuves (`chronoweb_team_name`) ; protiming,
+      faux athlètes, Q21) ; toutes les lignes des autres épreuves « Duo » (Douai 2023 « Swimrun S (Duo) », où
+      seul le nom d'équipe est publié : « RETARDATAIRE . » → « RETARDATAIRE ») ; chronoweb, toutes les lignes
+      de ces épreuves et des swimruns, courus en duo (`chronoweb_team_name` ; 392 lignes de swimrun étaient
+      jusqu'au 25/11/2026 de faux athlètes, Q24) ; protiming,
       toutes les lignes des relais, bike&run et swimruns en duo (`protiming_team_name`). Ces fonctions
       donnent aussi le nom affiché ; nb_races.sql ne compte pas ces lignes.
       Un athlète garde une ligne par temps total dans une épreuve : même temps = doublon de la source (Ironman de
