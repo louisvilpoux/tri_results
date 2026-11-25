@@ -201,11 +201,13 @@ $$ LANGUAGE plpgsql IMMUTABLE;
 --      (GRAVELINES TRI) » ;
 --   3. code court en majuscules dans le prénom, nom d'équipe dans le nom
 --      (« MI  BRETAGNE 2 ») → « BRETAGNE 2 » ;
---   4. bike&run seulement : équipier 1 (« NOM Prénom ») dans le prénom, équipier 2 dans le
---      nom (« MEEUS Theo  MOREAU TEOPHANE ») → « MEEUS Theo & MOREAU TEOPHANE » ;
+--   4. épreuves à deux (`is_pair` : bike&run, et épreuves « Duo » comme les Triath'Elles de
+--      Gravelines 2017, Q21 de l'audit du 25/11/2026) : équipier 1 (« NOM Prénom ») dans le
+--      prénom, équipier 2 dans le nom (« MEEUS Theo  MOREAU TEOPHANE ») → « MEEUS Theo &
+--      MOREAU TEOPHANE » ;
 --   sinon (prénom d'un seul mot, ou prénom composé dans un relais : « Laly  CHAOUCH »,
 --   « Jean francois  DUHAMEL ») : une seule personne → NULL. La casse d'origine est gardée.
-CREATE OR REPLACE FUNCTION prolivesport_team_name(nom text, is_bike_and_run boolean)
+CREATE OR REPLACE FUNCTION prolivesport_team_name(nom text, is_pair boolean)
 RETURNS text AS $$
 DECLARE
     first_part text;
@@ -227,7 +229,7 @@ BEGIN
     IF first_part ~ '^[A-Z]{1,3}[0-9]?$' THEN
         RETURN second_part;
     END IF;
-    IF is_bike_and_run AND first_part ~ '\s' THEN
+    IF is_pair AND first_part ~ '\s' THEN
         RETURN first_part || ' & ' || second_part;
     END IF;
     RETURN NULL;

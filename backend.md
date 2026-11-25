@@ -226,7 +226,9 @@ Dossier : `transform`
       absente des deux côtés, par l'année (NULL = NULL n'étant jamais vrai, ces résultats étaient
       écartés : c'était le cas de tout chronoweb avant que la date soit scrappée).
       La colonne `equipe` marque les lignes d'équipe (bike&run, relais) : prolivesport, repérées ligne par ligne par
-      `prolivesport_team_name` ; chronoweb, toutes les lignes de ces épreuves (`chronoweb_team_name`) ; protiming,
+      `prolivesport_team_name` (dans un bike&run ou une épreuve « Duo », « NOM Prénom  NOM PRÉNOM » est une paire
+      d'équipiers : les 69 lignes des Duos des Triath'Elles de Gravelines 2017 étaient jusqu'au 25/11/2026 de
+      faux athlètes, Q21) ; chronoweb, toutes les lignes de ces épreuves (`chronoweb_team_name`) ; protiming,
       toutes les lignes des relais, bike&run et swimruns en duo (`protiming_team_name`). Ces fonctions
       donnent aussi le nom affiché ; nb_races.sql ne compte pas ces lignes.
       Un athlète garde une ligne par temps total dans une épreuve : même temps = doublon de la source (Ironman de

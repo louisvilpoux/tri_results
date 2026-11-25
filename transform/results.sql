@@ -84,7 +84,10 @@ CROSS JOIN LATERAL (
     SELECT CASE
         WHEN rfta.source = 'prolivesport'
              AND (r.type_epreuve = 'bike&run' OR r.format_epreuve = 'RELAIS')
-        THEN prolivesport_team_name(rfta.nom, r.type_epreuve = 'bike&run')
+        -- à deux : bike&run, ou épreuve « Duo » (équipiers dans le prénom et le nom)
+        THEN prolivesport_team_name(
+            rfta.nom, r.type_epreuve = 'bike&run' OR lower(r.format_initial) ~ '\mduo\M'
+        )
         WHEN rfta.source = 'chronoweb'
              AND (r.type_epreuve = 'bike&run' OR r.format_epreuve = 'RELAIS')
         THEN chronoweb_team_name(rfta.nom, rfta.club)

@@ -3,7 +3,7 @@
 Audit du 25/11/2026 au commit `f064619`. La base est celle reconstruite avec
 `transform/run_sql.py` après le dernier changement de `transform/` (`294ca84`, Q1) : 868 141
 résultats. Elle n'a pas été reconstruite pendant l'audit.
-Q20 corrigé le même jour (base reconstruite : 867 812 résultats, voir plus bas).
+Q20 et Q21 corrigés le même jour (base reconstruite : 867 812 résultats, voir plus bas).
 Audit précédent : [etat_qualite_donnees_2026-11-22.md](etat_qualite_donnees_2026-11-22.md),
 complété jusqu'au 25/11 (mêmes identifiants Q1 à Q19). D2, D9, D10 et D11 renvoient à
 [retour_utilisateur_2026-11-23_2.md](retour_utilisateur_2026-11-23_2.md).
@@ -69,7 +69,7 @@ fftri_t2_area 98,1 %, protiming 97,9 %, chronoweb 97,5 %. Classement dans l'ordr
 | Q18 | Classement publié qui ne suit pas les temps | 34 épreuves (24/11) | 32 épreuves, dont 7 sur plus de 5 % des lignes ; Openlakes 2026 : 83 classés plus rapides que le vainqueur (arrêtés avant l'arrivée) | **Ouvert, priorité 1** |
 | Q19 | Temps protiming « mm:ss:00 » | 0 après correction | 0 ; 9 totaux au-dessus de 24 h, tous fftri, plausibles | Corrigé |
 | Q20 | Épreuve natation + vélo classée triathlon L | — | Chtriman 2023 et 2024 « SWIMBIKE », 329 résultats ; 0 après correction | **Corrigé** le 25/11 |
-| Q21 | **Duos comptés comme des athlètes** | — | Triath'Elles Gravelines 2017, 3 épreuves « Duo », 68 lignes | **Nouveau** |
+| Q21 | Duos comptés comme des athlètes | — | Triath'Elles Gravelines 2017, 3 épreuves « Duo », 68 lignes ; 0 après correction | **Corrigé** le 25/11 |
 
 ---
 
@@ -84,6 +84,7 @@ fftri_t2_area 98,1 %, protiming 97,9 %, chronoweb 97,5 %. Classement dans l'ordr
 | Q19 | `2b66c24` | 99 totaux protiming écrits « mm:ss:00 » relus en minutes (Cepoy 2015-2016, Chartres 2016). |
 | Q1 | `294ca84` | Totaux prolivesport non fiables marqués suspects en bloc (35 épreuves, 4 481 totaux) ; temps négatifs vidés. |
 | Q20 | 25/11 | Épreuves « SWIMBIKE » (natation + vélo) exclues de la base : −2 épreuves, −329 résultats, −81 athlètes. |
+| Q21 | 25/11 | Lignes des épreuves « Duo » prolivesport marquées équipe : +68 lignes d'équipe, 68 faux profils retirés. |
 
 ---
 
@@ -174,7 +175,7 @@ résultats). Les anciennes pages des deux épreuves (`/races/508`, `/races/510`)
 elles n'ont pas d'équivalent vers lequel rediriger, et elles sortent du sitemap. Le reste de
 l'audit garde les chiffres d'avant la correction.
 
-### Q21 — Duos comptés comme des athlètes (nouveau)
+### Q21 — Duos comptés comme des athlètes (corrigé le 25/11/2026)
 
 Triath'Elles Gravelines 2017 (prolivesport) publie trois épreuves « Verte - Duo », « Bleue - Duo »
 et « Rouge - Duo » (69 lignes). Les deux équipières sont écrites dans le nom, séparées par deux
@@ -187,8 +188,21 @@ relais et bike & run prolivesport, les lignes non marquées équipe (134 en tria
 bike & run, 30 en aquathlon et cross triathlon) sont, d'après un échantillon, des relayeurs seuls
 (« Sarah  DELCOURT »), comme prévu.
 
-Piste : dans `prolivesport_team_name`, traiter un libellé d'épreuve contenant « duo » comme une
-épreuve d'équipe.
+Correction (`transform/results.sql`, `transform/disciplines.sql`) : dans une épreuve prolivesport
+dont le libellé contient le mot « duo », `prolivesport_team_name` lit le nom comme une paire
+d'équipiers, comme dans un bike & run : « AUGER Lucie  AUGER AGNES » → équipe « AUGER Lucie &
+AUGER AGNES ». Un relayeur seul (« Sarah  DELCOURT ») reste un athlète. Base reconstruite :
+
+| | Avant | Après |
+|---|------:|------:|
+| lignes Duo marquées équipe | 1 sur 69 | 69 sur 69 |
+| lignes d'équipe | 15 134 | 15 202 |
+| athlètes avec un résultat individuel | 266 183 (avant Q20) | 266 035 (après Q20 et Q21) |
+
+Les 68 faux profils (« /athletes/125671 »…) répondent 404 et ne sortent plus dans la recherche
+ni la liste des athlètes ; ces duos s'affichent sans lien, avec « Équipe » dans le classement,
+comme les autres équipes. Les équipières ne retrouvent pas ce résultat dans leur profil (limite
+connue des équipes, voir frontend.md).
 
 ### Q13 — Épreuves sans format
 
@@ -278,7 +292,6 @@ Reste aussi le relais CHTRIMAN 2017 relevé le 25/11 (4 équipes, vainqueur en 0
 1. **Q18** : classés plus rapides que le vainqueur marqués suspects (Openlakes 2026 : 83 temps qui
    faussent les Repères), puis drapeau d'épreuve « classement publié différent de l'ordre des
    temps ».
-2. **Q21** : duos de Triath'Elles 2017 marqués équipe (correction rapide, 68 faux athlètes).
-3. Q7 (3 lignes de `lieux_courses.csv`, Volcanik Tri à vérifier) et Extrememan 2020 (D9).
-4. Q13 : format des bike & run décrits par leur distance.
-5. Q5 / D2 / D10 : table de correspondance des catégories, protiming compris.
+2. Q7 (3 lignes de `lieux_courses.csv`, Volcanik Tri à vérifier) et Extrememan 2020 (D9).
+3. Q13 : format des bike & run décrits par leur distance.
+4. Q5 / D2 / D10 : table de correspondance des catégories, protiming compris.
