@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, Info, MapPin, TriangleAlert, Trophy } from "lucide-react";
 
+import { ReportErrorButton } from "@/components/feedback/feedback-button";
 import { MyPlaceBanner } from "@/components/results/my-place";
 import { MySimulationProvider } from "@/components/results/my-simulation";
 import { RaceInsights } from "@/components/results/race-insights";
@@ -19,6 +20,7 @@ import {
 import { raceResultsMetadata } from "@/lib/seo";
 import { SWIM_CANCELLED_MESSAGE } from "@/lib/swim-cancelled";
 import { redirectOrNotFound } from "@/lib/redirections";
+import type { Race } from "@/types/race";
 import { DISCIPLINES_WITHOUT_SPLITS } from "@/types/result";
 import {
   buildRaceResultsUrl,
@@ -43,6 +45,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
     return {}; // erreur d'API : la page affiche elle-même le message
   }
+}
+
+/** Ce que signale « Signaler une erreur » : « Épreuve 767 — Duathlon Lomme 2026 (S) ». */
+function raceFeedbackContext(id: string, race: Race): string {
+  const parts = [race.name_epreuve ?? "sans nom"];
+  if (race.year_epreuve) parts.push(race.year_epreuve);
+  if (race.format_epreuve) parts.push(`(${race.format_epreuve})`);
+  return `Épreuve ${id} — ${parts.join(" ")}`;
 }
 
 export default async function RaceResultsPage({ params, searchParams }: PageProps) {
@@ -98,14 +108,17 @@ export default async function RaceResultsPage({ params, searchParams }: PageProp
 
   return (
     <div className="space-y-8">
-      {/* Retour à la course (tous ses formats) */}
-      <Link
-        href={`/races/${id}`}
-        className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-[#FC6B32]"
-      >
-        <ArrowLeft size={16} />
-        Retour à la course
-      </Link>
+      {/* Retour à la course (tous ses formats) et signalement d'une erreur sur cette épreuve */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link
+          href={`/races/${id}`}
+          className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-[#FC6B32]"
+        >
+          <ArrowLeft size={16} />
+          Retour à la course
+        </Link>
+        <ReportErrorButton context={raceFeedbackContext(id, race)} />
+      </div>
 
       {/* En-tête de course */}
       <section className="rounded-2xl bg-[#17202E] p-6 text-white sm:p-8">

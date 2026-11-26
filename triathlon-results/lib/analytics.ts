@@ -19,6 +19,8 @@ export interface AnalyticsEvents {
   suggestion_open: { kind: "athlete" | "club" | "race" | "search" };
   /** Ouverture du simulateur « Et moi ? » d'une course. */
   simulator_open: { race_id: string };
+  /** Retour envoyé par la fenêtre « Un avis ? Un bug ? » (le contenu n'est pas transmis). */
+  feedback_sent: { kind: string };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEvents;

@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { AthleteBestTimes } from "@/components/athletes/athlete-best-times";
 import { AthleteProgressionBlock } from "@/components/athletes/athlete-progression";
 import { AthleteHeader } from "@/components/athletes/athlete-header";
+import { ReportErrorButton } from "@/components/feedback/feedback-button";
 import { AthleteResultsFilters } from "@/components/athletes/athlete-results-filters";
 import { AthleteResultsTable } from "@/components/athletes/athlete-results-table";
 import { AthleteStats } from "@/components/athletes/athlete-stats";
@@ -88,13 +89,16 @@ export default async function AthletePage({ params, searchParams }: PageProps) {
 
   return (
     <div className="space-y-8">
-      <Link
-        href="/"
-        className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-[#FC6B32]"
-      >
-        <ArrowLeft size={16} />
-        Retour à l’accueil
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-[#FC6B32]"
+        >
+          <ArrowLeft size={16} />
+          Retour à l’accueil
+        </Link>
+        <ReportErrorButton context={`Athlète ${id} — ${athlete.nom ?? "sans nom"}`} />
+      </div>
 
       <AthleteHeader athlete={athlete} />
       <AthleteStats athlete={athlete} />

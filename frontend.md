@@ -439,13 +439,31 @@ Réalisés
         - `search` : onglet et nombre de résultats d'une recherche sur `/search` (`TrackEvent`, envoyé depuis
           la page serveur) ; 0 résultat signale un athlète ou une course manquants ;
         - `suggestion_open` : suggestion ouverte depuis un champ de recherche (athlete, club, race, search) ;
-        - `simulator_open` : ouverture de « Et moi ? » sur un classement (id de la course).
+        - `simulator_open` : ouverture de « Et moi ? » sur un classement (id de la course) ;
+        - `feedback_sent` : retour envoyé par la fenêtre « Un avis ? Un bug ? » (type seulement).
     - Variables (lues au build pour `NEXT_PUBLIC_*`) :
         - `SENTRY_DSN` (serveur) et `NEXT_PUBLIC_SENTRY_DSN` (navigateur), le même DSN du projet Sentry front ;
         - optionnelles : `SENTRY_ENVIRONMENT` / `NEXT_PUBLIC_SENTRY_ENVIRONMENT` (défaut `production`),
           `SENTRY_TRACES_SAMPLE_RATE` / `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` (défaut `0.1`) ;
         - `NEXT_PUBLIC_UMAMI_WEBSITE_ID` (identifiant du site dans Umami) ; `NEXT_PUBLIC_UMAMI_SCRIPT_URL`
           (défaut `https://cloud.umami.is/script.js`, à changer pour une instance Umami auto-hébergée).
+- Retours des utilisateurs par e-mail (26/11/2026) :
+    - Bouton flottant « Un avis ? Un bug ? » sur toutes les pages (`FeedbackButton`, layout racine) et lien
+      « Signaler une erreur » en haut du classement d'une épreuve et du profil d'un athlète
+      (`ReportErrorButton`), qui ouvre la fenêtre sur « Donnée fausse » avec l'épreuve ou l'athlète concerné
+      (« Épreuve 767 — Duathlon Lomme 2026 (S) »). Code : `components/feedback/`, `lib/feedback.ts`.
+    - Fenêtre (`FeedbackDialog`, Dialog de Base UI) : type (Bug, Donnée fausse, Idée, Avis général),
+      message (5 à 2 000 caractères), e-mail facultatif pour la réponse. L'adresse complète de la page
+      (simulation « Et moi ? » comprise) et la taille de la fenêtre sont jointes automatiquement.
+    - `POST /api/feedback` (`app/api/feedback/route.ts`) valide le formulaire (zod) et envoie le mail avec
+      l'API transactionnelle de Brevo (`fetch`, sans dépendance) ; l'e-mail de l'utilisateur devient le
+      « Répondre à ». Anti-spam sans CAPTCHA : champ piège `website` (un robot qui le remplit reçoit un
+      faux succès), au plus 5 envois par heure et par IP (en mémoire, remis à zéro au redéploiement).
+    - Variables (serveur, lues à l'exécution) : `BREVO_API_KEY`, `FEEDBACK_TO` (destinataire),
+      `FEEDBACK_FROM` (expéditeur validé dans Brevo). Sans elles, en développement, le retour est écrit
+      dans la console du serveur Next ; en production, la route répond 503 et le formulaire affiche
+      « Envoi indisponible ».
+    - Pas de stockage en base : la publication des données remplace les tables de production en bloc.
 
 En cours :
 - rien.

@@ -102,6 +102,14 @@ domaine `https://<domaine>`. Variables :
 | `SENTRY_DSN` | non | DSN du projet Sentry Next.js |
 | `NEXT_PUBLIC_SENTRY_DSN` | **oui** | le même DSN |
 | `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | **oui** | identifiant du site dans Umami |
+| `BREVO_API_KEY` | non | clé API Brevo (SMTP & API → API Keys), pour les retours des utilisateurs |
+| `FEEDBACK_TO` | non | adresse qui reçoit les retours (« Un avis ? Un bug ? ») |
+| `FEEDBACK_FROM` | non | expéditeur des retours, validé dans Brevo (Senders, domains & dedicated IPs) |
+
+Retours des utilisateurs : créer un compte Brevo (offre gratuite, 300 mails par jour), valider
+l'adresse expéditrice (`FEEDBACK_FROM`), puis, une fois le domaine acheté, authentifier le domaine
+dans Brevo (enregistrements DKIM et DMARC chez le registrar) pour que les mails n'arrivent pas en
+indésirables. Sans ces trois variables, le formulaire répond « Envoi indisponible ».
 
 Les variables `NEXT_PUBLIC_*` et `SITE_URL` sont lues au build : après un changement, redéployer.
 `SITE_URL` sert aussi à l'exécution : le déclarer comme variable de build **et** d'exécution.
