@@ -155,7 +155,7 @@ export function AthleteProgressionBlock({ progression }: { progression: AthleteP
               ? "1 course n’a pas de point sur les graphiques de segments : "
               : `${retiredCount} courses n’ont pas de point sur les graphiques de segments : `}
             leurs temps intermédiaires publiés par la source sont incohérents (
-            {retiredNames}) et ne sont pas utilisés. Le classement en pourcentage les compte.
+            {retiredNames}) et ne sont pas utilisés. Le classement est cependant bien pris en compte.
           </p>
         )}
 
