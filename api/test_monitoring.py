@@ -1,6 +1,6 @@
 """Tests du monitoring (monitoring.py) : journal JSON des requêtes et activation de Sentry.
 
-Ils n'ont pas besoin de la base PostgreSQL : /health n'y accède pas.
+Ils n'ont pas besoin de la base PostgreSQL : « / » (redirection vers /health) n'y accède pas.
 Lancement : `cd api && pytest`.
 """
 
@@ -35,17 +35,17 @@ def captured(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
 
 
 def test_une_ligne_json_par_requete(captured: pytest.LogCaptureFixture) -> None:
-    response = client.get("/health")
-    assert response.status_code == 200
+    response = client.get("/", follow_redirects=False)
+    assert response.status_code == 303
 
     entries = request_entries(captured)
     assert len(entries) == 1
     entry = entries[0]
     assert entry["message"] == "request"
     assert entry["method"] == "GET"
-    assert entry["path"] == "/health"
-    assert entry["route"] == "/health"
-    assert entry["status"] == 200
+    assert entry["path"] == "/"
+    assert entry["route"] == "/"
+    assert entry["status"] == 303
     assert isinstance(entry["duration_ms"], float)
     assert entry["level"] == "INFO"
 

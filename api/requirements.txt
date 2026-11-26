@@ -1,0 +1,6 @@
+# Dépendances de l'API (production). Versions du venv `chrono`, testées avec Python 3.14.
+fastapi==0.125.0
+uvicorn==0.38.0
+SQLAlchemy==2.0.45
+psycopg2-binary==2.9.11
+sentry-sdk[fastapi]==3.0.1

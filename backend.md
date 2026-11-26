@@ -7,6 +7,15 @@ source chrono/bin/activate
 # Notebook
 Un Jupyter Notebook est utilisable pour différents tests. Il utilise le venv ci-dessus.
 
+# Dépendances de l'API
+- `api/requirements.txt` : dépendances de production (FastAPI, uvicorn, SQLAlchemy, psycopg2, Sentry), à
+  installer par l'hébergeur ; versions figées sur celles du venv `chrono` (Python 3.14).
+- `api/requirements-dev.txt` : les mêmes, plus pytest et httpx pour les tests.
+```
+pip install -r api/requirements-dev.txt
+```
+Le scraping (`sources/`) a ses propres dépendances, installées seulement dans le venv `chrono`.
+
 # Lancer l'API
 ```
 cd api
@@ -23,15 +32,17 @@ pytest
 
 # Monitoring de l'API
 `api/monitoring.py`, branché dans `main.py` ; inactif sans variables, rien n'est envoyé en local.
-- Erreurs avec Sentry (`sentry-sdk[fastapi]`, installé dans le venv `chrono`), activé par `SENTRY_DSN`.
+- Erreurs avec Sentry (`sentry-sdk[fastapi]`), activé par `SENTRY_DSN`.
   Optionnelles : `SENTRY_ENVIRONMENT` (défaut `production`), `SENTRY_TRACES_SAMPLE_RATE` (part des requêtes
   mesurées en performance, défaut `0.1`). Ni adresse IP, ni cookies, ni en-têtes, ni corps de requête envoyés
   (`data_collection`).
 - Journal : une ligne JSON par requête sur la sortie standard (`time`, `level`, `method`, `path`, `route`
   comme `/races/{race_id}` pour regrouper les appels, `status`, `duration_ms`), niveau `ERROR` pour les 5xx.
   La chaîne de requête n'est pas journalisée (elle contient les recherches). Niveau réglable par `LOG_LEVEL`.
-- Disponibilité : `GET /health` (ne vérifie pas la base PostgreSQL).
-- Tests : `api/test_monitoring.py`.
+- Disponibilité : `GET /health` exécute `SELECT 1` sur la base : 200 `{"status": "ok", "database": "ok"}`,
+  ou 503 `{"status": "error", "database": "unavailable"}` si PostgreSQL ne répond pas. C'est l'adresse à
+  donner à l'outil de surveillance (UptimeRobot…).
+- Tests : `api/test_monitoring.py`, `api/test_health.py`.
 
 # Récupération de la donnée source
 Dossier : `sources`

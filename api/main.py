@@ -3,7 +3,7 @@ import re
 from collections import Counter
 from typing import Any, Literal
 
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Query, Response
 from sqlalchemy import (
     Boolean,
     Column,
@@ -20,11 +20,12 @@ from sqlalchemy import (
     func,
     or_,
 )
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import Select
 from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session, aliased
 import os
-from sqlalchemy import select
+from sqlalchemy import select, text
 from fastapi.responses import RedirectResponse
 
 from monitoring import setup_request_logging, setup_sentry
@@ -166,8 +167,15 @@ def get_db():
 # Endpoints
 # ----------------------
 @app.get("/health")
-def health():
-    return {"status": "ok"}
+def health(response: Response) -> dict[str, str]:
+    """Disponibilité de l'API et de la base, pour la surveillance (503 si la base ne répond pas)."""
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        response.status_code = 503
+        return {"status": "error", "database": "unavailable"}
+    return {"status": "ok", "database": "ok"}
 
 @app.get("/", include_in_schema=False)
 async def root():
