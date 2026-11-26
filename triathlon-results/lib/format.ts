@@ -52,3 +52,8 @@ export function formatOrdinal(rank: number): string {
 export function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
+
+/** Classement en pourcentage : 12e sur 200 → « Top 6 % » (arrondi au-dessus, au moins 1 %). */
+export function topPercent(share: number): string {
+  return `Top ${Math.max(1, Math.ceil(share * 100))} %`;
+}

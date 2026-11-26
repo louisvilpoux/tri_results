@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Timer } from "lucide-react";
 
 import { SwimCancelledBadge } from "@/components/shared/swim-cancelled-badge";
-import { capitalize, formatShortDate } from "@/lib/format";
+import { capitalize, formatShortDate, topPercent } from "@/lib/format";
 import type { AthleteBestTime } from "@/types/athlete";
 
 /** Meilleur temps total par discipline et format. */
@@ -33,6 +33,16 @@ export function AthleteBestTimes({ bestTimes }: { bestTimes: AthleteBestTime[] }
             <p className="mt-2 font-mono text-2xl font-bold tabular-nums text-[#17202E]">
               {best.total_time}
             </p>
+
+            {/* place sur les classés, comme l'historique et la progression (U23) */}
+            {best.classes > 0 && (
+              <p className="mt-1 text-sm tabular-nums text-gray-500">
+                <span className="font-semibold text-[#17202E]">{best.clt}</span> / {best.classes}
+                <span className="ml-1.5 text-xs text-gray-400">
+                  · {topPercent(best.clt / best.classes)}
+                </span>
+              </p>
+            )}
 
             <Link
               href={`/races/${best.epreuve_id}/results`}

@@ -6,7 +6,7 @@ import { TrendingUp, TriangleAlert } from "lucide-react";
 
 import { ChoiceGroup } from "@/components/shared/choice-group";
 import { LineChart } from "@/components/shared/line-chart";
-import { capitalize, formatShortDate } from "@/lib/format";
+import { capitalize, formatShortDate, topPercent } from "@/lib/format";
 import { formatGap, shortDuration, signedGap, toSeconds } from "@/lib/time";
 import type { AthleteProgression, ProgressionRace, ProgressionSeries } from "@/types/athlete";
 
@@ -32,11 +32,6 @@ function mostRun(series: ProgressionSeries[]): ProgressionSeries {
 
 function seriesLabel(series: ProgressionSeries): string {
   return `${capitalize(series.type_epreuve)} ${series.format_epreuve}`;
-}
-
-/** Classement en pourcentage : 12e sur 200 → « Top 6 % » (arrondi au-dessus, au moins 1 %). */
-function topPercent(share: number): string {
-  return `Top ${Math.max(1, Math.ceil(share * 100))} %`;
 }
 
 function raceName(race: ProgressionRace): string {

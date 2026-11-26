@@ -1053,12 +1053,25 @@ def is_valid_time(value: str | None) -> bool:
     )
 
 
-def get_best_times(results: list[Result]) -> list[dict[str, Any]]:
+def classes_count(db: Session, race_ids: list[int]) -> dict[int, int]:
+    """Nombre de classés (rang valide) de chaque épreuve : dénominateur de la place."""
+    if not race_ids:
+        return {}
+    rows = db.execute(
+        select(Result.epreuve_id, func.count(valid_rank_or_null(Result.clt)))
+        .where(Result.epreuve_id.in_(race_ids))
+        .group_by(Result.epreuve_id)
+    ).all()
+    return {race_id: count for race_id, count in rows}
+
+
+def get_best_times(results: list[Result], db: Session) -> list[dict[str, Any]]:
     """Meilleur temps total par discipline et format, parmi les résultats classés : le temps d'un
     non-classé est souvent celui de son abandon (00:32:50 sur un M à Bordeaux 2018). Un temps
     suspect (probable erreur de la source) n'est pas pris non plus. Même ordre que la progression :
     disciplines de la page d'accueil, puis formats du plus court au plus long (XS → XXL), puis
-    Jeunes et Relais."""
+    Jeunes et Relais. Chaque record donne sa place sur le nombre de classés de l'épreuve, comme
+    l'historique et la progression (U23)."""
     best: dict[tuple[str, str], Result] = {}
     for result in results:
         if not is_valid_time(result.total_time) or not is_valid_rank(result.clt):
@@ -1069,6 +1082,8 @@ def get_best_times(results: list[Result]) -> list[dict[str, Any]]:
         if key not in best or result.total_time < best[key].total_time:
             best[key] = result
 
+    classes_by_race = classes_count(db, [result.epreuve_id for result in best.values()])
+
     return [
         {
             "type_epreuve": result.type_epreuve,
@@ -1077,6 +1092,8 @@ def get_best_times(results: list[Result]) -> list[dict[str, Any]]:
             "epreuve_id": result.epreuve_id,
             "name_epreuve": result.name_epreuve,
             "date_epreuve": result.date_epreuve,
+            "clt": result.clt,
+            "classes": classes_by_race.get(result.epreuve_id, 0),
             # record de duathlon couru à la place d'un triathlon (natation annulée, D14)
             "natation_annulee": bool(result.race and result.race.natation_annulee),
         }
@@ -1128,7 +1145,7 @@ def get_athlete(athlete_id: int, db: Session = Depends(get_db)) -> dict[str, Any
             {"type_epreuve": type_epreuve, "count": count}
             for type_epreuve, count in disciplines.most_common()
         ],
-        "best_times": get_best_times(results),
+        "best_times": get_best_times(results, db),
     }
 
 

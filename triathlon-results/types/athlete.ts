@@ -13,6 +13,10 @@ export interface AthleteBestTime {
   epreuve_id: number;
   name_epreuve: string | null;
   date_epreuve: string | null;
+  /** Place du record (toujours un rang valide : seuls les classés comptent). */
+  clt: number;
+  /** Classés de l'épreuve : dénominateur de la place, comme dans l'historique. */
+  classes: number;
   /** Duathlon couru à la place du triathlon habituel (natation probablement annulée, D14). */
   natation_annulee: boolean;
 }

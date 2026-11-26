@@ -90,6 +90,18 @@ def test_best_times_are_the_minimum_per_format(active_athlete_id: int) -> None:
         assert best["total_time"] == min(times)
 
 
+def test_best_times_give_the_same_place_as_the_history(active_athlete_id: int) -> None:
+    """U23 (retour du 25/11/2026) : un record affiche sa place sur le nombre de classés, la même
+    que dans l'historique."""
+    history = {item["epreuve_id"]: item for item in get_history(active_athlete_id)["items"]}
+    for best in get_profile(active_athlete_id)["best_times"]:
+        assert is_ranked(best["clt"])
+        assert 1 <= best["clt"] <= best["classes"]
+        same_race = history.get(best["epreuve_id"])
+        if same_race is not None:
+            assert (best["clt"], best["classes"]) == (same_race["clt"], same_race["classes"])
+
+
 def test_history_default_sort_is_most_recent_first(active_athlete_id: int) -> None:
     dates = [item["date_epreuve"] for item in get_history(active_athlete_id)["items"]]
     assert dates == sorted(dates, reverse=True)
