@@ -6,6 +6,7 @@ import { OPEN_GRAPH_DEFAULTS, SITE_NAME, SITE_URL } from "@/lib/seo";
 
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { AnalyticsScript } from "@/components/shared/analytics";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,6 +48,8 @@ export default function RootLayout({
         </main>
 
         <Footer />
+
+        <AnalyticsScript />
       </body>
     </html>
   );

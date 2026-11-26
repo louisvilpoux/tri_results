@@ -420,6 +420,28 @@ Réalisés
           l'accueil (avec `og:url`). `pageMetadata` (`lib/seo.ts`) est partagé par ces pages.
         - Au déploiement : renseigner `SITE_URL` (sinon URL canoniques, Open Graph et sitemaps pointent vers
           `http://localhost:3000`).
+- Monitoring (26/11/2026), inactif tant que les variables ne sont pas renseignées (rien n'est envoyé en
+  développement) :
+    - Erreurs avec Sentry (`@sentry/nextjs`) : `instrumentation.ts` (serveur : rendu, routes `/api`, proxy,
+      via `onRequestError`) et `instrumentation-client.ts` (navigateur, avec la mesure des navigations).
+      Échantillon de 10 % des requêtes pour la performance. Ni adresse IP, ni cookies, ni en-têtes, ni corps
+      de requête envoyés (`dataCollection`). `withSentryConfig` n'est pas utilisé : pas d'envoi des source
+      maps, les traces du navigateur pointent donc vers le code minifié (à ajouter au déploiement si besoin,
+      avec un jeton Sentry).
+    - Audience avec Umami (sans cookie, donc sans bandeau de consentement) : script chargé par
+      `AnalyticsScript` (`components/shared/analytics.tsx`) dans le layout racine ; pages vues comptées par
+      le script, navigations sans rechargement comprises (l'adresse complète est gardée : `?q=` de la
+      recherche, filtres du classement). Événements métier déclarés dans `lib/analytics.ts` (`trackEvent`) :
+        - `search` : onglet et nombre de résultats d'une recherche sur `/search` (`TrackEvent`, envoyé depuis
+          la page serveur) ; 0 résultat signale un athlète ou une course manquants ;
+        - `suggestion_open` : suggestion ouverte depuis un champ de recherche (athlete, club, race, search) ;
+        - `simulator_open` : ouverture de « Et moi ? » sur un classement (id de la course).
+    - Variables (lues au build pour `NEXT_PUBLIC_*`) :
+        - `SENTRY_DSN` (serveur) et `NEXT_PUBLIC_SENTRY_DSN` (navigateur), le même DSN du projet Sentry front ;
+        - optionnelles : `SENTRY_ENVIRONMENT` / `NEXT_PUBLIC_SENTRY_ENVIRONMENT` (défaut `production`),
+          `SENTRY_TRACES_SAMPLE_RATE` / `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` (défaut `0.1`) ;
+        - `NEXT_PUBLIC_UMAMI_WEBSITE_ID` (identifiant du site dans Umami) ; `NEXT_PUBLIC_UMAMI_SCRIPT_URL`
+          (défaut `https://cloud.umami.is/script.js`, à changer pour une instance Umami auto-hébergée).
 
 En cours :
 - rien.

@@ -27,6 +27,8 @@ import os
 from sqlalchemy import select
 from fastapi.responses import RedirectResponse
 
+from monitoring import setup_request_logging, setup_sentry
+
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://tri_user:tri_password@localhost:5432/tri_results")
 
 engine = create_engine(DATABASE_URL)
@@ -138,11 +140,15 @@ class Result(Base):
 # ----------------------
 # FastAPI App
 # ----------------------
+# Sentry s'initialise avant l'app pour instrumenter FastAPI (inactif sans SENTRY_DSN).
+setup_sentry()
+
 app = FastAPI(
     title="Tri Results API",
     description="API publique pour les résultats de triathlon et duathlon",
     version="0.1.0",
 )
+setup_request_logging(app)
 
 
 # ----------------------

@@ -10,6 +10,7 @@ import {
   SIMULATOR_PARAM_PREFIX,
   SIMULATOR_SEXE_PARAM,
 } from "@/lib/simulator";
+import { trackEvent } from "@/lib/analytics";
 import { categoryLabel, categoryShort, sortCategories } from "@/lib/categories";
 import { formatGap } from "@/lib/time";
 import type { MySimulation } from "@/components/results/my-simulation";
@@ -192,7 +193,10 @@ export function RaceSimulator({
     <section className="space-y-4" aria-labelledby="simulateur-titre">
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (!open) trackEvent("simulator_open", { race_id: raceId });
+          setOpen(!open);
+        }}
         aria-expanded={open}
         className="flex w-full items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-5 py-4 text-left hover:border-[#FC6B32]"
       >

@@ -5,6 +5,7 @@ import { AthleteHitList } from "@/components/search/athlete-hit-list";
 import { ClubHitList } from "@/components/search/club-hit-list";
 import { RaceHitList } from "@/components/search/race-hit-list";
 import { SearchForm } from "@/components/search/search-form";
+import { TrackEvent } from "@/components/shared/analytics";
 import { PaginationBar } from "@/components/shared/pagination-bar";
 import { searchSite } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -165,6 +166,14 @@ export default async function SearchPage({ searchParams }: PageProps) {
           active={type === "races"}
         />
       </nav>
+
+      <TrackEvent
+        name="search"
+        data={{
+          type,
+          results: type === "all" ? athleteTotal + raceTotal + clubTotal : page[type]?.total ?? 0,
+        }}
+      />
 
       {athleteTotal + raceTotal + clubTotal === 0 && (
         <EmptyState>Aucun athlète, aucun club ni aucune course ne correspond à « {q} ».</EmptyState>

@@ -7,6 +7,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 
 import { clubHref } from "@/components/search/club-hit-list";
+import { trackEvent, type AnalyticsEvents } from "@/lib/analytics";
 import { capitalize } from "@/lib/format";
 import type { SuggestFilters } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,8 @@ interface SuggestInputProps {
 
 interface Option {
   href: string;
+  /** Sorte de suggestion, pour la mesure d'audience (lib/analytics.ts). */
+  kind: AnalyticsEvents["suggestion_open"]["kind"];
   content: ReactNode;
   /** Titre du groupe (« Athlètes », « Clubs », « Courses ») sur sa première suggestion. */
   group?: string;
@@ -131,6 +134,7 @@ export function SuggestInput({
     ...athletes.map((athlete, index) => ({
       group: groupTitle("Athlètes", index),
       href: `/athletes/${athlete.id}`,
+      kind: "athlete" as const,
       content: (
         <SuggestionRow
           icon={<User size={15} aria-hidden />}
@@ -147,6 +151,7 @@ export function SuggestInput({
     ...clubs.map((club, index) => ({
       group: groupTitle("Clubs", index),
       href: clubHref(club.club, clubLinkFilters),
+      kind: "club" as const,
       content: (
         <SuggestionRow
           icon={<Users size={15} aria-hidden />}
@@ -158,6 +163,7 @@ export function SuggestInput({
     ...courses.map((course, index) => ({
       group: groupTitle("Courses", index),
       href: `/races/${course.edition.id}`,
+      kind: "race" as const,
       content: (
         <SuggestionRow
           icon={<Flag size={15} aria-hidden />}
@@ -177,6 +183,7 @@ export function SuggestInput({
       ? [
           {
             href: `/search?${new URLSearchParams({ q: query })}`,
+            kind: "search" as const,
             content: (
               <span className="block px-3 py-2.5 text-sm font-semibold text-[#FC6B32]">
                 Voir tous les résultats pour « {query} »
@@ -209,6 +216,7 @@ export function SuggestInput({
     } else if (event.key === "Enter") {
       if (expanded && active >= 0) {
         event.preventDefault();
+        trackEvent("suggestion_open", { kind: options[active].kind });
         router.push(options[active].href);
       }
       // sans suggestion choisie, Entrée envoie le formulaire
@@ -277,7 +285,10 @@ export function SuggestInput({
               <Link
                 href={option.href}
                 tabIndex={-1}
-                onClick={close}
+                onClick={() => {
+                  trackEvent("suggestion_open", { kind: option.kind });
+                  close();
+                }}
                 onMouseEnter={() => setActive(index)}
                 className="block hover:bg-orange-50"
               >

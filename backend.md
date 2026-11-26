@@ -21,6 +21,18 @@ cd api
 pytest
 ```
 
+# Monitoring de l'API
+`api/monitoring.py`, branché dans `main.py` ; inactif sans variables, rien n'est envoyé en local.
+- Erreurs avec Sentry (`sentry-sdk[fastapi]`, installé dans le venv `chrono`), activé par `SENTRY_DSN`.
+  Optionnelles : `SENTRY_ENVIRONMENT` (défaut `production`), `SENTRY_TRACES_SAMPLE_RATE` (part des requêtes
+  mesurées en performance, défaut `0.1`). Ni adresse IP, ni cookies, ni en-têtes, ni corps de requête envoyés
+  (`data_collection`).
+- Journal : une ligne JSON par requête sur la sortie standard (`time`, `level`, `method`, `path`, `route`
+  comme `/races/{race_id}` pour regrouper les appels, `status`, `duration_ms`), niveau `ERROR` pour les 5xx.
+  La chaîne de requête n'est pas journalisée (elle contient les recherches). Niveau réglable par `LOG_LEVEL`.
+- Disponibilité : `GET /health` (ne vérifie pas la base PostgreSQL).
+- Tests : `api/test_monitoring.py`.
+
 # Récupération de la donnée source
 Dossier : `sources`
 Pour chaque source, un ou plusieurs fichiers Python est utilisé. La donnée scrappée est chargée dans un dossier ayant le nom de la source.
