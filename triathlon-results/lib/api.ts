@@ -15,6 +15,7 @@ import type {
   SearchType,
 } from "@/types/search";
 import type { RaceResultsQuery, RaceResultsResponse } from "@/types/result";
+import { connection } from "next/server";
 
 const API_BASE_URL = process.env.API_BASE_URL;
 
@@ -30,6 +31,10 @@ export class ApiError extends Error {
 
 /** Appel GET commun vers l'API FastAPI : gère l'URL de base et les erreurs HTTP. */
 async function apiGet<T>(path: string, params?: URLSearchParams): Promise<T> {
+  // Données lues à chaque requête, jamais au build : le build ne dépend pas de l'API, et les
+  // sitemaps et robots.txt suivent les données publiées sans redéployer le front.
+  await connection();
+
   if (!API_BASE_URL) {
     throw new Error("La variable API_BASE_URL est manquante.");
   }

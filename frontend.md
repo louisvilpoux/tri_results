@@ -413,6 +413,9 @@ Réalisés
           athlètes, 6 fichiers remplis). Le nombre de fichiers est fixe (10) parce que `generateSitemaps`
           s'exécute au build, sans API ; `app/robots.ts` ne liste que les fichiers remplis
           (`GET /sitemap/athletes/count`). API : `GET /sitemap/races`, `GET /sitemap/athletes/{page}`.
+          Sitemaps et robots.txt sont générés à chaque requête (`connection()` dans `apiGet`,
+          `lib/api.ts`) : ils suivent les données publiées sans redéployer, et le build n'appelle
+          jamais l'API (il échouait sur le VPS, sans `API_BASE_URL`, en les pré-rendant).
         - Description du classement selon la page : « Participants … » pour une épreuve sans temps
           (`sans_temps`), temps de natation, vélo et course à pied (triathlon) ou de course à pied et de vélo
           (duathlon) seulement quand la page les affiche, sinon temps total.

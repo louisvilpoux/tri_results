@@ -97,7 +97,7 @@ dépôt seulement), branche `main` :
 
 | Variable | Valeur |
 |---|---|
-| `DATABASE_URL` | URL interne de la base (étape 3) |
+| `DATABASE_URL` | URL interne de la base (étape 3), préfixe `postgres://` remplacé par `postgresql://` (SQLAlchemy refuse le premier) |
 | `SENTRY_DSN` | DSN du projet Sentry FastAPI |
 | `SENTRY_ENVIRONMENT` | facultatif, `production` par défaut |
 
