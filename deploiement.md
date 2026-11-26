@@ -29,14 +29,27 @@ Les libellés des écrans OVH et Coolify ci-dessous peuvent différer légèreme
 1. Commander un VPS OVH sous **Ubuntu 24.04 LTS**. Coolify demande au minimum 2 vCPU, 2 Go de RAM et
    30 Go de disque ; avec PostgreSQL (environ 1 Go avec index) et la construction du front sur le VPS,
    viser **4 vCPU, 8 Go de RAM et 75 Go de disque ou plus** (vérifier la gamme OVH du moment).
-2. Ajouter sa clé SSH à la commande, puis se connecter : `ssh ubuntu@<ip>`.
+2. Ajouter sa clé SSH à la commande, puis se connecter : `ssh ubuntu@<ip>`. Clé à créer au besoin
+   (`ssh-keygen -t ed25519`). OVH ne copie la clé qu'à l'installation du VPS : si `ssh` demande un
+   mot de passe, la clé n'y est pas ; l'ajouter avec `ssh-copy-id ubuntu@<ip>` (mot de passe reçu
+   par e-mail) ou réinstaller le VPS avec la clé.
 3. Sécuriser :
    - mises à jour : `sudo apt update && sudo apt upgrade -y`, puis
      `sudo apt install -y unattended-upgrades` (correctifs de sécurité automatiques) ;
-   - SSH par clé seulement : dans `/etc/ssh/sshd_config`, `PasswordAuthentication no` et
-     `PermitRootLogin prohibit-password`, puis `sudo systemctl restart ssh` (garder la session
-     ouverte et tester une nouvelle connexion avant de la fermer) ;
-   - pare-feu : utiliser le **pare-feu réseau OVH** (Edge Network Firewall, espace client) plutôt que
+   - SSH par clé seulement. Sur Ubuntu 24.04, un fichier de `/etc/ssh/sshd_config.d/` peut
+     réactiver les mots de passe : écrire les réglages dans un fichier lu en premier.
+     ```bash
+     printf 'PasswordAuthentication no\nKbdInteractiveAuthentication no\nPermitRootLogin prohibit-password\n' \
+       | sudo tee /etc/ssh/sshd_config.d/00-securite.conf
+     sudo mkdir -p /run/sshd && sudo sshd -t && sudo systemctl restart ssh
+     ```
+     `PermitRootLogin prohibit-password` et non `no` : Coolify gère le serveur en SSH en tant que
+     root, avec sa propre clé (sinon « Server is not reachable »). `/run/sshd` manque tant que SSH
+     n'a pas démarré (activation à la connexion) et `sshd -t` le réclame. Garder la session
+     ouverte et tester une nouvelle connexion avant de la fermer ;
+   - pare-feu (ports en « port de destination », « port source » vide ; une règle TCP
+     « established » sans port pour les réponses) : utiliser le **pare-feu réseau OVH** (Edge
+     Network Firewall, espace client) plutôt que
      `ufw`, que Docker contourne. N'ouvrir que 22 (SSH), 80 et 443 (sites), et 8000 (interface
      Coolify) le temps de la configuration ; Coolify utilise aussi 6001 et 6002 pour son
      interface en temps réel.
