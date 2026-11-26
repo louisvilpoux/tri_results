@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Serveur Node autonome pour l'image Docker (Dockerfile, déploiement Coolify).
+  output: "standalone",
   /* config options here */
   experimental: {
     agentFeedback: true,

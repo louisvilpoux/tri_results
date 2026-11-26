@@ -11,8 +11,8 @@ export function register(): void {
   Sentry.init({
     dsn,
     enabled: Boolean(dsn),
-    environment: process.env.SENTRY_ENVIRONMENT ?? "production",
-    tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? "0.1"),
+    environment: process.env.SENTRY_ENVIRONMENT || "production",
+    tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE || "0.1"),
     // ni adresse IP, ni cookies, ni en-têtes, ni corps de requête des visiteurs dans Sentry
     dataCollection: { userInfo: false, cookies: false, httpHeaders: false, httpBodies: [] },
   });

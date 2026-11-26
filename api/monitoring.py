@@ -44,7 +44,7 @@ def setup_logging() -> None:
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JsonFormatter())
     logger.handlers = [handler]
-    logger.setLevel(os.getenv("LOG_LEVEL", "INFO").upper())
+    logger.setLevel((os.getenv("LOG_LEVEL") or "INFO").upper())
     logger.propagate = False
 
 
@@ -55,8 +55,8 @@ def setup_sentry() -> bool:
         return False
     sentry_sdk.init(
         dsn=dsn,
-        environment=os.getenv("SENTRY_ENVIRONMENT", "production"),
-        traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+        environment=os.getenv("SENTRY_ENVIRONMENT") or "production",
+        traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE") or "0.1"),
         # Ni adresse IP, ni cookies, ni en-têtes, ni corps de requête des visiteurs dans Sentry.
         data_collection={
             "user_info": False,

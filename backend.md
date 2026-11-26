@@ -44,6 +44,12 @@ pytest
   donner à l'outil de surveillance (UptimeRobot…).
 - Tests : `api/test_monitoring.py`, `api/test_health.py`.
 
+# Publication des données en production
+`deploy/publier_donnees.sh` copie les tables lues par l'API (`races`, `athletes`, `results`,
+`redirections`) de la base locale vers PostgreSQL sur le VPS, par SSH et `docker exec`, en une seule
+transaction, après confirmation. Les tables brutes et les fonctions du pipeline restent en local.
+Détails et variables : `deploiement.md`. L'API est empaquetée par `api/Dockerfile`.
+
 # Récupération de la donnée source
 Dossier : `sources`
 Pour chaque source, un ou plusieurs fichiers Python est utilisé. La donnée scrappée est chargée dans un dossier ayant le nom de la source.

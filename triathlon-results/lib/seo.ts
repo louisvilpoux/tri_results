@@ -6,7 +6,7 @@ import type { Race, RaceEvent } from "@/types/race";
 import { DISCIPLINES_WITHOUT_SPLITS } from "@/types/result";
 
 /** Adresse publique du site, utilisée pour les URL canoniques et Open Graph. */
-export const SITE_URL = process.env.SITE_URL ?? "http://localhost:3000";
+export const SITE_URL = process.env.SITE_URL || "http://localhost:3000";
 
 export const SITE_NAME = "PACE";
 

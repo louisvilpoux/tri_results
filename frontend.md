@@ -420,6 +420,10 @@ Réalisés
           l'accueil (avec `og:url`). `pageMetadata` (`lib/seo.ts`) est partagé par ces pages.
         - Au déploiement : renseigner `SITE_URL` (sinon URL canoniques, Open Graph et sitemaps pointent vers
           `http://localhost:3000`).
+- Déploiement (26/11/2026) : `output: "standalone"` (`next.config.ts`) et `Dockerfile` pour Coolify
+  sur un VPS OVH (voir `deploiement.md`). Les variables `NEXT_PUBLIC_*` et `SITE_URL` sont lues au
+  build ; une variable vide prend sa valeur par défaut (`||`), car un argument de build Docker non
+  renseigné arrive vide.
 - Monitoring (26/11/2026), inactif tant que les variables ne sont pas renseignées (rien n'est envoyé en
   développement) :
     - Erreurs avec Sentry (`@sentry/nextjs`) : `instrumentation.ts` (serveur : rendu, routes `/api`, proxy,

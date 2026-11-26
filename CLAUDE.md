@@ -31,6 +31,7 @@ cd triathlon-results && npm run dev # application web de développement
 - `AGENTS.md` - instructions de développement.
 - `backend.md` - informations relatives aux traitements backend Python et SQL.
 - `business_model.md` - objectifs business de l'application.
+- `deploiement.md` - déploiement sur VPS OVH avec Coolify et publication des données en production.
 - `frontend.md` - specifications et détails techniques du front-end.
 - `mvp.md` - brève définition d'un MVP.
 - `roadmap.md` - définition d'une roadmap.
