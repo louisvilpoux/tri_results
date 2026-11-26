@@ -92,5 +92,9 @@ FROM doublons_sources
 ORDER BY source_id, athletes_communs DESC, fftri_id
 ON CONFLICT (type, ancien_id) DO UPDATE SET nouvel_id = EXCLUDED.nouvel_id;
 
+-- Les anciens liens qui redirigeaient vers une épreuve retirée vont directement à la version
+-- gardée (Q16 : 806 → 804 → 1691 devient 806 → 1691).
+SELECT aplatit_redirections('epreuve');
+
 DELETE FROM results WHERE epreuve_id IN (SELECT source_id FROM doublons_sources);
 DELETE FROM races WHERE id IN (SELECT source_id FROM doublons_sources);

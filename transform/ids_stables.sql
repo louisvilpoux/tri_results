@@ -28,6 +28,25 @@ CREATE TABLE IF NOT EXISTS redirections (
 );
 
 
+-- Aplatit les redirections en chaîne : une redirection vers un id qui redirige à son tour vise
+-- directement le bout de la chaîne (806 → 804 → 1691 devient 806 → 1691 : épreuves du Duathlon
+-- du Lac d'Ardres réunies par epreuves_sexe.sql, puis retirées comme doublon de source ; Q16 de
+-- l'audit du 25/11/2026 au soir). Répété tant qu'une chaîne reste, pour les chaînes longues.
+CREATE OR REPLACE FUNCTION aplatit_redirections(type_entite text)
+RETURNS void AS $$
+BEGIN
+    LOOP
+        UPDATE redirections r
+        SET nouvel_id = suivante.nouvel_id
+        FROM redirections suivante
+        WHERE r.type = type_entite AND suivante.type = type_entite
+          AND r.nouvel_id = suivante.ancien_id;
+        EXIT WHEN NOT FOUND;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+
 -- Attribue un id stable à chaque entité (épreuve ou athlète) de la table temporaire
 -- cles_entites (entite, cle, poids) et écrit le résultat dans la table temporaire
 -- ids_entites (entite, id). Une entité peut avoir plusieurs clés (un athlète dont le nom
@@ -85,11 +104,7 @@ BEGIN
     DELETE FROM redirections
     WHERE type = type_entite AND ancien_id IN (SELECT id FROM ids_entites);
 
-    UPDATE redirections r
-    SET nouvel_id = suivante.nouvel_id
-    FROM redirections suivante
-    WHERE r.type = type_entite AND suivante.type = type_entite
-      AND r.nouvel_id = suivante.ancien_id;
+    PERFORM aplatit_redirections(type_entite);
 
     -- Toutes les clés pointent vers l'id de leur entité (une clé partagée par deux entités va à
     -- la plus grosse).

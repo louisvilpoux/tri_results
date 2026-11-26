@@ -64,8 +64,8 @@ sur 3 335. Les équipes sont exclues du calcul, d'où un total plus faible que l
 | Q23 | Classement par catégorie présenté comme un classement général | — | 3 épreuves jeunes timingzone à plusieurs « 1ᵉʳ » (Hyères 2026 Poussins / Pupilles : 4 ; Funny Day 2024 : 2 et 2) | Nouveau |
 | Q25 | Catégories timingzone non reconnues | — | 3,1 % des lignes (« JUN », « VET », « CAD » : 174 lignes, faciles à lire). 2,2 % après correction (« HOM », « FEM », « PRO », voulus) | **Corrigé** le 25/11 |
 | Q13 | Épreuves sans format | 45 | 75 (+30 timingzone ; « MIDDLE DISTANCE », « MINI POUS / POUS » lisibles). 72 après correction | **Corrigé** le 25/11 (reste faute de distance) |
-| Q7 | Lieu manquant ou incohérent | 0 | 1 ville écrite de deux façons (Saint-Laurent-du-Var), Monaco sans code postal | Rouvert (mineur) |
-| Q16 | Identifiants instables | non revérifié | 2 redirections en chaîne (806 → 804 → 1691, 807 → 805 → 1692) | Mineur |
+| Q7 | Lieu manquant ou incohérent | 0 | 1 ville écrite de deux façons (Saint-Laurent-du-Var), Monaco sans code postal. 0 après correction | **Corrigé** le 26/11 |
+| Q16 | Identifiants instables | non revérifié | 2 redirections en chaîne (806 → 804 → 1691, 807 → 805 → 1692). 0 après correction | **Corrigé** le 26/11 |
 | Q1 | Temps total faux | 5 084 temps suspects | 5 168 (+84 timingzone, à juste titre) | Corrigé |
 | Q2 | Épreuves sans temps ni classement | 262 épreuves, 17 539 lignes | inchangé (toutes prolivesport) | Traité (affichage « Participants ») |
 | Q3 | Total à 00:00:00 | 0 | 0 | Corrigé |
@@ -250,12 +250,28 @@ Aucune épreuve sans lieu. Nouveaux :
 - « Monaco » (Triathlon International de Monaco 2026) n'a pas de code postal, comme « Tangier » et
   « Geraardsbergen (9500) » : étranger, normal ; « Monaco (98000) » est possible à la main.
 
+Corrigé le 26/11/2026 dans `transform/lieux_courses.csv` (3 lignes) : « Saint-Laurent-du-Var
+(06700) » pour le Duathlon et l'Aquathlon de St Laurent du Var (l'aquathlon était écrit « Saint
+Laurent du Var », sans tirets, contrairement au triathlon de la même ville), « Monaco (98000) »
+pour le Triathlon International de Monaco, comme l'Ironman et le Tristar 111 de Monaco. Base
+reconstruite : une seule course à deux lieux (Pierre Percée, voulu) ; restent sans code postal à
+5 chiffres, normalement, « Tangier » et « Geraardsbergen (9500) ».
+
 ### Q16 — Redirections en chaîne
 
 Deux redirections mènent à une épreuve qui redirige elle-même : 806 → 804 → 1691 et 807 → 805 →
 1692 (Duathlon du Lac d'Ardres 2025 et 2026, Duathlon F et M réunis par D9, puis l'épreuve réunie
 remplacée). L'ancien lien `/races/806` arrive bien au bout, mais en deux redirections 308. À
 aplatir dans `ids_stables.sql` (une redirection doit viser l'id final).
+
+Cause : `doublons_sources.sql` redirige l'épreuve retirée (804 → 1691), mais ne met pas à jour
+les redirections qui la visaient déjà (806 → 804). Corrigé le 26/11/2026 : nouvelle fonction
+`aplatit_redirections` (`transform/ids_stables.sql`), qui fait viser à chaque redirection le bout
+de sa chaîne, répétée tant qu'une chaîne reste ; appelée par `attribue_ids_stables` (à la place
+de l'ancienne mise à jour, qui ne suivait qu'un maillon) et après les redirections de
+`doublons_sources.sql`. Base reconstruite : 0 chaîne, 0 redirection vers un id absent ;
+`/redirections/races/806` renvoie 1691. Test : `test_redirections_lead_to_an_existing_page_in_one_step`
+(`api/test_athletes.py`).
 
 ---
 
@@ -285,5 +301,5 @@ aplatir dans `ids_stables.sql` (une redirection doit viser l'id final).
 1. ~~**Q22** et **Q24**~~ : corrigés le 25/11/2026 (base reconstruite : 894 645 résultats,
    292 238 athlètes, 20 417 lignes d'équipe).
 2. **Q23** : classements jeunes à plusieurs 1ᵉʳ.
-3. Petites corrections : ~~**Q25**~~ et ~~**Q13**~~ (corrigés le 25/11/2026), **Q7**
-   (Saint-Laurent-du-Var, Monaco), **Q16** (aplatir les redirections en chaîne).
+3. Petites corrections : ~~**Q25**~~, ~~**Q13**~~ (corrigés le 25/11/2026), ~~**Q7**~~ et
+   ~~**Q16**~~ (corrigés le 26/11/2026).

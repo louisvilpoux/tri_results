@@ -181,7 +181,10 @@ Dossier : `transform`
       (ancien id → nouvel id), et la fonction attribue_ids_stables. Les id d'épreuve et d'athlète sont ainsi les
       mêmes d'une reconstruction à l'autre : les liens partagés ne cassent plus. Une entité dont une clé est connue
       reprend son id ; deux entités réunies (nouvelle règle de nom, doublon de source) gardent le plus petit id et
-      l'autre redirige vers lui. Remise à zéro (tous les liens changent) : `transform/reset_ids_stables.sql`.
+      l'autre redirige vers lui. `aplatit_redirections` fait viser à chaque redirection le bout de sa chaîne (appelée
+      par attribue_ids_stables et par doublons_sources.sql, qui retire des épreuves déjà visées par une redirection :
+      806 → 804 → 1691 devient 806 → 1691, Q16 du 25/11/2026). Remise à zéro (tous les liens changent) :
+      `transform/reset_ids_stables.sql`.
 2. génération table globale :
     - disciplines.sql : fonctions `epreuve_discipline` et `epreuve_format`, qui déduisent du nom libre d'une
       épreuve prolivesport, ou du nom de l'onglet Excel chronoweb, sa discipline (nom de l'épreuve, puis catégorie,

@@ -450,6 +450,33 @@ def test_old_ids_redirect() -> None:
     assert response.json() == {"id": row.nouvel_id}
 
 
+def test_redirections_lead_to_an_existing_page_in_one_step() -> None:
+    """Q16 (audit du 25/11/2026 au soir) : aucune redirection ne vise un id qui redirige à son
+    tour (806 → 804 → 1691 devient 806 → 1691), et chacune mène à une page qui existe."""
+    try:
+        with engine.connect() as connection:
+            row = connection.execute(
+                text(
+                    """
+                    SELECT
+                        (SELECT COUNT(*) FROM redirections a
+                         JOIN redirections b ON b.type = a.type AND b.ancien_id = a.nouvel_id)
+                            AS chaines,
+                        (SELECT COUNT(*) FROM redirections d
+                         WHERE (d.type = 'epreuve'
+                                AND NOT EXISTS (SELECT 1 FROM races r WHERE r.id = d.nouvel_id))
+                            OR (d.type = 'athlete'
+                                AND NOT EXISTS (SELECT 1 FROM athletes a
+                                                WHERE a.unified_id = d.nouvel_id))) AS absentes
+                    """
+                )
+            ).first()
+    except OperationalError:
+        pytest.skip("Base PostgreSQL indisponible")
+    assert row.chaines == 0
+    assert row.absentes == 0
+
+
 def test_list_and_profile_show_the_same_club() -> None:
     """Un athlète qui a changé de club a le même club dans la liste et sur son profil : celui
     de sa course la plus récente (transform/athletes_club.sql). Ex. VILPOUX Louis, Courbevoie en
