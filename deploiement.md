@@ -157,15 +157,21 @@ ne change pas), et déclarer le domaine dans Umami.
 
 ## 7. Après la mise en ligne
 
-- **UptimeRobot** (ou Better Stack) : surveiller `https://api.<domaine>/health` et
-  `https://<domaine>/` toutes les minutes, alerte par e-mail.
+- **UptimeRobot** (en place le 27/11/2026, offre gratuite, toutes les 5 minutes, alerte par
+  e-mail) : trois sondes, à mettre à jour au passage au domaine.
+  - `https://api.<domaine>/health` (HTTP) : API arrêtée ou base injoignable (503) ;
+  - `https://<domaine>/` (HTTP) : front arrêté ;
+  - `https://<domaine>/races` (Keyword, alerte si « Impossible de charger » est présent) : front
+    en ligne mais qui ne joint plus l'API (page affichée avec un message d'erreur).
 - **Google Search Console** : déclarer le domaine et soumettre `https://<domaine>/sitemap.xml`.
 - **Serveur** : surveiller disque et mémoire (alertes de Coolify, Settings → Notifications) et
   vérifier de temps en temps qu'une sauvegarde récente existe dans l'Object Storage.
 
 ## Mettre à jour
 
-- **Code** : un push sur `main` redéploie l'API et le front (webhook GitHub de Coolify). Le nouveau
+- **Code** : un push sur `main` redéploie l'API et le front (webhook GitHub de Coolify). Pour ne
+  redéployer que ce qui a changé, Watch Paths (onglet General) : `api/**` pour l'API,
+  `triathlon-results/**` pour le front. Le nouveau
   conteneur de l'API doit répondre à `/health` avant que Coolify ne bascule dessus (Health Checks
   de l'étape 4) : sans ce réglage, l'API et le front, redéployés ensemble, renvoient des 503
   pendant quelques secondes.
