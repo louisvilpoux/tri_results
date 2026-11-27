@@ -13,6 +13,12 @@
       "url": "http://localhost:3000"
     },
     {
+      "name": "web-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/maclv/Work/dev/tri_results/triathlon-results", "run", "dev"],
+      "port": 3000
+    },
+    {
       "name": "web-prod",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["--prefix", "/Users/maclv/Work/dev/tri_results/triathlon-results", "next", "start", "/Users/maclv/Work/dev/tri_results/triathlon-results", "-p", "3100"],

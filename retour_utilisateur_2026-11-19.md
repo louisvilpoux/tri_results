@@ -1,4 +1,4 @@
-# Retour utilisateur — PACE
+# Retour utilisateur — RANKED
 
 Test réalisé le 19/11/2026 en se mettant dans la peau d'un triathlète amateur (profil de test :
 « DUPONT Damien », Beauvais Triathlon, 21 courses du S à l'Ironman) qui veut :

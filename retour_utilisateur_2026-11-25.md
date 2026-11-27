@@ -1,4 +1,4 @@
-# Retour utilisateur — PACE — 25/11/2026
+# Retour utilisateur — RANKED — 25/11/2026
 
 Quatrième test, au commit `03e263d` (après la refonte UX du 24/11, D9, la catégorie FFTRI
 commune et les corrections de l'audit du 25/11). Tests précédents :
@@ -10,7 +10,7 @@ et F continuent la numérotation de ces retours.
 **Nouveau profil** : triathlète **et** duathlète amateur, V4 (55-59 ans), club de la Côte
 d'Opale, une dizaine de courses par an dans le Nord – Pas-de-Calais : sprints et M l'été,
 duathlons au printemps et à l'automne, un format long ou XXL par an. Profil réel utilisé pour le
-test : BELLET Jean francois (108 courses, 2007-2026). Je découvre PACE.
+test : BELLET Jean francois (108 courses, 2007-2026). Je découvre RANKED.
 
 Ce que j'attends en arrivant :
 1. retrouver mes temps et voir si je progresse ou si je décline avec l'âge ;
@@ -125,7 +125,7 @@ ne plus aller chercher sur chaque site de chronométrage.
 ## Pourquoi je reviendrais
 
 - **Après chaque course**, pour voir ma place en %, l'écart à la médiane et la comparaison avec
-  mes éditions précédentes : PACE remplace mon tableur et les cinq sites de chronométreurs que je
+  mes éditions précédentes : RANKED remplace mon tableur et les cinq sites de chronométreurs que je
   consulte aujourd'hui.
 - **Avant de m'inscrire**, pour regarder les repères d'une course et simuler mon temps avec
   « Et moi ? » : c'est déjà possible et c'est convaincant, à condition de connaître la course.

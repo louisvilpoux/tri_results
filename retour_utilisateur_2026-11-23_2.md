@@ -1,4 +1,4 @@
-# Retour utilisateur — PACE — 23/11/2026 (second test)
+# Retour utilisateur — RANKED — 23/11/2026 (second test)
 
 Troisième test, le même jour que le précédent, au commit `8d4712f` (après les corrections
 U4, U7 à U10, U12, U13, D7, les colonnes de duathlon et l'arrivée de protiming). Base

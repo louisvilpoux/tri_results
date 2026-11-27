@@ -21,7 +21,7 @@ type Status = "idle" | "sending" | "sent" | "error";
 const PLACEHOLDERS: Record<FeedbackKind, string> = {
   bug: "Ce que tu as fait, ce qui s'est passé, ce que tu attendais…",
   donnee: "Quel résultat, quel temps ou quelle catégorie est faux, et la bonne valeur si tu la connais…",
-  idee: "Ce qui te manque sur PACE…",
+  idee: "Ce qui te manque sur RANKED…",
   avis: "Ce que tu aimes, ce que tu n'aimes pas…",
 };
 

@@ -9,7 +9,7 @@ export function Footer() {
 
         <Link href="/" className="flex items-center gap-2">
           <Activity size={18} className="text-[#FC6B32]" />
-          <span className="font-bold text-[#17202E]">PACE.</span>
+          <span className="font-bold text-[#17202E]">RANKED.</span>
         </Link>
 
         <p className="text-center text-xs text-gray-500">
@@ -17,7 +17,7 @@ export function Footer() {
         </p>
 
         <p className="text-xs text-gray-400">
-          © {year} PACE
+          © {year} RANKED
         </p>
       </div>
     </footer>

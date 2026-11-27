@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
   openGraph: {
     ...OPEN_GRAPH_DEFAULTS,
-    title: "PACE — Triathlon & Duathlon",
+    title: "RANKED — Triathlon & Duathlon",
     description:
       "Retrouve les résultats, classements et performances des athlètes de triathlon et duathlon.",
     url: "/",

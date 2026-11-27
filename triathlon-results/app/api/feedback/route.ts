@@ -59,8 +59,8 @@ function clientIp(request: NextRequest): string {
 }
 
 function emailSubject(feedback: FeedbackPayload): string {
-  const where = feedback.context || new URL(feedback.page, "http://pace").pathname;
-  return `[PACE] ${FEEDBACK_KIND_LABELS[feedback.kind]} — ${where}`.slice(0, 200);
+  const where = feedback.context || new URL(feedback.page, "http://ranked").pathname;
+  return `[RANKED] ${FEEDBACK_KIND_LABELS[feedback.kind]} — ${where}`.slice(0, 200);
 }
 
 function emailText(feedback: FeedbackPayload, userAgent: string): string {
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       method: "POST",
       headers: { "api-key": apiKey, "content-type": "application/json", accept: "application/json" },
       body: JSON.stringify({
-        sender: { name: "PACE", email: from },
+        sender: { name: "RANKED", email: from },
         to: [{ email: to }],
         ...(feedback.email && { replyTo: { email: feedback.email } }),
         subject,

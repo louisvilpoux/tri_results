@@ -23,8 +23,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   applicationName: SITE_NAME,
   title: {
-    default: "PACE — Triathlon & Duathlon",
-    template: "%s | PACE",
+    default: "RANKED — Triathlon & Duathlon",
+    template: "%s | RANKED",
   },
   description:
     "Retrouve les résultats, classements et performances des athlètes de triathlon et duathlon.",

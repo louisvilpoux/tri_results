@@ -1,4 +1,4 @@
-# Retour utilisateur — PACE — 23/11/2026
+# Retour utilisateur — RANKED — 23/11/2026
 
 Deuxième test, au commit `f2ef150`, base reconstruite avec `transform/run_sql.py`.
 Test précédent : [retour_utilisateur_2026-11-19.md](retour_utilisateur_2026-11-19.md)
