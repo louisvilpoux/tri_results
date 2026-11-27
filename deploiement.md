@@ -152,7 +152,13 @@ Un « / » final dans `API_BASE_URL` est retiré par le front.
 
 Quand le domaine est acheté : chez le registrar, enregistrements `A` de `<domaine>`, `api` (et
 `coolify`) vers l'IP du VPS ; renseigner ces domaines dans Coolify, qui obtient les certificats
-HTTPS (Let's Encrypt). Mettre à jour `SITE_URL` puis redéployer le front (`API_BASE_URL`, interne,
+HTTPS (Let's Encrypt). Front : `https://<domaine>,https://www.<domaine>` (le front redirige www
+vers `SITE_URL`, `next.config.ts`) ; API : `https://api.<domaine>` seul, sans la variante `www.api`
+que Coolify ajoute (aucun DNS : certificat impossible). Supprimer les enregistrements `A` et `AAAA`
+créés par défaut par OVH pour `<domaine>` et `www` (page d'attente, `213.186.33.5`) ; vérifier sur
+le serveur DNS d'OVH (`dig +short A <domaine> @ns17.ovh.net`), le cache local garde l'ancienne
+réponse jusqu'à 30 minutes. Une fois les sondes UptimeRobot mises à jour, retirer les adresses
+sslip.io. Mettre à jour `SITE_URL` puis redéployer le front (`API_BASE_URL`, interne,
 ne change pas), et déclarer le domaine dans Umami.
 
 ## 7. Après la mise en ligne

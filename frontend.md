@@ -423,6 +423,9 @@ Réalisés
           l'accueil (avec `og:url`). `pageMetadata` (`lib/seo.ts`) est partagé par ces pages.
         - Au déploiement : renseigner `SITE_URL` (sinon URL canoniques, Open Graph et sitemaps pointent vers
           `http://localhost:3000`).
+        - `www.<domaine>` redirige (308, même chemin et paramètres) vers `SITE_URL` : règle
+          `redirects` de `next.config.ts`, construite au build depuis `SITE_URL` (aucune sans elle,
+          ni si elle est en www). Les URL canoniques évitaient déjà le contenu en double.
 - Déploiement (26/11/2026) : `output: "standalone"` (`next.config.ts`) et `Dockerfile` pour Coolify
   sur un VPS OVH (voir `deploiement.md`). Les variables `NEXT_PUBLIC_*` et `SITE_URL` sont lues au
   build ; une variable vide prend sa valeur par défaut (`||`), car un argument de build Docker non
