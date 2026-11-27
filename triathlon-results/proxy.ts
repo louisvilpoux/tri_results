@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { API_BASE_URL } from "@/lib/api";
+
 /**
  * Pages course, classement et athlète : vérifie l'id avant le rendu pour répondre avec le bon
  * code HTTP.
@@ -17,15 +19,14 @@ const ID_PAGE = /^\/(races|athletes)\/(\d+)(\/results)?$/;
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const match = request.nextUrl.pathname.match(ID_PAGE);
-  const apiBaseUrl = process.env.API_BASE_URL;
-  if (!match || !apiBaseUrl) return NextResponse.next();
+  if (!match || !API_BASE_URL) return NextResponse.next();
 
   const [, kind, id, suffix = ""] = match;
   if (kind === "athletes" && suffix) return NextResponse.next();
 
   let response: Response;
   try {
-    response = await fetch(`${apiBaseUrl}/resolve/${kind}/${id}`, { cache: "no-store" });
+    response = await fetch(`${API_BASE_URL}/resolve/${kind}/${id}`, { cache: "no-store" });
   } catch {
     return NextResponse.next();
   }

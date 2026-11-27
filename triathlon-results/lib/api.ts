@@ -17,7 +17,8 @@ import type {
 import type { RaceResultsQuery, RaceResultsResponse } from "@/types/result";
 import { connection } from "next/server";
 
-const API_BASE_URL = process.env.API_BASE_URL;
+/** Adresse de l'API, sans « / » final (sinon les chemins deviendraient « //courses »). */
+export const API_BASE_URL = process.env.API_BASE_URL?.replace(/\/+$/, "");
 
 export class ApiError extends Error {
   constructor(

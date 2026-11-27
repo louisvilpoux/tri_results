@@ -92,7 +92,14 @@ Pour `deploy/publier_donnees.sh`, l'utilisateur SSH doit pouvoir lancer `docker`
 Coolify → **New Resource → Application → dépôt GitHub** (application GitHub de Coolify, accès au
 dépôt seulement), branche `main` :
 - Build Pack : **Dockerfile**, Base Directory : **`/api`**, port exposé : **8000** ;
-- domaine : `https://api.<domaine>` (ou l'adresse temporaire proposée par Coolify) ;
+- domaine : `https://api.<domaine>` (ou l'adresse temporaire `http://….sslip.io` proposée par
+  Coolify) ;
+- **Advanced → Custom Container Name : `api`**. Coolify ajoute au nom du conteneur l'heure du
+  déploiement (`<uuid>-20261126T212109`) : seul ce nom fixe permet au front de joindre l'API par
+  le réseau Docker interne (`http://api:8000`). Ne pas activer « Consistent Container Name » à la
+  place : l'API serait coupée pendant chaque déploiement ;
+- **Health Checks** : activer, chemin `/health`, port `8000`, pour que Coolify n'envoie le trafic
+  au nouveau conteneur qu'une fois prêt (sinon Traefik répond 503 le temps du démarrage) ;
 - variables d'environnement :
 
 | Variable | Valeur |
@@ -110,7 +117,7 @@ domaine `https://<domaine>`. Variables :
 
 | Variable | Build Variable ? | Valeur |
 |---|---|---|
-| `API_BASE_URL` | non | `https://api.<domaine>` |
+| `API_BASE_URL` | non | `http://api:8000` : adresse interne de l'API (étape 4), pas son domaine public |
 | `SITE_URL` | **oui** | `https://<domaine>` (URL canoniques, Open Graph, sitemaps) |
 | `SENTRY_DSN` | non | DSN du projet Sentry Next.js |
 | `NEXT_PUBLIC_SENTRY_DSN` | **oui** | le même DSN |
@@ -125,14 +132,24 @@ dans Brevo (enregistrements DKIM et DMARC chez le registrar) pour que les mails 
 indésirables. Sans ces trois variables, le formulaire répond « Envoi indisponible ».
 
 Les variables `NEXT_PUBLIC_*` et `SITE_URL` sont lues au build : après un changement, redéployer.
-`SITE_URL` sert aussi à l'exécution : le déclarer comme variable de build **et** d'exécution.
+`SITE_URL` sert aussi à l'exécution : le déclarer comme variable de build **et** d'exécution. Les
+autres ne sont lues qu'à l'exécution, mais ne s'appliquent qu'après **Restart** du conteneur.
+
+`API_BASE_URL` ne sert que côté serveur (`lib/api.ts`, `proxy.ts`) : le navigateur n'appelle jamais
+l'API directement. L'adresse interne évite Traefik et l'aller-retour par l'IP publique ; avec
+l'adresse publique, une faute (`https` au lieu de `http`, ancienne adresse) donne une page d'erreur
+503 de Traefik et aucune trace dans les logs de l'API. Pour vérifier depuis le VPS :
+```bash
+docker exec $(docker ps -qf name=<uuid-du-front>) sh -c 'echo "[$API_BASE_URL]"; wget -qO- "$API_BASE_URL/health"'
+```
+Un « / » final dans `API_BASE_URL` est retiré par le front.
 
 ## 6. Domaine
 
 Quand le domaine est acheté : chez le registrar, enregistrements `A` de `<domaine>`, `api` (et
 `coolify`) vers l'IP du VPS ; renseigner ces domaines dans Coolify, qui obtient les certificats
-HTTPS (Let's Encrypt). Mettre à jour `API_BASE_URL` et `SITE_URL` puis redéployer le front, et
-déclarer le domaine dans Umami.
+HTTPS (Let's Encrypt). Mettre à jour `SITE_URL` puis redéployer le front (`API_BASE_URL`, interne,
+ne change pas), et déclarer le domaine dans Umami.
 
 ## 7. Après la mise en ligne
 
@@ -145,8 +162,9 @@ déclarer le domaine dans Umami.
 ## Mettre à jour
 
 - **Code** : un push sur `main` redéploie l'API et le front (webhook GitHub de Coolify). Le nouveau
-  conteneur de l'API doit répondre à `/health` (healthcheck du Dockerfile) avant que Coolify ne
-  bascule dessus ; vérifier ce comportement au premier déploiement.
+  conteneur de l'API doit répondre à `/health` avant que Coolify ne bascule dessus (Health Checks
+  de l'étape 4) : sans ce réglage, l'API et le front, redéployés ensemble, renvoient des 503
+  pendant quelques secondes.
 - **Données** : après un scraping et les transformations en local, lancer
   `deploy/publier_donnees.sh`. Il affiche les volumes local et production et demande confirmation,
   puis remplace les 4 tables en une seule transaction (environ 80 Mo, une quinzaine de secondes
