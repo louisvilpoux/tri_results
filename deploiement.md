@@ -78,10 +78,14 @@ Pour `deploy/publier_donnees.sh`, l'utilisateur SSH doit pouvoir lancer `docker`
    - le **nom du conteneur** (identifiant affiché dans Coolify, aussi visible par `docker ps` sur
      le VPS), qui sera `PROD_DB_CONTAINER` ;
    - l'utilisateur et la base (`postgres` / `postgres` par défaut).
-4. **Sauvegardes** (onglet Backups) : sauvegarde planifiée quotidienne vers un stockage S3, par
-   exemple **OVH Object Storage** (compatible S3) déclaré dans Coolify → Storages. Une sauvegarde
-   restée sur le VPS disparaît avec lui. La base locale fait foi pour les données, mais une
-   sauvegarde évite de devoir tout republier en urgence.
+4. **Sauvegardes : pas pour l'instant** (choix du 27/11/2026). La production n'est qu'une copie de
+   la base locale, que personne d'autre n'écrit : si le VPS disparaît, recréer la base et relancer
+   `deploy/publier_donnees.sh`. C'est la base locale qui est sauvegardée
+   (`deploy/sauvegarder_base_locale.sh`, voir `backend.md`). À mettre en place dès que la
+   production contient des données qui n'existent pas ailleurs (comptes, contributions…) :
+   onglet Backups, sauvegarde quotidienne vers **OVH Object Storage** (S3, Coolify → Storages),
+   une sauvegarde restée sur le VPS disparaissant avec lui. Garder aussi les variables
+   d'environnement de Coolify dans un gestionnaire de mots de passe.
 5. Premier envoi des données, depuis la machine locale :
    ```bash
    PROD_SSH=ubuntu@<ip> PROD_DB_CONTAINER=<conteneur> deploy/publier_donnees.sh
@@ -166,7 +170,7 @@ ne change pas), et déclarer le domaine dans Umami.
   de l'étape 4) : sans ce réglage, l'API et le front, redéployés ensemble, renvoient des 503
   pendant quelques secondes.
 - **Données** : après un scraping et les transformations en local, lancer
-  `deploy/publier_donnees.sh`. Il affiche les volumes local et production et demande confirmation,
+  `deploy/sauvegarder_base_locale.sh` puis `deploy/publier_donnees.sh`. Il affiche les volumes local et production et demande confirmation,
   puis remplace les 4 tables en une seule transaction (environ 80 Mo, une quinzaine de secondes
   en local le 26/11/2026) : en cas d'erreur rien ne change, et pendant la copie les requêtes de
   l'API attendent au lieu d'échouer. Testé contre une base locale : les tests des routes de l'API

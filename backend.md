@@ -50,6 +50,15 @@ pytest
 transaction, après confirmation. Les tables brutes et les fonctions du pipeline restent en local.
 Détails et variables : `deploiement.md`. L'API est empaquetée par `api/Dockerfile`.
 
+# Sauvegarde de la base locale
+La base locale fait foi : la production n'en est qu'une copie partielle, reconstruite par
+`deploy/publier_donnees.sh`, et n'est donc pas sauvegardée. `deploy/sauvegarder_base_locale.sh`
+fait un `pg_dump` complet (format custom) dans `~/Sauvegardes/tri_results` (hors du dépôt, couvert
+par Time Machine), relit le fichier (`pg_restore --list`) puis ne garde que les 7 plus récents
+(`SAUVEGARDE_DIR`, `SAUVEGARDES_A_GARDER`). À lancer après chaque scraping et transformation.
+Le 27/11/2026 : 14 s, 208 Mo pour une base de 2 Go ; restauration dans une base vide en 50 s,
+nombre de lignes identique pour les 15 tables. Commande de restauration en tête du script.
+
 # Récupération de la donnée source
 Dossier : `sources`
 Pour chaque source, un ou plusieurs fichiers Python est utilisé. La donnée scrappée est chargée dans un dossier ayant le nom de la source.
