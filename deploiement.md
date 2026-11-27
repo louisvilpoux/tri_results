@@ -133,7 +133,11 @@ domaine `https://<domaine>`. Variables :
 Retours des utilisateurs : créer un compte Brevo (offre gratuite, 300 mails par jour), valider
 l'adresse expéditrice (`FEEDBACK_FROM`), puis, une fois le domaine acheté, authentifier le domaine
 dans Brevo (enregistrements DKIM et DMARC chez le registrar) pour que les mails n'arrivent pas en
-indésirables. Sans ces trois variables, le formulaire répond « Envoi indisponible ».
+indésirables. Sans ces trois variables, le formulaire répond « Envoi indisponible ». Autoriser
+aussi l'IP du VPS dans Brevo (Security → Authorized IPs), sinon l'API Brevo répond 401 ; les
+erreurs d'envoi sont dans les logs du front (`[feedback]`). En place le 27/11/2026 :
+`FEEDBACK_FROM=contact@ranked.coach`, domaine authentifié (code Brevo, DKIM, DMARC dans la zone
+OVH).
 
 Les variables `NEXT_PUBLIC_*` et `SITE_URL` sont lues au build : après un changement, redéployer.
 `SITE_URL` sert aussi à l'exécution : le déclarer comme variable de build **et** d'exécution. Les
@@ -169,7 +173,10 @@ ne change pas), et déclarer le domaine dans Umami.
   - `https://<domaine>/` (HTTP) : front arrêté ;
   - `https://<domaine>/races` (Keyword, alerte si « Impossible de charger » est présent) : front
     en ligne mais qui ne joint plus l'API (page affichée avec un message d'erreur).
-- **Google Search Console** : déclarer le domaine et soumettre `https://<domaine>/sitemap.xml`.
+- **Google Search Console** (en place le 27/11/2026) : propriété de type **Domaine** (couvre www et
+  sous-domaines), validée par un enregistrement TXT chez OVH ; sitemaps soumis : `sitemap.xml` et
+  `athletes/sitemap/0.xml` à `5.xml` (en soumettre un nouveau quand `robots.txt` en liste un de
+  plus).
 - **Serveur** : surveiller disque et mémoire (alertes de Coolify, Settings → Notifications) et
   vérifier de temps en temps qu'une sauvegarde récente existe dans l'Object Storage.
 
